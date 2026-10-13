@@ -1,0 +1,40 @@
+name: PA-28 related-source import
+on:
+  workflow_dispatch:
+    inputs:
+      verify_only:
+        description: Verify FAA metadata without writing to Supabase
+        type: boolean
+        default: true
+      document_type:
+        description: Scoped source type
+        type: choice
+        options: [AD, STC, CAR]
+        default: AD
+permissions:
+  contents: read
+concurrency:
+  group: pa28-related-import
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FAA_DRS_API_KEY: ${{ secrets.FAA_DRS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      DOCUMENT_TYPE: ${{ inputs.document_type }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Verify scoped source contract
+        if: inputs.verify_only
+        run: npm run import:related:verify -- --type="$DOCUMENT_TYPE"
+      - name: Archive and import scoped records
+        if: ${{ !inputs.verify_only }}
+        run: npm run import:related -- --type="$DOCUMENT_TYPE"

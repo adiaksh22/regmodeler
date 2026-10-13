@@ -4,7 +4,7 @@ The primary entry point is an aircraft model, as selected by the user. Certifica
 
 ## First working navigation
 
-Search `PA-28-181` → select the Piper PA-28 result → view the selected model's relationships → select a reference → read its TCDS evidence and open the FAA source. Switch to revision history to browse all 23 imported TCDS snapshots.
+Search `PA-28-181` → select the Piper PA-28 result → view the selected model's relationships → select a reference → read its evidence and view the cited original PDF. Switch to related records for current-first AD/STC discovery or revision history for all 23 imported TCDS snapshots and comparison.
 
 | Area | What the user gets |
 | --- | --- |
@@ -12,20 +12,23 @@ Search `PA-28-181` → select the Piper PA-28 result → view the selected model
 | Certificate overview | Holder, source status, revision/date, number of covered models, FAA source link |
 | Model selector | Chooses the model within a certificate; does not treat every PA-28 variant as interchangeable |
 | Relationships | Model-centered graph and an equivalent list; selecting a connection opens the evidence panel |
-| Evidence | Exact certificate revision and page, source excerpt, amendment/effective date or scope, FAA source link |
+| Evidence | Exact source snapshot and page, excerpt, amendment/effective date or scope, official link, archived PDF viewer |
 | Imported history | Current revision identified by the database pointer, issuance and first-retrieval dates, archival status, every imported source link |
-| Coverage | Reviewed models and pending AD/STC/noise/optional-equipment coverage stated explicitly |
+| Related records | AD/STC type, text filter, current-first results, optional history, reviewed-source badges, extracted AD text |
+| Regulation originals | Historical CAR scans and 2016 CFR text labeled by edition and completeness |
+| Comparison | Two archived revision selections, issuance metadata and PDF byte identity; both originals available |
+| Coverage | Reviewed connections distinguished from index candidates; missing amendments, equipment and applicability stated explicitly |
 | Browser notes | Existing personal links and prototype history remain labeled as local records |
 
 Desktop keeps evidence beside the diagram so a user can inspect connections without scrolling to the end. Mobile defaults to the list; the graph remains selectable and scrolls within its own container. Native buttons, source links, and the model selector support keyboard navigation.
 
 ## Current relationship coverage
 
-Fifteen reviewed connections cover PA-28-140 and PA-28-181: each model links to TCDS 2A13 and its selected CAR 3/FAR Part 23 certification-basis references. Evidence comes from pages 1, 35 and 36 of revision 66. The review function requires the exact SHA-256 of the inspected PDF; it cannot publish against an arbitrary source revision.
+Nineteen reviewed connections cover PA-28-140 and PA-28-181: 15 model-to-TCDS/basis references plus a conditional AD connection, two STC scope connections and an AD-to-service-bulletin path. TCDS evidence comes from pages 1, 35 and 36 of revision 66. Review functions require the exact SHA-256 of inspected PDFs; they cannot publish against arbitrary source originals.
 
-The graph distinguishes `covered_by` from `certified_against`. CAR 3 baseline identity is shared, while model-specific amendment scope stays on each relationship. Individual FAR sections include the cited amendment in their identity. Optional-equipment, serial-specific noise, AD and STC connections are not yet asserted. Other PA-28 models show explicit unreviewed coverage.
+The graph distinguishes `covered_by`, `certified_against`, `applies_to`, `approved_for` and `references`, with directed arrows and a matching list. CAR 3 baseline identity is shared, while model-specific amendment scope stays on each relationship. Individual FAR sections include the cited amendment in their identity. Selecting AD 2020-24-05 for PA-28-140 shows conditional serial scope and lets the user expand to the referenced Piper SB 1304A. Approved STC scope does not assert installation. Optional-equipment and serial-specific noise connections remain pending. Other PA-28 models show explicit unreviewed coverage.
 
-A new current TCDS snapshot hides the previous snapshot's graph connections until the evidence is reviewed again. The underlying historical relationships remain stored. Full historical regulation text has not been imported; displayed references are supported by the TCDS, and are not represented as today's eCFR wording.
+A new current TCDS snapshot hides the previous snapshot's graph connections until the evidence is reviewed again. A changed or inactive AD/STC index observation likewise hides the old reviewed current paths. Historical relationships remain stored. CAR baseline and amendment 3-7 originals are available, but do not form the complete cited basis. Seven 2016 CFR sections are labeled as later reference text, distinct from the TCDS's amendment wording and today's regulations.
 
 ## Dates and changes
 
@@ -35,9 +38,9 @@ A revised document is not automatically an applicable change for every aircraft.
 
 ## Next data and interface layers
 
-1. Add related AD and STC discovery, retaining candidate matches until applicability/approval evidence is reviewed. Include serial ranges and installed equipment where specified.
-2. Retrieve amendment-specific regulatory text and historical CAR material. Keep current eCFR text as a separately dated reference.
-3. Expand graph traversal to reviewed AD/STC/product connections, with relation-type filters and historical evidence views.
-4. Add source-page viewing and revision comparison, then configuration-aware watchlists and alerts.
+1. Build aircraft configuration profiles first, as selected by the user: model, serial number, installed modifications and explicit unknown details.
+2. Extend source review to relevant ADs/STCs, AMLs and exact historical amendment wording.
+3. Add more graph paths, relationship-type filters and historical relationship exploration.
+4. Add actual source-content change summaries and configuration-aware watchlists before scheduled alerts. PDF fingerprint differences alone do not describe changed wording.
 
-Verified on October 13, 2026: 53 frontend tests, eight worker tests, PostgreSQL importer/explorer checks, lint, types, production build, and hosted desktop/mobile browser smoke checks passed. Live review published 15 connections in both local and hosted Supabase. The browser checks cover model search, page-specific citations, all 23 imported revisions, unreviewed-model coverage, personal-link preservation, mobile layout, and catalog outage fallback.
+Verified on October 13, 2026: 53 frontend tests, 17 worker tests, PostgreSQL importer/dependency/access checks, lint, types and production build passed. Local and hosted Supabase expose 19 reviewed connections. The browser smoke flow covers model search, dated reference labels, AD-to-bulletin traversal, cited PDF viewing, current/history discovery, archived revision comparison, unreviewed-model coverage, personal-link preservation, mobile layout and outage fallback. See [related-source validation](related-sources.md) for source counts and remaining coverage.

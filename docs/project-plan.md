@@ -12,7 +12,7 @@ The published product will support source-linked search, aircraft profiles, regu
 
 The user chose to keep the website unpublished until live imports and the relationship graph are ready. Cloudflare account and build settings are prepared, but the three-sample prototype should not be deployed publicly. Review imported coverage and a working model-to-regulation graph before returning to the publishing decision.
 
-The GitHub foundation is pushed and its automated quality checks passed. Hosted Supabase is initialized. First and repeated live imports of PA-28 TCDS `2A13` passed: 23 revisions with privately archived PDFs and metadata. Related AD/STC/regulation ingestion, scheduling, and graph evidence remain subsequent work. See [the PA-28 validation record](pa28-ingestion.md).
+The GitHub foundation is pushed and its automated quality checks passed. Hosted Supabase is initialized. PA-28 ingestion includes 23 TCDS revisions, scoped AD/STC discovery, CAR originals and dated GovInfo reference text. Nineteen reviewed connections support model-centered exploration and one AD-to-service-bulletin path. Scheduling and broader applicability review remain pending. See [the PA-28 validation record](pa28-ingestion.md) and [related sources](related-sources.md).
 
 ## Execution steps
 
@@ -41,7 +41,11 @@ Authenticated FAA DRS access passed sample metadata, PDF-download, and paginatio
 
 Proposed polling: daily for TCDSs, STCs, and eCFR metadata; every four hours for AD and Federal Register discovery where supported; weekly reconciliation. Validate source limits and source update cadence before enabling unattended jobs. Store checkpoints only after complete successful batches and overlap incremental windows to accommodate corrections and delayed records.
 
-Outstanding checks include positive-result last-modified filtering, filtered model retrieval, additional attachments, repeated polling, full-catalog coverage, and historical CAR/amendment text. Manufacturer manuals and referenced service material may need separate access/licensing.
+Scoped positive-result last-modified filtering and model retrieval have passed. STCs include undated legacy records, so full reconciliation is required even when using incremental filtering. Outstanding work includes additional attachments, unattended polling, broader model coverage and exact historical amendment text. Manufacturer manuals and referenced service material may need separate access/licensing.
+
+## Next selected phase
+
+The user selected aircraft configuration profiles before automatic change tracking. Start with model, serial number, installed STCs/modifications, and explicit unknown values. Keep approval scope distinct from installation evidence. Use these details to refine candidate relevance; do not infer compliance from a model match. Ask about profile storage and the first supported configuration checks before implementing this phase.
 
 ## Decisions to ask the user
 

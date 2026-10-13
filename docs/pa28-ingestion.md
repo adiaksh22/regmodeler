@@ -1,6 +1,6 @@
 # First live import: Piper PA-28
 
-Selected scope: FAA TCDS `2A13`, including the current and historical revisions returned by the authenticated API. This is the first part of step 3; AD/STC discovery, eCFR/CAR references, attachment downloads, scheduling, and the relationship graph remain subsequent work. The website stays unpublished.
+Selected scope: FAA TCDS `2A13`, including the current and historical revisions returned by the authenticated API. Related AD/STC discovery, CAR originals, dated CFR reference text, and selected graph connections are now implemented; see [related-source validation](related-sources.md). Additional attachments and scheduling remain pending. The website stays unpublished.
 
 ## Source contract
 
@@ -54,4 +54,4 @@ Verified October 13, 2026:
 
 `retrieved_at` preserves the first observation of an unchanged snapshot. Use the checkpoint's successful run for last-check freshness; repeated polling does not rewrite historical retrieval dates.
 
-Primary PDFs and raw metadata are archived. Additional attachments, related AD/STC discovery, regulatory text ingestion, and graph evidence remain subsequent work. No unattended schedule or public website deployment has been enabled. Hosted server credentials were used only in memory and were not saved in frontend configuration or committed.
+Primary PDFs and raw metadata are archived. Additional attachments and complete amendment-specific text remain pending. No unattended schedule or public website deployment has been enabled. Hosted server credentials were used only in memory and were not saved in frontend configuration or committed. Anonymous direct bucket downloads remain denied; the new source viewer provides short-lived access only to published FAA PDF snapshots.

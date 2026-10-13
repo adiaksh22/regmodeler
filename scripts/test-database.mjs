@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
+import { relatedSnapshot } from '../apps/worker/src/related.mjs';
 
 // Real embedded PostgreSQL exercises the application schema without Docker.
 // These stubs represent Supabase-owned infrastructure, not application tables.
@@ -117,6 +118,62 @@ try {
   await query('update public.documents set current_version_id=$1 where document_number=\'2A13\'',[ (await query("select id from public.document_versions where content_sha256=$1",['c'.repeat(64)])).rows[0].id ]);
   assert.equal((await query('select * from public.tcds_relationships')).rows.length,0,'Relationships must not silently carry over to an unreviewed new revision');
   console.log('Explorer checks passed: published history, model-specific citations, reviewed-source hash guard, repeat review, public freshness, private review, and new-revision coverage boundary.');
+  const relatedRun='60000000-0000-4000-8000-000000000001';
+  const sourceRecord={'drs:documentNumber':'SA_TEST','drs:title':'Test approval','drs:status':'Current','drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-181'],documentGuid:'RELATEDTEST',documentURL:'https://drs.faa.gov/browse/excelExternalWindow/RELATEDTEST.0001',docLastModifiedDate:'2025-12-01T00:00:00Z'};
+  const relatedRow=relatedSnapshot('STC',sourceRecord,'2026-10-13T00:00:00Z').row;
+  const relatedStart=id=>query("insert into public.ingestion_runs(id,source,status) values($1,'FAA:STC:PA28','running')",[id]);
+  const relatedCommit=(id,rows)=>query("select public.commit_pa28_related($1,'STC',$2::jsonb)",[id,JSON.stringify(rows)]);
+  await relatedStart(relatedRun);await relatedCommit(relatedRun,[relatedRow]);
+  await asRole('anon',null,async()=>{
+    const found=(await query("select * from public.related_documents where model='PA-28-181' and is_active and status='current'")).rows;
+    assert.equal(found.length,1);assert.equal(found[0].original_archived,false);assert.match(found[0].candidate_reason,/not verified/);
+  });
+  await assert.rejects(asRole('anon',null,()=>relatedCommit(relatedRun,[relatedRow])),/permission denied/);
+  const second='60000000-0000-4000-8000-000000000002';await relatedStart(second);
+  const correctedRelated=relatedSnapshot('STC',{...sourceRecord,'drs:title':'Corrected approval'},'2026-10-13T01:00:00Z').row;
+  await relatedCommit(second,[correctedRelated]);
+  assert.equal((await query('select * from public.related_documents where is_active')).rows.length,1);
+  assert.equal((await query('select * from public.related_documents where not is_active')).rows.length,1,'Prior registry observations remain available');
+  const third='60000000-0000-4000-8000-000000000003';await relatedStart(third);await relatedCommit(third,[correctedRelated]);
+  assert.equal((await query('select * from public.related_documents')).rows.length,2,'Repeat discovery does not duplicate metadata');
+  const badRun='60000000-0000-4000-8000-000000000004';await relatedStart(badRun);
+  await assert.rejects(relatedCommit(badRun,[{...correctedRelated,models:['UNKNOWN']}]),/check constraint/);
+  assert.equal((await query('select * from public.related_documents where is_active')).rows.length,1,'A failed batch cannot deactivate the previous index');
+  assert.equal((await query("select last_successful_run_id from public.ingestion_checkpoints where source='FAA:STC:PA28'")).rows[0].last_successful_run_id,third);
+  const reference={section:'23.955',title:'Fuel flow.',body_text:'Reference fixture.',source_kind:'later_reference',edition_date:'2016-01-01',basis_key:'FAR:23.955:amendment:23-7',source_url:'https://www.govinfo.gov/content/pkg/CFR-2016-title14-vol1/xml/CFR-2016-title14-vol1-part23.xml',content_sha256:'e'.repeat(64),storage_path:'US/CFR/2016/fixture.xml',retrieved_at:'2026-10-13T00:00:00Z'};
+  await query('select public.commit_reference_texts($1::jsonb)',[JSON.stringify([reference])]);
+  await assert.rejects(query('select public.commit_reference_texts($1::jsonb)',[JSON.stringify([{...reference,source_kind:'exact_historical'}])]),/Invalid reference source/);
+  await asRole('anon',null,async()=>assert.equal((await query('select source_kind from public.regulation_sources')).rows[0].source_kind,'later_reference'));
+  const reviewRecords=[
+    ['STC','SA2230CE','REVIEWSTC','42968de3068a3da4cf72896c64d1ae06db594feb7889855d4c43d9fe71371463'],
+    ['AD','2020-24-05','REVIEWAD','56bcc802e7a5a992be7a62c9fa84c9c31cf6cbeccbf0ef93584a73ab9c64652d'],
+  ];
+  const reviewIds=[];
+  for(const [type,number,guid,hash] of reviewRecords){
+    const record={...sourceRecord,'drs:documentNumber':number,documentGuid:guid,documentURL:`https://drs.faa.gov/browse/excelExternalWindow/${guid}.0001`,'drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-140','2A13 -- Piper -- PA-28-181'],'drs:adfrawdModel':['PA-28-140']};
+    const row=relatedSnapshot(type,record,'2026-10-13T02:00:00Z').row;
+    const run=(await query('insert into public.ingestion_runs(source,status) values($1,\'running\') returning id',[`FAA:${type==='AD'?'ADFRAWD':type}:PA28`])).rows[0].id;
+    await query('select public.commit_pa28_related($1,$2,$3::jsonb)',[run,type,JSON.stringify([row])]);
+    const version=(await query('select id from public.document_versions where source_version_id=$1',[row.source_version_id])).rows[0].id;reviewIds.push(version);
+    await assert.rejects(asRole('anon',null,()=>query('select public.attach_source_original($1,$2,$3,$4::jsonb)',[version,hash,`FAA/${type}/reviewed/${hash}.pdf`,'{}'])),/permission denied/);
+    await query('select public.attach_source_original($1,$2,$3,$4::jsonb)',[version,hash,`FAA/${type}/reviewed/${hash}.pdf`,'{}']);
+    await assert.rejects(query('select public.attach_source_original($1,$2,$3,$4::jsonb)',[version,'f'.repeat(64),`FAA/${type}/reviewed/${'f'.repeat(64)}.pdf`,'{}']),/immutable/i);
+  }
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_related_graph()')),/permission denied/);
+  assert.equal((await query('select public.review_pa28_related_graph() as n')).rows[0].n,4);
+  const connectionCount=(await query('select count(*)::integer n from public.relationships')).rows[0].n;
+  await query('select public.review_pa28_related_graph()');
+  assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,connectionCount);
+  const publicGraph=()=>asRole('anon',null,()=>query("select * from public.model_graph where source_document_type in('AD','STC')"));
+  assert.equal((await publicGraph()).rows.length,4);
+  assert.equal((await publicGraph()).rows.filter(r=>r.path_via).length,1);
+  await query('update public.document_versions set is_published=false where id=$1',[reviewIds[1]]);
+  assert.equal((await publicGraph()).rows.length,2,'Unpublished AD evidence hides both its model edge and service-bulletin path');
+  await query('update public.document_versions set is_published=true where id=$1',[reviewIds[1]]);
+  await query('update public.related_document_matches set is_active=false where version_id=$1',[reviewIds[1]]);
+  assert.equal((await publicGraph()).rows.length,2,'A changed discovery observation cannot retain a current reviewed path without renewed review');
+  console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
+  console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');
   console.log('Importer transaction checks passed: private RPC, stable evidence IDs, deduplication, correction history, rollback, checkpoint integrity, stale-run rejection.');
   console.log('Database checks passed: migrations, idempotent seed, search, publication/review RLS, importer isolation, current-version integrity, private watchlists, private source bucket.');
 } finally { await db.close(); }

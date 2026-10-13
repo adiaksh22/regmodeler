@@ -37,6 +37,13 @@ export function drsClient(key, { request = fetch, sleep = delay } = {}) {
     }
   }
   return {
+    async metadata(type, filters, offset = 0, since) {
+      if (!['ADFRAWD','STC','CAR'].includes(type)) throw new ImportError('UNSUPPORTED_DOCUMENT_TYPE');
+      const bytes = await read(`/api/drs/data-pull/${type}/filtered`, {
+        offset, sortOrder: 'ASC', ...(since ? { docLastModifiedDate: since } : {}), documentFilters: filters,
+      }, 20_000_000);
+      try { return JSON.parse(bytes.toString('utf8')); } catch { throw new ImportError('INVALID_METADATA_JSON'); }
+    },
     async page(offset = 0, since) {
       const bytes = await read('/api/drs/data-pull/TCDSMODEL/filtered', {
         offset, sortOrder: 'ASC', ...(since ? { docLastModifiedDate: since } : {}),

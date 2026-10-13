@@ -413,3 +413,8 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+[functions.source-viewer]
+# Public FAA snapshots only; the handler checks publication and PDF identity.
+# Modern publishable keys are sent in apikey, not treated as user JWTs.
+verify_jwt = false

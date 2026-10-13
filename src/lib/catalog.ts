@@ -42,10 +42,11 @@ export async function loadExplorerDetails(number: string): Promise<ExplorerDetai
   try {
     const [versions, relationships, checked] = await Promise.all([
       client.from('tcds_versions').select('*').eq('tcds_number',number.toUpperCase()).order('revision_date',{ascending:false}).order('retrieved_at',{ascending:false}),
-      client.from('tcds_relationships').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
+      client.from('model_graph').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
       client.rpc('catalog_last_checked',{p_number:number.toUpperCase()}),
     ]);
     if (versions.error || relationships.error || checked.error) throw new Error('Unavailable');
-    return { revisions: versions.data ?? [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true };
+    const materials=await client.from('regulation_sources').select('*');
+    return { revisions: versions.data ?? [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true,sourceMaterials:materials.error?[]:materials.data??[] };
   } catch { return { ...empty, notice: 'Imported history and relationships are temporarily unavailable. Reload to try again.' }; }
 }

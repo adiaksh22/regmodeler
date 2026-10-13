@@ -2,7 +2,7 @@
 
 Aircraft regulatory exploration for owners and maintenance professionals. The first release focuses on FAA general aviation data; the planned data model will support commercial aircraft, other product categories, and additional authorities.
 
-The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 15 reviewed certification-basis relationships for PA-28-140 and PA-28-181, with a graph/list and page-specific FAA evidence. AD/STC/optional-equipment coverage and full historical regulation text remain pending. Automatic imports are not enabled yet. Personal cross-references and browser-recorded prototype history remain local.
+The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 19 reviewed relationships for PA-28-140 and PA-28-181. Related AD/STC records show current FAA status first with an optional history filter. The graph supports source traversal, cited-page PDF viewing, historical CAR originals, and separately labeled 2016 CFR reference text. Archived revisions can be compared by metadata and PDF fingerprints. Full historical amendment wording, equipment coverage, and individual-aircraft applicability remain incomplete. Automatic imports are not enabled yet. Personal cross-references and browser-recorded prototype history remain local.
 
 ## Local development
 
@@ -39,6 +39,10 @@ This runs linting, frontend tests, embedded PostgreSQL schema/access tests, type
 | `npm run worker:check` | Check server-only importer connectivity |
 | `npm run import:verify` | Verify live PA-28 TCDS metadata and incremental filtering |
 | `npm run import:tcds` | Archive and import PA-28 TCDS revisions to the configured database |
+| `npm run import:related:verify` | Verify scoped AD/STC/CAR pagination and incremental filtering |
+| `npm run import:related` | Archive scoped FAA metadata and reconcile model matches |
+| `npm run import:reference` | Import seven dated 2016 GovInfo Part 23 reference sections |
+| `npm run review:pa28` | Archive the exact reviewed originals and publish their guarded connections |
 | `npm run worker:test` | Test the importer offline |
 
 ## Workspace layout
@@ -52,8 +56,8 @@ src/                 Active frontend and unit/integration tests
   utils/             Browser-local prototype storage and revisions
 docs/                Project plan, foundation decisions, storage documentation
 supabase/            Database migrations, private storage setup, local seed
-apps/worker/         Server-only worker connection check
-.github/workflows/   Quality checks and manual worker connection check
+apps/worker/         Server-only FAA/GovInfo import and source-review jobs
+.github/workflows/   Quality checks and manual import/connection jobs
 data-feasibility/    Reproducible data-access probes and local evidence
 research/legacy/     Archived experiments, obsolete UI, and original datasets
 public/              Public frontend assets (no credentials or raw research data)
@@ -83,8 +87,10 @@ finally {
 
 ## Next steps
 
-See [the free-stack setup guide](docs/free-stack-setup.md), [the implementation plan](docs/project-plan.md), [foundation decisions](docs/foundation.md), and [the data feasibility report](data-feasibility/REPORT.txt). The hosted Supabase schema is initialized and PA-28 TCDS live ingestion is validated; related AD/STC/regulation ingestion remains step 3 work. Production configuration is saved locally in ignored `.env.production.local`; development still uses the local stack. The website has not been deployed. Student-pack approval is not required to use the normal free accounts.
+See [the free-stack setup guide](docs/free-stack-setup.md), [the implementation plan](docs/project-plan.md), [foundation decisions](docs/foundation.md), and [the data feasibility report](data-feasibility/REPORT.txt). Local and hosted Supabase contain the reviewed PA-28 sources. Production configuration is saved locally in ignored `.env.production.local`; development still uses the local stack. The website has not been deployed. Student-pack approval is not required to use the normal free accounts.
 
 Piper PA-28 is the first supported live TCDS import. See [PA-28 ingestion](docs/pa28-ingestion.md) for its source contract, archival behavior, configuration, and validation results. Publication waits until live imports and the relationship graph are ready.
 
 See [data presentation](docs/data-presentation.md) for the implemented navigation, evidence and date semantics, coverage, and next source connections. Try searching `PA-28-181` locally, open its result, and select a graph connection or the imported revision history tab.
+
+See [related-source validation](docs/related-sources.md) for the AD/STC/CAR source contracts, reviewed-original identities, and source-viewer setup. The next selected phase is aircraft configuration profiles before automatic change tracking.

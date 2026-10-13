@@ -1,5 +1,5 @@
-import type { OfficialRevision, EvidenceRelationship } from '../domain/explorer';
-// Initial Data API contract. Regenerate from Supabase after schema changes.
+import type { OfficialRevision, EvidenceRelationship, RelatedDocument, RegulationSource } from '../domain/explorer';
+// Public read contract. Keep view columns and RPC signatures in sync with migrations.
 export type TCDSCatalogRow = {
   id: string;
   authority: string;
@@ -16,15 +16,19 @@ export type TCDSCatalogRow = {
 
 export interface Database {
   public: {
-    Tables: Record<string, never>;
+    Tables: Record<never, never>;
     Views: {
       tcds_catalog: { Row: TCDSCatalogRow; Relationships: [] };
       tcds_versions: { Row: OfficialRevision; Relationships: [] };
       tcds_relationships: { Row: EvidenceRelationship; Relationships: [] };
+      model_graph: { Row: EvidenceRelationship; Relationships: [] };
+      related_documents: { Row: RelatedDocument & {regulatory_text: string | null}; Relationships: [] };
+      regulation_sources: { Row: RegulationSource; Relationships: [] };
     };
     Functions: {
       search_tcds: { Args: { search_query?: string; result_limit?: number }; Returns: TCDSCatalogRow[] };
       catalog_last_checked: { Args: { p_number: string }; Returns: string | null };
+      related_last_checked: { Args: { p_model: string }; Returns: {document_type:string;last_checked:string}[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
