@@ -21,7 +21,10 @@
     "db:env": "node scripts/local-env.mjs",
     "api:test": "node --env-file=.env.local scripts/test-api.mjs",
     "worker:check": "node --env-file-if-exists=.env.local apps/worker/src/index.mjs",
-    "check": "npm run lint && npm test && npm run db:test && npm run build"
+    "worker:test": "node --test apps/worker/test/*.test.mjs",
+    "import:verify": "node --env-file-if-exists=.env.local apps/worker/src/import-tcds.mjs --verify-only",
+    "import:tcds": "node --env-file-if-exists=.env.local apps/worker/src/import-tcds.mjs",
+    "check": "npm run lint && npm test && npm run worker:test && npm run db:test && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

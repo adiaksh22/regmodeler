@@ -37,6 +37,9 @@ This runs linting, frontend tests, embedded PostgreSQL schema/access tests, type
 | `npm run db:test` | Test schema and access policies without Docker |
 | `npm run api:test` | Test local HTTP/Auth/Storage behavior with Docker |
 | `npm run worker:check` | Check server-only importer connectivity |
+| `npm run import:verify` | Verify live PA-28 TCDS metadata and incremental filtering |
+| `npm run import:tcds` | Archive and import PA-28 TCDS revisions to the configured database |
+| `npm run worker:test` | Test the importer offline |
 
 ## Workspace layout
 
@@ -81,3 +84,5 @@ finally {
 ## Next steps
 
 See [the free-stack setup guide](docs/free-stack-setup.md), [the implementation plan](docs/project-plan.md), [foundation decisions](docs/foundation.md), and [the data feasibility report](data-feasibility/REPORT.txt). The hosted Supabase schema and three verified sample records are initialized; live ingestion is step 3. Production configuration is saved locally in ignored `.env.production.local`; development still uses the local stack. The website has not been deployed. Student-pack approval is not required to use the normal free accounts.
+
+Piper PA-28 is selected for the first live import. See [PA-28 ingestion](docs/pa28-ingestion.md) for its source contract, archival behavior, configuration, and validation commands. Publication waits until live imports and the relationship graph are ready.

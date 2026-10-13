@@ -1,0 +1,34 @@
+name: PA-28 TCDS import
+on:
+  workflow_dispatch:
+    inputs:
+      verify_only:
+        description: Verify FAA metadata only, without writing to Supabase
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: pa28-tcds-import
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FAA_DRS_API_KEY: ${{ secrets.FAA_DRS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Verify source contract
+        if: inputs.verify_only
+        run: npm run import:verify
+      - name: Archive and import revisions
+        if: ${{ !inputs.verify_only }}
+        run: npm run import:tcds

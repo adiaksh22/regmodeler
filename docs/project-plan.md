@@ -4,6 +4,8 @@
 
 Primary users: aircraft owners and maintenance professionals. Initial coverage: FAA general aviation, starting with a small reviewed catalog of aircraft families. Commercial airplanes, other aircraft categories, engines, propellers, appliances, and additional authorities must fit the future domain model without replacing its fundamentals.
 
+First selected aircraft family: Piper PA-28. Begin live ingestion with FAA TCDS `2A13`, then add related AD/STC discovery and the model-specific certification-basis evidence needed for the graph.
+
 The published product will support source-linked search, aircraft profiles, regulatory relationship exploration, revision comparisons, and aircraft/configuration watchlists. It will distinguish certification-basis amendments from current regulations and distinguish potential relevance from confirmed applicability.
 
 ## Publication decision

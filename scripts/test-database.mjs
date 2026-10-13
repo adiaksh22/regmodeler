@@ -71,5 +71,36 @@ try {
   });
   await assert.rejects(asRole('authenticated',userB,() => query('insert into public.watchlists(user_id,entity_id) values($1,$2)',[userA,entity])), /row-level security/);
   assert.equal((await query("select public from storage.buckets where id='regulatory-sources'")).rows[0].public,false);
+  const importRecord = {
+    source_version_id:'DRSDOCID125895332520251113164724.0001',revision_label:'66',revision_date:'2025-10-10',status:'current',
+    source_url:'https://drs.faa.gov/browse/excelExternalWindow/DRSDOCID125895332520251113164724.0001',
+    retrieved_at:'2026-10-13T00:00:00Z',content_sha256:'a'.repeat(64),storage_path:`FAA/TCDS/2A13/${'a'.repeat(64)}.pdf`,
+    metadata:{model:'PA-28-140',snapshot_sha256:'b'.repeat(64),source_modified_at:'2025-12-15T18:03:54.151Z'},
+  };
+  const startRun = async (id,started) => query("insert into public.ingestion_runs(id,source,status,started_at) values($1,'FAA:TCDSMODEL:2A13','running',$2)",[id,started]);
+  const commit = (id,records) => query('select public.commit_pa28_tcds($1,$2::jsonb)',[id,JSON.stringify(records)]);
+  const run1='50000000-0000-4000-8000-000000000001';
+  const run2='50000000-0000-4000-8000-000000000002';
+  const run3='50000000-0000-4000-8000-000000000003';
+  await startRun(run1,'2026-10-13T00:00:00Z');
+  await assert.rejects(asRole('anon',null,()=>commit(run1,[importRecord])),/permission denied/);
+  await commit(run1,[importRecord]);
+  assert.equal((await query("select content_sha256 from public.document_versions where id='20000000-0000-4000-8000-000000000001'")).rows[0].content_sha256,'a'.repeat(64),'Initial import enriches the seed without replacing evidence IDs');
+  const versionCount = (await query('select count(*)::integer n from public.document_versions')).rows[0].n;
+  await startRun(run2,'2026-10-13T01:00:00Z');
+  await commit(run2,[importRecord]);
+  assert.equal((await query('select count(*)::integer n from public.document_versions')).rows[0].n,versionCount,'Repeated imports do not duplicate snapshots');
+  await startRun(run3,'2026-10-13T02:00:00Z');
+  const corrected={...importRecord,content_sha256:'c'.repeat(64),storage_path:`FAA/TCDS/2A13/${'c'.repeat(64)}.pdf`,metadata:{...importRecord.metadata,snapshot_sha256:'d'.repeat(64)}};
+  await assert.rejects(commit(run3,[corrected,{...importRecord,status:'invalid'}]),/check constraint/);
+  assert.equal((await query('select count(*)::integer n from public.document_versions')).rows[0].n,versionCount,'Failed batch rolls back all snapshots');
+  assert.equal((await query("select last_successful_run_id from public.ingestion_checkpoints where source='FAA:TCDSMODEL:2A13'")).rows[0].last_successful_run_id,run2,'Failed batch cannot advance checkpoint');
+  await commit(run3,[corrected]);
+  assert.equal((await query('select count(*)::integer n from public.document_versions')).rows[0].n,versionCount+1);
+  assert.equal((await query("select content_sha256 from public.document_versions where id='20000000-0000-4000-8000-000000000001'")).rows[0].content_sha256,'a'.repeat(64),'A correction preserves previous original bytes');
+  const stale='50000000-0000-4000-8000-000000000004';
+  await startRun(stale,'2026-10-13T00:30:00Z');
+  await assert.rejects(commit(stale,[importRecord]),/Stale import run/);
+  console.log('Importer transaction checks passed: private RPC, stable evidence IDs, deduplication, correction history, rollback, checkpoint integrity, stale-run rejection.');
   console.log('Database checks passed: migrations, idempotent seed, search, publication/review RLS, importer isolation, current-version integrity, private watchlists, private source bucket.');
 } finally { await db.close(); }
