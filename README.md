@@ -1,1 +1,83 @@
-# regmodeler
+# RegModeler
+
+Aircraft regulatory exploration for owners and maintenance professionals. The first release focuses on FAA general aviation data; the planned data model will support commercial aircraft, other product categories, and additional authorities.
+
+The current app is a prototype with search, TCDS detail, and change-log pages. It can read the shared Supabase catalog or display three verified demo snapshots: Piper aircraft TCDS `2A13`, Continental engine TCDS `E7CE`, and MT-Propeller TCDS `P19NE`. Automatic imports are not enabled yet. Cross-references and recorded history remain local to the browser and do not establish applicability or compliance.
+
+## Local development
+
+Use Node.js 24 (see `.nvmrc`); the supported minimum is Node.js 22.12. Run commands from this project directory. On Windows, use `npm.cmd` if PowerShell blocks `npm.ps1`.
+
+```powershell
+Set-Location C:\Users\adiak\RegModeler
+npm.cmd ci
+npm.cmd run dev
+```
+
+Vite prints the local URL. Open it to browse the prototype.
+
+## Checks
+
+```powershell
+npm.cmd run check
+```
+
+This runs linting, frontend tests, embedded PostgreSQL schema/access tests, typechecking, and the production build. Individual commands are available:
+
+| Command | Purpose |
+| --- | --- |
+| `npm run typecheck` | Check application and build/test configuration types |
+| `npm run lint` | Lint active TypeScript and React code |
+| `npm test` | Run the tests once, without network access or FAA credentials |
+| `npm run test:watch` | Watch tests during development |
+| `npm run build` | Typecheck and build to `dist/` |
+| `npm run preview` | Serve an existing production build locally |
+| `npm run db:start` | Start local Supabase with Docker |
+| `npm run db:env` | Generate ignored local configuration without printing keys |
+| `npm run db:test` | Test schema and access policies without Docker |
+| `npm run api:test` | Test local HTTP/Auth/Storage behavior with Docker |
+| `npm run worker:check` | Check server-only importer connectivity |
+
+## Workspace layout
+
+```text
+src/                 Active frontend and unit/integration tests
+  data/              Small verified FAA sample snapshots
+  components/        Shared interface components
+  pages/             Search, TCDS detail, change log
+  types/             Prototype TypeScript contracts
+  utils/             Browser-local prototype storage and revisions
+docs/                Project plan, foundation decisions, storage documentation
+supabase/            Database migrations, private storage setup, local seed
+apps/worker/         Server-only worker connection check
+.github/workflows/   Quality checks and manual worker connection check
+data-feasibility/    Reproducible data-access probes and local evidence
+research/legacy/     Archived experiments, obsolete UI, and original datasets
+public/              Public frontend assets (no credentials or raw research data)
+```
+
+Archived research is not compiled, linted, served, or executed by the app. Evidence files and installed dependencies are ignored by Git. The supported FAA API probe remains at its original path so existing instructions still work.
+
+Local `main` tracks [adiaksh22/regmodeler](https://github.com/adiaksh22/regmodeler) and preserves the repository's initial README commit. For a record of the cleanup and validation, see [foundation decisions](docs/foundation.md).
+
+## FAA credentials
+
+The frontend does not need an FAA key. It accepts only `VITE_SUPABASE_URL` and a public `VITE_SUPABASE_PUBLISHABLE_KEY`; leave both blank for demo mode. Never put an FAA or Supabase server key in a `VITE_*` variable or a file under `src/` or `public/`. The build rejects privileged public configuration before generating a bundle.
+
+The feasibility probe reads `FAA_DRS_API_KEY` from its process environment. It does not print or save the key and does not load `.env` automatically. The worker reads server configuration from the process environment or ignored `.env.local`. `.env.example` documents the separate public and private variables.
+
+```powershell
+$drsKey = Read-Host "Paste your FAA DRS API key" -AsSecureString
+try {
+    $env:FAA_DRS_API_KEY = [System.Net.NetworkCredential]::new("", $drsKey).Password
+    node data-feasibility/api-key-probe.cjs
+}
+finally {
+    Remove-Item Env:FAA_DRS_API_KEY -ErrorAction SilentlyContinue
+    Remove-Variable drsKey -ErrorAction SilentlyContinue
+}
+```
+
+## Next steps
+
+See [the free-stack setup guide](docs/free-stack-setup.md), [the implementation plan](docs/project-plan.md), [foundation decisions](docs/foundation.md), and [the data feasibility report](data-feasibility/REPORT.txt). The hosted Supabase schema and three verified sample records are initialized; live ingestion is step 3. Production configuration is saved locally in ignored `.env.production.local`; development still uses the local stack. The website has not been deployed. Student-pack approval is not required to use the normal free accounts.

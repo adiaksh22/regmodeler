@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/node_modules": true,
+			"dist": true,
+			"data-feasibility/vendor": true
+		},
+		"search.exclude": {
+			"research/legacy": true,
+			"data-feasibility/evidence": true,
+			"data-feasibility/vendor": true,
+			"dist": true
+		}
+	}
+}

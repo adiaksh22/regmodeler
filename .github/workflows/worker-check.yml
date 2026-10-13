@@ -1,0 +1,25 @@
+name: Worker connection check
+on:
+  workflow_dispatch:
+# Enable scheduled imports in step 3 after pagination/checkpoint validation.
+# This workflow only checks connectivity; it never claims FAA freshness.
+permissions:
+  contents: read
+concurrency:
+  group: worker-connection-check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run worker:check

@@ -1,0 +1,35 @@
+[
+  {
+    "tcds_number": "2A13",
+    "revision": "66",
+    "revision_date": "10/10/2025",
+    "url": "https://drs.faa.gov/browse/excelExternalWindow/DRSDOCID125895332520251113164724.0001",
+    "model": "PA-28-140 | PA-28-150 | PA-28-151 | PA-28-160 | PA-28-161 | PA-28-180 | PA-28-181 | PA-28-201T | PA-28-235 | PA-28-236 | PA-28R-180 | PA-28R-200 | PA-28R-201 | PA-28R-201T | PA-28RT-201 | PA-28RT-201T | PA-28S-160 | PA-28S-180",
+    "status": "current",
+    "holder": "Piper Aircraft Inc.",
+    "product_type": "Aircraft",
+    "retrieved_at": "2026-10-13T01:25:27.516Z"
+  },
+  {
+    "tcds_number": "E7CE",
+    "revision": "21",
+    "revision_date": "02/23/2023",
+    "url": "https://drs.faa.gov/browse/excelExternalWindow/DRSDOCID148994589720230223190439.0001",
+    "model": "GTSIO-520-C | GTSIO-520-D | GTSIO-520-E | GTSIO-520-F | GTSIO-520-H | GTSIO-520-K | GTSIO-520-L | GTSIO-520-M | GTSIO-520-N | GTSIO-520-S",
+    "status": "current",
+    "holder": "Continental Aerospace Technologies, Inc.",
+    "product_type": "Engine",
+    "retrieved_at": "2026-10-13T01:25:31.252Z"
+  },
+  {
+    "tcds_number": "P19NE",
+    "revision": "8",
+    "revision_date": "07/08/2021",
+    "url": "https://drs.faa.gov/browse/excelExternalWindow/65F15764601662218625870C00615523.0001",
+    "model": "MTV-6-( )",
+    "status": "current",
+    "holder": "MT-Propeller Entwicklung GmbH",
+    "product_type": "Propeller",
+    "retrieved_at": "2026-10-13T01:25:34.427Z"
+  }
+]

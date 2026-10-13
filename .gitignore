@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.artifacts/
+.vitest/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+data-feasibility/vendor/
+data-feasibility/evidence/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,18 @@
+[
+  [
+    "ad-detail",
+    "https://www.federalregister.gov/api/v1/documents/2026-20722.json"
+  ],
+  [
+    "ad-pdf",
+    "https://www.govinfo.gov/content/pkg/FR-2026-10-09/pdf/2026-20722.pdf"
+  ],
+  [
+    "ecfr-part39-versions",
+    "https://www.ecfr.gov/api/versioner/v1/versions/title-14.json?part=39&issue_date%5Bgte%5D=2025-01-01"
+  ],
+  [
+    "ecfr-part23-historical",
+    "https://www.ecfr.gov/api/versioner/v1/full/2016-01-01/title-14.xml?part=23"
+  ]
+]

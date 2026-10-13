@@ -1,0 +1,26 @@
+{
+  "name": "faa-tcds-lookup",
+  "version": "1.0.0",
+  "description": "MCP client to lookup FAA TCDS document IDs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "api-lookup": "ts-node src/faa-api-lookup.ts",
+    "discover": "ts-node src/discover-api.ts",
+    "find-pdfs": "ts-node src/find-pdf-urls.ts",
+    "scrape": "ts-node src/simple-scraper.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "puppeteer": "^21.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0"
+  }
+}

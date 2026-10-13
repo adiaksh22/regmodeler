@@ -1,0 +1,110 @@
+RegModeler data feasibility review
+Checks performed October 12, 2026 (America/Los_Angeles).
+
+DECISION
+GO for a scoped MVP: authenticated FAA data access is now demonstrated in
+addition to the public-source checks below. The user ran api-key-probe.cjs with
+their key locally; the key was not provided in chat or saved by the probe.
+This establishes data-access feasibility, not complete coverage or long-term
+service reliability.
+
+AUTHENTICATED API RESULTS (October 12, 2026)
+All three document-type metadata requests and their sample file downloads
+returned HTTP 200.
+- TCDSMODEL: retrieved 1,500 distinct document records across two 750-record
+  pages. The API reported 8,101 total records in this document type.
+- STC: retrieved 1,500 distinct document records across two 750-record pages.
+  The API reported 83,407 total records in this document type.
+- ADFREAD (Emergency ADs): retrieved all 291 records reported by this response.
+The two-page TCDS and STC samples contain no duplicate documentGuid values within
+or across their pages. Totals are document records, not unique aircraft or
+unique certificates; historical entries may be included.
+The downloaded files have PDF signatures and parse successfully:
+- TCDS sample: 42 pages, 105,359 extracted text characters.
+- STC sample: 6 pages, 16,917 extracted text characters.
+- Emergency AD sample: 4 pages, 9,039 extracted text characters.
+Last-modified filtering returned HTTP 200 with zero records when queried after
+the newest retrieved timestamp. This is consistent with no newer records. A
+positive-result incremental query and repeated polling remain to be tested.
+Evidence: evidence/api-key-probe-results.json and evidence/api-*.json/bin/txt.
+
+VERIFIED LIVE RETRIEVAL
+1. Aircraft TCDS 2A13: revision 66, October 10, 2025, Piper Aircraft Inc.; 47-page
+   PDF, 470,576 bytes, 121,868 extracted text characters. Covers PA-28 variants.
+2. Engine TCDS E7CE: revision 21, February 23, 2023, Continental Aerospace
+   Technologies; 6-page PDF, 238,814 bytes. Covers GTSIO-520 variants.
+3. Propeller TCDS P19NE: revision 8, July 8, 2021, MT-Propeller; 7-page PDF,
+   112,126 bytes. Covers MTV-6-( ).
+4. Revision histories: 23 entries for 2A13, 5 for E7CE, 8 for P19NE.
+   These are available entries, not claims of complete historical coverage.
+5. Prior Piper revision 65 PDF downloaded (606,741 bytes). Comparing extracted
+   text with revision 66 identified changed pages 1, 39, 40, 41. Page 39 adds a
+   configuration-specific certification basis for optional System Release 7 or
+   later and Garmin GDL 60. Some changes on subsequent pages are text movement.
+6. Current 14 CFR Part 39 XML downloaded via eCFR (10,266 bytes).
+7. Full Title 14 XML downloaded from GovInfo (16,135,676 bytes).
+8. eCFR Part 23 version metadata returned 897 section-version records when
+   requested from 2017 onward. This is not 897 whole-Part revisions.
+9. Historical Part 23 from January 1, 2020 downloaded via eCFR. The tested
+   January 1, 2016 request returned 404. GovInfo annual 2016 Part 23 XML worked.
+10. Federal Register API returned FAA rules and individual document 2026-20722,
+    AD 2026-21-02. Retrieved its metadata, source text, and original PDF.
+
+GRAPH EVIDENCE
+Piper 2A13 pages 35-37 contain model-specific certification bases, including
+CAR 3 and particular FAR sections and amendments. E7CE page 4 contains CAR 13
+and FAR 33.8 references. P19NE page 4 references FAR 35 amendments 35-1 to 35-7.
+These support source-backed graph edges, but accurate extraction needs model,
+serial/configuration context and review. The FAA does not supply a ready-made
+complete aircraft applicability graph.
+
+DRS ACCESS FINDINGS
+Plain HTTP requests to public UI metadata endpoints returned 403. The normal
+guest browser flow returned 200 for document metadata, history, and complete
+PDF downloads. No sign-in, API key request, or identity submission was performed.
+Browser retrieval demonstrates availability; it is not the preferred production
+integration and does not establish continuous-service reliability.
+
+Downloaded the official 14-page DRS API Technical Design Document, version 6.0
+dated August 7, 2025, and the document-type metadata mapping workbook.
+Guide origin: https://drs.faa.gov/api/content/alf/672a7d0c-e369-4963-a2a5-63ed2772ac1d
+Key request: https://drs.faa.gov/drs-api
+Documentation: https://drs.faa.gov/help (DRS API section)
+
+DOCUMENTED SUPPORTED API
+GET https://drs.faa.gov/api/drs/data-pull/<doctypeName>
+GET https://drs.faa.gov/api/drs/data-pull/download/<id>
+GET https://drs.faa.gov/api/drs/data-pull/get-other-attachment-details/<id>
+POST https://drs.faa.gov/api/drs/data-pull/<doctypeName>/filtered
+Authentication: x-api-key header.
+Metadata retrieval supports offset pagination (up to 750 documents per call),
+docLastModifiedDate, and docLastModifiedDateSortOrder.
+Mapping workbook identifies TCDSMODEL for TCDSs, STC for supplemental type
+certificates, CAR for Civil Air Regulations, and ADFREAD for emergency ADs.
+The metadata response documents file download URLs and last-modified dates.
+
+FOLLOW-UP VALIDATION
+Authenticated metadata retrieval, PDF downloads, and pagination passed.
+Next verify positive-result incremental filtering, metadata filters for model
+matching, additional attachments, broader catalog coverage, and repeated polling.
+api-key-probe.cjs reads FAA_DRS_API_KEY from the process environment and never
+prints or saves the key. Do not commit credentials or paste them into chat.
+Run: node data-feasibility/api-key-probe.cjs
+Use a secure local environment or secret manager to supply the key.
+
+LIMITS
+These are point-in-time feasibility checks, not uptime or completeness guarantees.
+Authenticated DRS API calls succeeded for the samples described above.
+The full STC/TCDS catalogs have not been downloaded or audited.
+Exact historical CAR/amendment text referenced by the sampled TCDSs has not been
+fully retrieved. GovInfo annual editions alone do not reconstruct every amendment.
+OEM service bulletins, manuals, and installation data may not all be publicly
+available; do not promise their complete inclusion.
+Source terms, operational request limits, and production-host access still need
+verification before unattended public ingestion.
+
+ARTIFACTS
+evidence/ contains PDFs, XML/JSON responses, extracted text, hashes and receipts,
+the DRS technical guide, mapping workbook, and Piper revision diff.
+Feasibility scripts and dependencies are isolated in data-feasibility/.
+Application source and dependencies were not changed.

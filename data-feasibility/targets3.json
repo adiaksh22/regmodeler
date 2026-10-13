@@ -1,0 +1,18 @@
+[
+  [
+    "ad-text",
+    "https://www.federalregister.gov/documents/full_text/text/2026/10/09/2026-20722.txt"
+  ],
+  [
+    "ecfr-part23-versions-all",
+    "https://www.ecfr.gov/api/versioner/v1/versions/title-14.json?part=23&issue_date%5Bgte%5D=2017-01-01"
+  ],
+  [
+    "ecfr-part23-2020",
+    "https://www.ecfr.gov/api/versioner/v1/full/2020-01-01/title-14.xml?part=23"
+  ],
+  [
+    "govinfo-cfr2016-part23",
+    "https://www.govinfo.gov/content/pkg/CFR-2016-title14-vol1/xml/CFR-2016-title14-vol1-part23.xml"
+  ]
+]
