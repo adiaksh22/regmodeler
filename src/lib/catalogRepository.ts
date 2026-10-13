@@ -2,7 +2,7 @@ import { tcdsSamples } from '../data/tcdsSamples';
 import type { CatalogDocument, CatalogResult } from '../domain/catalog';
 
 export interface CatalogGateway {
-  list(): Promise<CatalogDocument[]>;
+  list(query?: string): Promise<CatalogDocument[]>;
   get(number: string): Promise<CatalogDocument | null>;
 }
 
@@ -11,10 +11,12 @@ const fallbackNotice = 'The online catalog is unavailable. Showing saved FAA dem
 
 export function createCatalogRepository(gateway: CatalogGateway | null = null) {
   return {
-    async list(): Promise<CatalogResult<CatalogDocument[]>> {
-      if (!gateway) return { data: samples, source: 'sample' };
-      try { return { data: await gateway.list(), source: 'database' }; }
-      catch { return { data: samples, source: 'fallback', notice: fallbackNotice }; }
+    async list(query = ''): Promise<CatalogResult<CatalogDocument[]>> {
+      const normalized=query.trim().toLowerCase();
+      const matching=samples.filter(doc=>[doc.tcds_number,doc.model,doc.holder??''].some(value=>value.toLowerCase().includes(normalized)));
+      if (!gateway) return { data: matching, source: 'sample' };
+      try { return { data: await gateway.list(query.trim()), source: 'database' }; }
+      catch { return { data: matching, source: 'fallback', notice: fallbackNotice }; }
     },
     async get(number: string): Promise<CatalogResult<CatalogDocument | null>> {
       const normalized = number.trim().toUpperCase();

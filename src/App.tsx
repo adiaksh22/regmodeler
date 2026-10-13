@@ -14,7 +14,7 @@ function App() {
           </div>
         </nav>
         <p className="container mx-auto px-4 mb-4 text-sm text-amber-900" role="note">
-          Prototype: FAA catalog browsing and local history. Automatic updates are not enabled yet.
+          Prototype: FAA catalog, imported revisions, and reviewed relationship evidence. Automatic updates are not enabled yet.
         </p>
 
         <Routes>

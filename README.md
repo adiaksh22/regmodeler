@@ -2,7 +2,7 @@
 
 Aircraft regulatory exploration for owners and maintenance professionals. The first release focuses on FAA general aviation data; the planned data model will support commercial aircraft, other product categories, and additional authorities.
 
-The current app is a prototype with search, TCDS detail, and change-log pages. It can read the shared Supabase catalog or display three verified demo snapshots: Piper aircraft TCDS `2A13`, Continental engine TCDS `E7CE`, and MT-Propeller TCDS `P19NE`. The live PA-28 importer has archived 23 TCDS revisions in Supabase; automatic imports are not enabled yet. The prototype's cross-references and displayed history remain local to the browser and do not establish applicability or compliance.
+The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 15 reviewed certification-basis relationships for PA-28-140 and PA-28-181, with a graph/list and page-specific FAA evidence. AD/STC/optional-equipment coverage and full historical regulation text remain pending. Automatic imports are not enabled yet. Personal cross-references and browser-recorded prototype history remain local.
 
 ## Local development
 
@@ -86,3 +86,5 @@ finally {
 See [the free-stack setup guide](docs/free-stack-setup.md), [the implementation plan](docs/project-plan.md), [foundation decisions](docs/foundation.md), and [the data feasibility report](data-feasibility/REPORT.txt). The hosted Supabase schema is initialized and PA-28 TCDS live ingestion is validated; related AD/STC/regulation ingestion remains step 3 work. Production configuration is saved locally in ignored `.env.production.local`; development still uses the local stack. The website has not been deployed. Student-pack approval is not required to use the normal free accounts.
 
 Piper PA-28 is the first supported live TCDS import. See [PA-28 ingestion](docs/pa28-ingestion.md) for its source contract, archival behavior, configuration, and validation results. Publication waits until live imports and the relationship graph are ready.
+
+See [data presentation](docs/data-presentation.md) for the implemented navigation, evidence and date semantics, coverage, and next source connections. Try searching `PA-28-181` locally, open its result, and select a graph connection or the imported revision history tab.

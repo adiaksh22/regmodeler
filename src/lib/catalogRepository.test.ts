@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { createCatalogRepository } from './catalogRepository';
 
 describe('catalog availability boundaries', () => {
+  it('searches model and holder and forwards the query to the shared catalog', async () => {
+    expect((await createCatalogRepository().list('pa-28-181')).data.map(d=>d.tcds_number)).toEqual(['2A13']);
+    expect((await createCatalogRepository().list('Continental')).data.map(d=>d.tcds_number)).toEqual(['E7CE']);
+    expect((await createCatalogRepository().list('not-a-model')).data).toEqual([]);
+    let query='';
+    await createCatalogRepository({list:async value=>{query=value??'';return [];},get:async()=>null}).list(' PA-28 ');
+    expect(query).toBe('PA-28');
+  });
   it('provides verified snapshots without cloud configuration', async () => {
     const result = await createCatalogRepository().get(' 2a13 ');
     expect(result.source).toBe('sample');

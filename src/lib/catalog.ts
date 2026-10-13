@@ -3,6 +3,7 @@ import { createCatalogRepository, type CatalogGateway } from './catalogRepositor
 import { readPublicConfig } from './publicConfig';
 import type { Database, TCDSCatalogRow } from './database.types';
 import type { CatalogDocument } from '../domain/catalog';
+import type { ExplorerDetails } from '../domain/explorer';
 
 const config = readPublicConfig(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 const toDocument = (row: TCDSCatalogRow): CatalogDocument => ({
@@ -16,8 +17,8 @@ function gateway(): CatalogGateway | null {
     global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) },
   });
   return {
-    async list() {
-      const { data, error } = await client.rpc('search_tcds', { search_query: '', result_limit: 20 });
+    async list(query = '') {
+      const { data, error } = await client.rpc('search_tcds', { search_query: query, result_limit: 20 });
       if (error) throw new Error('Catalog unavailable');
       return (data ?? []).map(toDocument);
     },
@@ -30,3 +31,21 @@ function gateway(): CatalogGateway | null {
 }
 
 export const catalog = createCatalogRepository(gateway());
+
+export async function loadExplorerDetails(number: string): Promise<ExplorerDetails> {
+  const empty = { revisions: [], relationships: [], lastChecked: null, available: false };
+  if (!config) return { ...empty, notice: 'Connect the shared catalog to load imported revisions and reviewed relationships.' };
+  const client = createClient<Database>(config.url, config.publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) },
+  });
+  try {
+    const [versions, relationships, checked] = await Promise.all([
+      client.from('tcds_versions').select('*').eq('tcds_number',number.toUpperCase()).order('revision_date',{ascending:false}).order('retrieved_at',{ascending:false}),
+      client.from('tcds_relationships').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
+      client.rpc('catalog_last_checked',{p_number:number.toUpperCase()}),
+    ]);
+    if (versions.error || relationships.error || checked.error) throw new Error('Unavailable');
+    return { revisions: versions.data ?? [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true };
+  } catch { return { ...empty, notice: 'Imported history and relationships are temporarily unavailable. Reload to try again.' }; }
+}

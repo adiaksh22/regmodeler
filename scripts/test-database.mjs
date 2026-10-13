@@ -101,6 +101,22 @@ try {
   const stale='50000000-0000-4000-8000-000000000004';
   await startRun(stale,'2026-10-13T00:30:00Z');
   await assert.rejects(commit(stale,[importRecord]),/Stale import run/);
+  await assert.rejects(query('select public.review_pa28_basis()'),/does not match/);
+  await query("update public.document_versions set is_published=true,content_sha256='284334b7de705d5549fb9484e57a264b4266d02d8ccc67981e08d5295057c1b1' where id='20000000-0000-4000-8000-000000000001'");
+  await query("update public.documents set current_version_id='20000000-0000-4000-8000-000000000001' where document_number='2A13'");
+  await query('select public.review_pa28_basis()');
+  const reviewedCount=(await query('select count(*)::integer n from public.relationships')).rows[0].n;
+  await query('select public.review_pa28_basis()');
+  assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,reviewedCount,'Reviewing evidence twice must not duplicate connections');
+  await asRole('anon',null,async()=>{
+    assert.equal((await query("select * from public.tcds_relationships where model='PA-28-181'")).rows.length,9);
+    assert.equal((await query("select public.catalog_last_checked('2A13') as checked")).rows[0].checked!==null,true);
+    assert.equal((await query("select public.catalog_last_checked('UNKNOWN') as checked")).rows[0].checked,null);
+  });
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_basis()')),/permission denied/);
+  await query('update public.documents set current_version_id=$1 where document_number=\'2A13\'',[ (await query("select id from public.document_versions where content_sha256=$1",['c'.repeat(64)])).rows[0].id ]);
+  assert.equal((await query('select * from public.tcds_relationships')).rows.length,0,'Relationships must not silently carry over to an unreviewed new revision');
+  console.log('Explorer checks passed: published history, model-specific citations, reviewed-source hash guard, repeat review, public freshness, private review, and new-revision coverage boundary.');
   console.log('Importer transaction checks passed: private RPC, stable evidence IDs, deduplication, correction history, rollback, checkpoint integrity, stale-run rejection.');
   console.log('Database checks passed: migrations, idempotent seed, search, publication/review RLS, importer isolation, current-version integrity, private watchlists, private source bucket.');
 } finally { await db.close(); }

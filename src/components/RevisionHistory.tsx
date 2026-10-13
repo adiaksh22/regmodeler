@@ -14,7 +14,7 @@ export default function RevisionHistory({ revisions }: { revisions: TCDSRevision
               <span className="font-semibold text-gray-900">Revision {rev.revision}</span>
               <span className="text-gray-500 text-sm ml-2">{new Date(rev.timestamp).toLocaleString()}</span>
             </div>
-            {idx === 0 && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Current</span>}
+            {idx === 0 && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Latest browser snapshot</span>}
           </div>
 
           <div className="text-sm text-gray-700 space-y-1">

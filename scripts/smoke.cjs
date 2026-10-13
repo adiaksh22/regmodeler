@@ -5,7 +5,10 @@ const path = require('node:path');
 const puppeteer = require('../research/legacy/mcp-client/node_modules/puppeteer');
 const out = path.join(__dirname, '../.artifacts/foundation');
 const requireDatabase = process.argv.includes('--database');
+const apiOrigin = process.env.VITE_SUPABASE_URL ?? 'http://127.0.0.1:54321';
 fs.mkdirSync(out, { recursive: true });
+let phase='home';
+const apiResponses=[];
 
 (async () => {
   const browser = await puppeteer.launch({ headless: 'new', executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
@@ -13,8 +16,9 @@ fs.mkdirSync(out, { recursive: true });
   const externalRequests = [];
   try {
     const page = await browser.newPage();
+    page.on('response',response=>{if(response.url().startsWith(apiOrigin+'/'))apiResponses.push({path:new URL(response.url()).pathname,status:response.status()});});
     page.on('pageerror', error => errors.push(error.message));
-    page.on('request', request => { if (/^https?:/.test(request.url()) && !['http://127.0.0.1:4173','http://127.0.0.1:54321'].includes(new URL(request.url()).origin)) externalRequests.push(request.url()); });
+    page.on('request', request => { if (/^https?:/.test(request.url()) && !['http://127.0.0.1:4173',apiOrigin].includes(new URL(request.url()).origin)) externalRequests.push(request.url()); });
     await page.setViewport({ width: 1280, height: 900 });
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle0' });
     await page.waitForFunction(() => document.querySelectorAll('a[href^="/tcds/"]').length === 3);
@@ -25,33 +29,61 @@ fs.mkdirSync(out, { recursive: true });
     assert.ok(fontSize >= 30, 'Tailwind typography must be present');
     await page.screenshot({ path: path.join(out, 'home.png'), fullPage: true });
 
-    await page.type('input[aria-label="TCDS number"]', ' 2a13 ');
+    phase='detail';
+    await page.type('input[aria-label="Aircraft model or TCDS number"]', ' 2a13 ');
     await page.click('button[type="submit"]');
     await page.waitForSelector('input[aria-label="TCDS number to link"]');
     assert.match(await page.$eval('h1', element => element.textContent), /2A13/);
     assert.match(await page.evaluate(() => document.body.innerText), /Piper Aircraft Inc\./);
+    if(requireDatabase) {
+      await page.waitForFunction(()=>document.body.innerText.includes('FAR 23.955'));
+      assert.equal(await page.$eval('#aircraft-model',element=>element.value),'PA-28-181');
+      await page.screenshot({path:path.join(out,'relationships.png'),fullPage:true});
+      await page.select('#aircraft-model','PA-28-140');
+      await page.waitForFunction(()=>document.body.innerText.includes('How PA-28-140 connects'));
+      await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('FAR 23.955')).click());
+      assert.match(await page.evaluate(()=>document.body.innerText),/page 35/);
+      await page.select('#aircraft-model','PA-28-161');
+      assert.match(await page.evaluate(()=>document.body.innerText),/No reviewed relationships/);
+      await page.click('#tab-history');
+      await page.waitForFunction(()=>document.body.innerText.includes('Show all 23 revisions'));
+      await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Show all 23 revisions').click());
+      assert.equal(await page.$$eval('ol li',items=>items.length),23);
+    }
+    phase='personal links';
     await page.evaluate(() => localStorage.setItem('tcds_documents', JSON.stringify([{ tcds_number: 'KEEP' }])));
     await page.type('input[aria-label="TCDS number to link"]', 'E7CE');
     await page.evaluate(() => [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Link').click());
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('tcds_cross_references') ?? '[]').length === 1);
-    await page.evaluate(() => [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Reload Snapshot').click());
+    await page.evaluate(() => [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Reload catalog').click());
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('tcds_documents'))[0].tcds_number), 'KEEP');
     assert.equal(await page.evaluate(() => localStorage.getItem('tcds_issues')), null, 'Personal links must not manufacture discrepancies');
 
+    phase='unknown and change log';
     await page.goto('http://127.0.0.1:4173/tcds/UNKNOWN', { waitUntil: 'networkidle0' });
     assert.match(await page.evaluate(() => document.body.innerText), /not included in this catalog/);
     await page.goto('http://127.0.0.1:4173/changelog', { waitUntil: 'networkidle0' });
     assert.match(await page.evaluate(() => document.body.innerText), /Local prototype records/);
+    phase='mobile';
     await page.setViewport({ width: 390, height: 844 });
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle0' });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'Home page must fit a mobile viewport');
     await page.screenshot({ path: path.join(out, 'home-mobile.png'), fullPage: true });
+    await page.type('input[aria-label="Aircraft model or TCDS number"]','PA-28-181');
+    await page.click('button[type="submit"]');
+    await page.waitForFunction(()=>document.querySelectorAll('a[href^="/tcds/"]').length===1);
+    await page.click('a[href^="/tcds/"]');
+    await page.waitForSelector('#aircraft-model');
+    assert.equal(await page.$eval('#aircraft-model',element=>element.value),'PA-28-181');
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Aircraft explorer must fit a mobile viewport');
+    await page.screenshot({path:path.join(out,'aircraft-mobile.png'),fullPage:true});
     assert.deepEqual(errors, [], 'No browser runtime errors');
     assert.deepEqual(externalRequests, [], 'Prototype must not issue live source requests');
     // A portfolio visitor can still browse when the free database is unavailable.
+    phase='outage fallback';
     await page.setRequestInterception(true);
     page.on('request', request => {
-      if (request.url().startsWith('http://127.0.0.1:54321/')) void request.respond({ status: 500, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' });
+      if (request.url().startsWith(apiOrigin+'/')) void request.respond({ status: 500, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' });
       else void request.continue();
     });
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle0' });
@@ -61,4 +93,4 @@ fs.mkdirSync(out, { recursive: true });
     }
     console.log('Browser smoke passed: catalog API/demo, search, verified detail, personal links, reload preservation, unknown TCDS, change log, mobile layout, and graceful outage fallback.');
   } finally { await browser.close(); }
-})().catch(error => { console.error(error.message); process.exitCode = 1; });
+})().catch(error => { console.error('Browser check failed during:',phase);console.error(JSON.stringify(apiResponses));console.error(error.stack);process.exitCode = 1; });
