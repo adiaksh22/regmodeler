@@ -12,7 +12,7 @@ The published product will support source-linked search, aircraft profiles, regu
 
 The user chose to keep the website unpublished until live imports and the relationship graph are ready. Cloudflare account and build settings are prepared, but the three-sample prototype should not be deployed publicly. Review imported coverage and a working model-to-regulation graph before returning to the publishing decision.
 
-The GitHub foundation is pushed and its automated quality checks passed. Hosted Supabase migrations and three verified sample snapshots are initialized; these samples are not live ingestion. The next implementation step is verified ingestion, starting with an aircraft family selected by the user.
+The GitHub foundation is pushed and its automated quality checks passed. Hosted Supabase is initialized. First and repeated live imports of PA-28 TCDS `2A13` passed: 23 revisions with privately archived PDFs and metadata. Related AD/STC/regulation ingestion, scheduling, and graph evidence remain subsequent work. See [the PA-28 validation record](pa28-ingestion.md).
 
 ## Execution steps
 

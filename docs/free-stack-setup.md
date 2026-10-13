@@ -12,7 +12,7 @@ Chosen October 12, 2026: Cloudflare Pages for the website, Supabase Free for Pos
 - Build-time rejection of server credentials in browser variables.
 - A server-only worker connectivity check and a manual GitHub Actions workflow. Scheduled FAA imports are not enabled yet.
 
-The app remains a prototype. Accounts/watchlist UI is step 7; the database permissions are prepared now. Catalog imports are step 3; only three verified snapshot records are seeded.
+The app remains a prototype. Accounts/watchlist UI is step 7; the database permissions are prepared now. Step 3 has validated first and repeated live PA-28 TCDS imports with 23 revisions. The other two catalog entries remain verified seed snapshots; related AD/STC/regulation imports and automatic scheduling are still planned.
 
 ## Run locally
 
@@ -75,7 +75,7 @@ npx.cmd supabase db push
 
 `db push` changes the linked hosted database, so verify the intended project before running it. The migrations create tables, access policies, views/functions, and the private source bucket. The initial hosted setup used `db push --linked --include-seed --skip-vault --yes` after a dry run. The three sample records are already seeded; this is not a live FAA import. Future migrations should normally omit `--include-seed` to avoid replacing current-version pointers with the development snapshots.
 
-Both local migration identifiers match the hosted migration history. No credit card, paid plan, or paid compute is required for the chosen portfolio setup.
+The initial schema and importer migrations are applied to both local and hosted databases. No credit card, paid plan, or paid compute is required for the chosen portfolio setup.
 
 ## Configure Cloudflare Pages
 

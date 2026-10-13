@@ -39,8 +39,19 @@ The import targets `SUPABASE_URL` and `SUPABASE_SECRET_KEY`, not the frontend's 
 
 GitHub has a manual **PA-28 TCDS import** workflow. Its default is verification only; importing requires explicitly turning off `verify_only` and configuring repository secrets `FAA_DRS_API_KEY`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY`. Apply the importer migration to the hosted project before a hosted import. This workflow does not deploy the website.
 
-No unattended schedule is enabled yet. Validate a live first import and a repeated import before scheduling. Log messages contain only counts, certificate identity, timestamps, and controlled error codes; never raw client errors or credentials.
+No unattended schedule is enabled yet. First and repeated live imports are validated; the next scheduling requirement is repository Actions secrets and a successful manual hosted workflow run. Log messages contain only counts, certificate identity, timestamps, and controlled error codes; never raw client errors or credentials.
 
 ## Validation status
 
-Eight offline worker tests and the PostgreSQL transaction/access checks passed. The importer migration applied to both the local and hosted Supabase databases. Live source verification is pending: `import:verify` currently reports `FAA_KEY_MISSING_OR_INVALID` because the FAA key has not been configured in the ignored local environment. No live batch has been imported, and no unattended schedule or public website deployment has been enabled.
+Verified October 13, 2026:
+
+- FAA certificate filtering returned 23 revisions for `2A13`, with one current revision (66) and 22 historical revisions.
+- Positive-result incremental filtering returned one record and matched the full-catalog result for that window.
+- First and repeated imports succeeded in both local and hosted Supabase. Each catalog retains 23 revisions and 46 private archive objects totaling 15,027,177 bytes; repeated imports did not add duplicate revisions or files.
+- Checkpoints reference successful runs; the source modification watermark is `2025-12-15T18:03:54.151Z`, distinct from the October 2026 retrieval/run dates.
+- The hosted public API can read the current record and all 23 revisions. Anonymous source writes and file downloads were denied.
+- Eight offline worker tests and PostgreSQL transaction/access checks passed. The importer migration is applied locally and in the hosted project.
+
+`retrieved_at` preserves the first observation of an unchanged snapshot. Use the checkpoint's successful run for last-check freshness; repeated polling does not rewrite historical retrieval dates.
+
+Primary PDFs and raw metadata are archived. Additional attachments, related AD/STC discovery, regulatory text ingestion, and graph evidence remain subsequent work. No unattended schedule or public website deployment has been enabled. Hosted server credentials were used only in memory and were not saved in frontend configuration or committed.
