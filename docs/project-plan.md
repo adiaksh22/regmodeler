@@ -6,6 +6,12 @@ Primary users: aircraft owners and maintenance professionals. Initial coverage: 
 
 The published product will support source-linked search, aircraft profiles, regulatory relationship exploration, revision comparisons, and aircraft/configuration watchlists. It will distinguish certification-basis amendments from current regulations and distinguish potential relevance from confirmed applicability.
 
+## Publication decision
+
+The user chose to keep the website unpublished until live imports and the relationship graph are ready. Cloudflare account and build settings are prepared, but the three-sample prototype should not be deployed publicly. Review imported coverage and a working model-to-regulation graph before returning to the publishing decision.
+
+The GitHub foundation is pushed and its automated quality checks passed. Hosted Supabase migrations and three verified sample snapshots are initialized; these samples are not live ingestion. The next implementation step is verified ingestion, starting with an aircraft family selected by the user.
+
 ## Execution steps
 
 | Step | Deliverable | Completion gate |
