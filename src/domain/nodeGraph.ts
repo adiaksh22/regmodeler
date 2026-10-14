@@ -1,5 +1,5 @@
 import type {EvidenceRelationship} from './explorer';
-export const relationshipLabel=(value:string)=>({covered_by:'Covered by',certified_against:'Certification basis',applies_to:'Conditional applicability',approved_for:'Approved modification scope',references:'References'}[value]??value.replaceAll('_',' '));
+export const relationshipLabel=(value:string)=>({covered_by:'Covered by',certified_against:'Certification basis',applies_to:'Conditional applicability',approved_for:'Approved modification scope',references:'References',supersedes:'Supersedes'}[value]??value.replaceAll('_',' '));
 export function buildNodeGraph(rows:EvidenceRelationship[]) {
   const nodes=new Map<string,{id:string;label:string;kind:string}>();
   const edges=new Map<string,{id:string;source:string;target:string;relationship:EvidenceRelationship}>();

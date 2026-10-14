@@ -28,4 +28,18 @@ describe('reviewed profile relevance',()=>{
     expect(validateProfile({...profile,modifications:[{number:'',status:'unknown',note:''}]})).not.toBeNull();
     expect(validateProfile({...profile,modifications:[{number:'SA1',status:'installed',note:''},{number:'SA1',status:'unknown',note:''}]})).toContain('one installation');
   });
+  it('preserves hyphenated and plain serial identities, singleton gaps and separate AD endpoints',()=>{
+    const fuel={...edge,model:'PA-28-181',applicability_conditions:{serial_ranges:'28-7690001 through 28-8690056; 28-8690061 through 28-8690061; 28-8690062 through 28-8690062; 2890001 through 2890205; 2890206 through 2890231; 2843001 through 2843879.'}};
+    const p={...profile,model:'PA-28-181'};
+    for(const serial of ['28-7690001','28-8690056','28-8690061','28-8690062','2890001','2890231','2843879'])expect(profileRelevance({...p,serial},fuel)?.category).toBe('match');
+    for(const serial of ['28-8690057','28-8690060','28-8690063','2890000','2890232','2843880','8690061'])expect(profileRelevance({...p,serial},fuel)?.category).toBe('outside');
+    for(const serial of ['02843001','28R-7690001'])expect(profileRelevance({...p,serial},fuel)?.category).toBe('unknown');
+    const shaft={...fuel,applicability_conditions:{serial_ranges:fuel.applicability_conditions.serial_ranges.replace('2843879','2843672')}};
+    expect(profileRelevance({...p,serial:'2843673'},fuel)?.category).toBe('match');expect(profileRelevance({...p,serial:'2843673'},shaft)?.category).toBe('outside');
+  });
+  it('does not turn conditional STC installation into AD applicability or accept malformed ranges',()=>{
+    const conditional={...edge,applicability_conditions:{installation_window:'Requires dated installation and a service change'}};
+    expect(profileRelevance({...profile,modifications:[{number:'SA2660CE',status:'installed',note:''}]},conditional)?.category).toBe('unknown');
+    for(const raw of ['123 through 0124','28-1 through 29-2','99999999999999999999 through 99999999999999999999','2843001 and on'])expect(profileRelevance(profile,{...edge,applicability_conditions:{serial_ranges:raw}})?.category).toBe('unknown');
+  });
 });

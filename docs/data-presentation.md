@@ -48,6 +48,8 @@ Verified on October 14, 2026: 62 frontend tests, 17 worker tests, PostgreSQL imp
 
 ## Node navigation and review coverage
 
-An additional Nodes view now supports zoom/pan, automatic layout, canonical shared nodes, directed arrows, node/relationship selection, type filters and shared-model comparisons. A keyboard-accessible incident-connection list opens the same exact evidence inspector. The Review coverage tab distinguishes current FAA candidates from reviewed model evidence. The hosted catalog now has 47 graph rows; local schema is updated, while the additional source archive was imported into the hosted catalog only. See [node graph and review](node-graph-and-review.md) for the implemented boundary and validation.
+An additional Nodes view now supports zoom/pan, automatic layout, canonical shared nodes, directed arrows, node/relationship selection, type filters and shared-model comparisons. A keyboard-accessible incident-connection list opens the same exact evidence inspector. The Review coverage tab distinguishes current FAA candidates from reviewed model evidence. The hosted catalog now has 71 graph rows; local schema is updated, while the additional source archive was imported into the hosted catalog only. See [node graph and review](node-graph-and-review.md) for the implemented boundary and validation.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
+
+See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-specific scope, supersession, publisher links and graph search.

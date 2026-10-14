@@ -252,6 +252,30 @@ try {
   await query('update public.related_document_matches set is_active=false where version_id=$1',[batchIds[0]]);assert.equal((await batchGraph()).rows.length,14,'An inactive AD observation hides both scope and service-bulletin reference');
   console.log('Batch 2 checks passed: publication provenance, atomic review, series membership, model-specific supplements, repeat review and inactive-source boundaries.');
 
+
+  const batch3=JSON.parse(readFileSync(new URL('../apps/worker/src/review-batch3.json',import.meta.url)));const fuelIds=[];
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_batch3_graph()')),/permission denied/);
+  await assert.rejects(query('select public.review_pa28_batch3_graph()'),/original missing/);
+  for(const entry of batch3){
+   const document=(await query("insert into public.documents(authority,document_type,document_number,title,is_published) values('FAA',$1,$2,$2,true) returning id",[entry.type,entry.number])).rows[0].id;
+   const version=(await query("insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,content_sha256,storage_path,is_published) values($1,$2,'reviewed','current','https://drs.faa.gov',now(),$3,$4,true) returning id",[document,entry.number,entry.hash,'FAA/'+entry.type+'/reviewed/'+entry.hash+'.pdf'])).rows[0].id;fuelIds.push(version);
+   for(const model of entry.models)await query("insert into public.related_document_matches(source,version_id,model) values('test-batch3',$1,$2)",[version,model]);
+  }
+  assert.equal((await query('select public.review_pa28_batch3_graph() as n')).rows[0].n,19);
+  const fuelGraph=()=>asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[fuelIds]));
+  const fuelRows=(await fuelGraph()).rows;assert.equal(fuelRows.length,24);assert.equal(fuelRows.filter(r=>!r.path_via).length,6);
+  assert.equal(fuelRows.filter(r=>r.relationship_type==='supersedes').length,2,'A reviewed supersession is scoped to both supported models');
+  const serialEdges=fuelRows.filter(r=>r.source_document_number==='2018-07-03'&&!r.path_via);assert.ok(serialEdges.find(r=>r.model==='PA-28-140').applicability_conditions.serial_ranges.includes('28-20001'));
+  assert.ok(serialEdges.find(r=>r.model==='PA-28-181').applicability_conditions.serial_ranges.includes('2843879'));
+  assert.equal(fuelRows.filter(r=>r.source_document_number==='2005-19-20').every(r=>r.model==='PA-28-181'),true);
+  const conversion=fuelRows.find(r=>r.source_document_number==='SA2660CE'&&!r.path_via);const conditional=fuelRows.find(r=>r.source_document_number==='2005-19-20'&&r.basis_key==='STC:SA2660CE');
+  assert.equal(conditional.target_entity_id,conversion.source_entity_id,'AD and STC paths share the same canonical certificate node');
+  assert.equal(fuelRows.filter(r=>r.basis_key==='STC:SE2563CE'||r.basis_key==='STC:SE2587CE').length,2);assert.ok(conversion.applicability_conditions.engine_condition.includes(' OR '));
+  assert.equal(fuelRows.filter(r=>r.applicability_conditions.publisher_url).length,4,'Two dated publisher references are exposed in each model scope');
+  const countFuel=(await query('select count(*)::integer n from public.relationships')).rows[0].n;await query('select public.review_pa28_batch3_graph()');assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,countFuel);
+  await query('update public.related_document_matches set is_active=false where version_id=$1',[fuelIds[0]]);assert.equal((await fuelGraph()).rows.length,16,'Changed source observations hide supersession and all reference paths until renewed review');
+  console.log('Fuel/airframe checks passed: serial-specific evidence, shared AD/STC identities, alternative engine approvals, dated publisher links and supersession boundaries.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

@@ -52,6 +52,8 @@ Deploy the PDF viewer backend with `npx.cmd supabase functions deploy source-vie
 
 ## Remaining coverage
 
-Most discovered primary PDFs and additional attachments remain unarchived; the UI states their status. AD extracted text may omit applicability tables and graphics. Selected additional originals and one AML have now been reviewed and archived, bringing hosted coverage to 47 model-scoped graph rows; see [node navigation and review coverage](node-graph-and-review.md). Further AMLs, manufacturer service documents, noise/optional-equipment provisions, other PA-28 model reviews, exact historical CFR amendment wording, configuration-aware applicability and automated attachment retrieval remain future work.
+Most discovered primary PDFs and additional attachments remain unarchived; the UI states their status. AD extracted text may omit applicability tables and graphics. Selected additional originals and one AML have now been reviewed and archived, bringing hosted coverage to 71 model-scoped graph rows; see [node navigation and review coverage](node-graph-and-review.md). Further AMLs, manufacturer service documents, noise/optional-equipment provisions, other PA-28 model reviews, exact historical CFR amendment wording, configuration-aware applicability and automated attachment retrieval remain future work.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
+
+See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-specific scope, supersession, publisher links and graph search.

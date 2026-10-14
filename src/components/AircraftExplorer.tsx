@@ -4,6 +4,8 @@ import type { ExplorerDetails } from '../domain/explorer';
 import type { CatalogDocument } from '../domain/catalog';
 import RelatedDocuments from './RelatedDocuments';
 import SourcePdf from './SourcePdf';
+import PublisherSource from './PublisherSource';
+import {relationshipLabel} from '../domain/nodeGraph';
 import RevisionComparison from './RevisionComparison';
 import AircraftProfileEditor from './AircraftProfileEditor';
 import ProfileRelevance from './ProfileRelevance';
@@ -72,7 +74,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
                 {links.map((link,index)=><path key={link.id} d={`M4 ${links.length*rowHeight/2} L30 ${links.length*rowHeight/2} L30 ${index*rowHeight+rowHeight/2} L76 ${index*rowHeight+rowHeight/2}`} fill="none" stroke="#94a3b8" strokeWidth="2" markerStart={link.direction==='incoming'?'url(#graph-arrow)':undefined} markerEnd={link.direction==='incoming'?undefined:'url(#graph-arrow)'}/>)}
               </svg></>}
             <div className={view==='graph'?'flex-1 space-y-2':'space-y-2'}>{links.map(link=><button key={link.id} onClick={()=>setEvidenceId(link.id)} aria-pressed={evidence?.id===link.id} className={`block w-full text-left rounded-lg border p-3 ${view==='graph'?(activeProfile?'h-[96px]':'h-[70px]'):''} ${evidence?.id===link.id?'border-blue-600 bg-blue-50':'border-slate-200 hover:bg-slate-50'}`}>
-              <span className="block text-xs text-slate-600">{{covered_by:'Covered by',certified_against:'Certification basis',applies_to:'Conditional applicability',approved_for:'Approved modification scope',references:'References'}[link.relationship_type]??link.relationship_type.replaceAll('_',' ')}</span>
+              <span className="block text-xs text-slate-600">{relationshipLabel(link.relationship_type)}</span>
               <span className="font-semibold text-sm">{link.target}</span>
               {profileRelevance(activeProfile,link)&&<span className="block text-xs text-blue-800">{profileRelevance(activeProfile,link)!.label}</span>}
             </button>)}</div>
@@ -84,7 +86,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
-          {Object.entries(evidence.applicability_conditions).map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
+          {Object.entries(evidence.applicability_conditions).filter(([key])=>!key.startsWith('publisher_')).map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
+          <PublisherSource conditions={evidence.applicability_conditions}/>
           <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">{evidence.original_source_url?'Open FAA record':`Open FAA source · see page ${evidence.evidence_page}`}</a>
           {evidence.original_source_url&&<a href={evidence.original_source_url} target="_blank" rel="noopener noreferrer" className="block text-blue-700 underline text-sm mt-3">Open published original · see PDF page {evidence.evidence_page}</a>}
           {evidence.evidence_version_id&&<SourcePdf key={evidence.evidence_version_id+(evidence.evidence_attachment_id??'')} versionId={evidence.evidence_version_id} attachmentId={evidence.evidence_attachment_id??undefined} page={evidence.evidence_page}/>}

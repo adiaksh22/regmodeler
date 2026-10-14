@@ -36,12 +36,13 @@ export function profileRelevance(profile: AircraftProfile | null, edge: Evidence
   if (edge.relationship_type !== 'applies_to' || edge.source_document_type !== 'AD') return null;
   const raw = edge.applicability_conditions.serial_ranges;
   if (!raw) return {category:'unknown',label:'Configuration needs review',explanation:'No machine-readable reviewed serial scope is available for this connection.'};
-  const ranges = raw.replace(/\.$/,'').split(';').map(part => /^\s*(\d+)-(\d+) through (\d+)-(\d+)\s*$/.exec(part));
-  const serial = /^(\d+)-(\d+)$/.exec(profile.serial);
-  if (!serial || ranges.some(r => !r || r[1] !== r[3] || r[2].length !== r[4].length || !Number.isSafeInteger(Number(r[2])) || !Number.isSafeInteger(Number(r[4])) || Number(r[2]) > Number(r[4]))) return {category:'unknown',label:'Serial number needs review',explanation:'Enter a complete serial number in the reviewed source format, including the prefix and hyphen. Unsupported formats remain unknown.'};
-  const sameFormat = ranges.some(r => r && r[1] === serial[1] && r[2].length === serial[2].length);
+  const parse=(value:string)=>{const m=/^(?:(\d+)-)?(\d+)$/.exec(value);return m&&Number.isSafeInteger(Number(m[2]))?{prefix:m[1]??'',digits:m[2],value:Number(m[2])}:null;};
+  const ranges=raw.replace(/\.$/,'').split(';').map(part=>{const m=/^\s*(\S+) through (\S+)\s*$/.exec(part);return m?{low:parse(m[1]),high:parse(m[2])}:null;});
+  const serial=parse(profile.serial);
+  if (!serial || ranges.some(r=>!r?.low||!r.high||r.low.prefix!==r.high.prefix||r.low.digits.length!==r.high.digits.length||r.low.value>r.high.value)) return {category:'unknown',label:'Serial number needs review',explanation:'Enter the complete serial number in the reviewed source format. Unsupported formats remain unknown.'};
+  const sameFormat = ranges.some(r => r?.low?.prefix===serial.prefix&&r.low.digits.length===serial.digits.length);
   if (!sameFormat) return {category:'unknown',label:'Serial format needs review',explanation:'This serial format does not match the reviewed ranges. Verify the data plate and original source.'};
-  const match = ranges.some(r => r && r[1] === serial[1] && r[2].length === serial[2].length && Number(serial[2]) >= Number(r[2]) && Number(serial[2]) <= Number(r[4]));
+  const match = ranges.some(r => r?.low&&r.high&&r.low.prefix===serial.prefix&&r.low.digits.length===serial.digits.length&&serial.value>=r.low.value&&serial.value<=r.high.value);
   return {category:match?'match':'outside',label:match?'Within reviewed serial range':'Outside reviewed serial ranges',
     explanation:match?'The entered model and serial match this source scope. Required actions, previous work and compliance still need review.':'The entered serial is outside this connection’s reviewed ranges. This does not clear other ADs or establish aircraft compliance.'};
 }
