@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectTcds, drsClient, snapshot } from '../src/drs.mjs';
 import { importPa28 } from '../src/import-tcds.mjs';
+test('attachment discovery refuses foreign URLs and bounded download methods retain the FAA key',async()=>{
+ const source=drsClient('private-test-key',{request:async(url,options)=>{assert.equal(options.headers['x-api-key'],'private-test-key');return new Response(url.pathname.includes('get-other')?'{"otherAttachmentDownloadDetails":[]}':'attachment');}});
+ assert.deepEqual(await source.attachments('https://drs.faa.gov/api/drs/data-pull/get-other-attachment-details/abcd-1234'),{otherAttachmentDownloadDetails:[]});
+ assert.equal((await source.attachment('https://drs.faa.gov/api/drs/data-pull/download/abcd-1234')).toString(),'attachment');
+ await assert.rejects(source.attachment('https://other.example/api/drs/data-pull/download/abcd'),/UNTRUSTED/);
+ await assert.rejects(source.attachments('https://drs.faa.gov/api/drs/data-pull/download/abcd'),/UNTRUSTED/);
+});
 
 function record(id = 'TEST', overrides = {}) {
   return {

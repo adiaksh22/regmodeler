@@ -27,3 +27,12 @@ test('viewer rejects invalid IDs, oversized requests and unsupported methods',as
  assert.equal((await handleSourceRequest(malformed,f.client,origin)).status,400);
  assert.equal((await handleSourceRequest(request(null),f.client,origin)).status,400);
 });
+test('attachment viewer binds a PDF to its published parent and refuses HTML and wrong paths',async()=>{
+ const attachmentId='20000000-0000-4000-8000-000000000001';
+ for(const [change,status] of [[{},200],[{version_id:attachmentId},404],[{mime_type:'text/plain'},404],[{storage_path:'arbitrary.pdf'},404]]){
+  const parent=fixture();const original=parent.client.from;
+  parent.client.from=table=>table==='source_attachments'?{select:()=>{const query={eq:()=>query,maybeSingle:async()=>({data:{version_id:id,mime_type:'application/pdf',content_sha256:hash,storage_path:`FAA/ATTACHMENT/reviewed/${hash}.pdf`,...change},error:null})};return query;}}:original(table);
+  let signed=0;parent.client.storage.from=()=>({createSignedUrl:async path=>{signed++;assert.equal(path,`FAA/ATTACHMENT/reviewed/${hash}.pdf`);return {data:{signedUrl:origin+'/storage/v1/object/sign/attachment.pdf'},error:null};}});
+  assert.equal((await handleSourceRequest(request({versionId:id,attachmentId}),parent.client,origin)).status,status);assert.equal(signed,status===200?1:0);
+ }
+});

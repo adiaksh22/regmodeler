@@ -193,6 +193,38 @@ try {
   const countBeforeRepeat=(await query('select count(*)::integer n from public.source_change_events')).rows[0].n;
   const repeatRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:STC:PA28','running') returning id")).rows[0].id;
   await relatedCommit(repeatRun,[returning]);assert.equal((await query('select count(*)::integer n from public.source_change_events')).rows[0].n,countBeforeRepeat);
+  const expanded=JSON.parse(readFileSync(new URL('../apps/worker/src/expanded-review.json',import.meta.url)));
+  await assert.rejects(query('select public.review_pa28_expanded_graph()'),/original missing/);
+  const expandedIds=[];
+  for(const entry of expanded){
+    const document=(await query("insert into public.documents(authority,document_type,document_number,title,is_published) values('FAA',$1,$2,$2,true) returning id",[entry.type,entry.number])).rows[0].id;
+    const version=(await query("insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,content_sha256,storage_path,is_published) values($1,$2,'reviewed','current','https://drs.faa.gov',now(),$3,$4,true) returning id",[document,entry.number,entry.hash,'FAA/'+entry.type+'/reviewed/'+entry.hash+'.pdf'])).rows[0].id;
+    expandedIds.push(version);
+    for(const model of entry.models)await query("insert into public.related_document_matches(source,version_id,model) values('test-expanded',$1,$2)",[version,model]);
+    if(entry.attachment){
+      await query("select public.attach_source_file($1,'AML.pdf',$2,$3,'application/pdf','https://drs.faa.gov/api/drs/data-pull/download/abcd-1234')",[version,entry.attachment,'FAA/ATTACHMENT/reviewed/'+entry.attachment+'.pdf']);
+      await query('select public.complete_attachment_check($1,1)',[version]);
+    }
+  }
+  await query("select public.set_source_review_decision($1,'PA-28-140','deferred','PRIVATE NOTE')",[expandedIds[0]]);
+  await asRole('anon',null,async()=>{
+    assert.equal((await query("select review_status from public.source_review_queue where version_id=$1 and model='PA-28-140'",[expandedIds[0]])).rows[0].review_status,'deferred');
+    await assert.rejects(query('select private_note from public.source_review_decisions'),/permission denied/);
+  });
+  await assert.rejects(asRole('anon',null,()=>query("select public.set_source_review_decision($1,'PA-28-140','pending','')",[expandedIds[0]])),/permission denied/);
+  assert.equal((await query('select public.review_pa28_expanded_graph() as n')).rows[0].n,10);
+  const expandedCount=(await query('select count(*)::integer n from public.relationships')).rows[0].n;
+  await query('select public.review_pa28_expanded_graph()');assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,expandedCount);
+  const expandedRows=(await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[expandedIds]))).rows;
+  assert.equal(expandedRows.length,12);assert.ok(expandedRows.every(r=>r.source_entity_id&&r.target_entity_id&&r.model_entity_id));
+  const aml=expandedRows.find(r=>r.source_document_number==='SA01941LA');assert.ok(aml.evidence_attachment_id);assert.equal(aml.model,'PA-28-140');
+  await assert.rejects(query('update public.relationships set evidence_attachment_id=$1 where evidence_version_id=$2',[aml.evidence_attachment_id,expandedIds[0]]),/foreign key/);
+  await query('update public.source_attachments set is_active=false where id=$1',[aml.evidence_attachment_id]);
+  assert.equal((await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=$1',[expandedIds[2]]))).rows.length,0,'Changed AML hides both approval and reference until renewed review');
+  assert.equal((await asRole('anon',null,()=>query('select review_status from public.source_review_queue where version_id=$1',[expandedIds[2]]))).rows[0].review_status,'pending');
+  await assert.rejects(query('select public.complete_attachment_check($1,1)',[expandedIds[2]]),/Incomplete/);
+  await assert.rejects(query('select public.complete_attachment_check($1,null)',[expandedIds[2]]),/Incomplete/);
+  console.log('Expanded graph checks passed: exact-source guards, shared identities, repeat review, parent-bound attachments, changed AML and private operator decisions.');
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

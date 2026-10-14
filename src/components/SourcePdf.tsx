@@ -1,10 +1,10 @@
 import {useEffect,useRef,useState} from 'react';
 import {getOriginalLink} from '../lib/relatedCatalog';
-export default function SourcePdf({versionId,page=1,label='View cited PDF'}:{versionId:string;page?:number;label?:string}) {
+export default function SourcePdf({versionId,attachmentId,page=1,label='View cited PDF'}:{versionId:string;attachmentId?:string;page?:number;label?:string}) {
   const [url,setUrl]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
   const trigger=useRef<HTMLButtonElement>(null);const close=useRef<HTMLButtonElement>(null);
   useEffect(()=>{if(!url)return;close.current?.focus();const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){setUrl('');trigger.current?.focus();}};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);},[url]);
-  async function open(){setBusy(true);setError('');try{setUrl(await getOriginalLink(versionId));}catch{setError('The archived PDF is unavailable. Use the official source link.');}finally{setBusy(false);}}
+  async function open(){setBusy(true);setError('');try{setUrl(await getOriginalLink(versionId,attachmentId));}catch{setError('The archived PDF is unavailable. Use the official source link.');}finally{setBusy(false);}}
   return <>
     <button ref={trigger} onClick={()=>void open()} disabled={busy} className="border border-blue-600 rounded px-3 py-2 text-blue-800 text-sm mt-3 disabled:opacity-50">{busy?'Loading PDF…':label}</button>
     {error&&<p role="status" className="text-sm text-amber-900 mt-2">{error}</p>}

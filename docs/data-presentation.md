@@ -45,3 +45,7 @@ A revised document is not automatically an applicable change for every aircraft.
 4. Add actual source-content change summaries and configuration-aware watchlists before scheduled alerts. PDF fingerprint differences alone do not describe changed wording.
 
 Verified on October 14, 2026: 62 frontend tests, 17 worker tests, PostgreSQL importer/dependency/access checks, lint, types and production build passed. Local and hosted Supabase expose 19 reviewed connections. Browser checks cover source exploration, history, profile persistence, reviewed serial boundaries, user-reported installation, filters retaining unknowns, storage failures, model isolation, mobile layout and outage fallback. See [related-source validation](related-sources.md) and [aircraft profiles](aircraft-profiles.md) for scope and remaining coverage.
+
+## Node navigation and review coverage
+
+An additional Nodes view now supports zoom/pan, automatic layout, canonical shared nodes, directed arrows, node/relationship selection, type filters and shared-model comparisons. A keyboard-accessible incident-connection list opens the same exact evidence inspector. The Review coverage tab distinguishes current FAA candidates from reviewed model evidence. The hosted catalog now has 31 graph rows; local schema is updated, while the additional source archive was imported into the hosted catalog only. See [node graph and review](node-graph-and-review.md) for the implemented boundary and validation.

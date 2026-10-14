@@ -34,4 +34,4 @@ Database tests cover baseline semantics, corrections, repeated imports, rollback
 
 Both migrations are applied to hosted and local databases. Local Windows host-port access failed despite healthy containers, so the local migrations were applied transactionally through Docker `psql` and recorded in `supabase_migrations.schema_migrations`. This does not reset existing data.
 
-The next source-quality work is broader reviewed applicability rules, attachment retrieval, an operator review queue and actual content comparisons. Notification subscriptions require a separate identity/preference design. The website remains unpublished.
+The additional node view, read-only review queue and selected attachment retrieval are now implemented; see [node navigation and review coverage](node-graph-and-review.md). The next source-quality work is broader reviewed applicability rules, automatic attachment freshness and actual content comparisons. Notification subscriptions require a separate identity/preference design. The website remains unpublished.

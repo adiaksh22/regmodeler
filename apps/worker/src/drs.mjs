@@ -37,6 +37,17 @@ export function drsClient(key, { request = fetch, sleep = delay } = {}) {
     }
   }
   return {
+    async attachment(url) {
+      const target=new URL(url);
+      if(target.origin!==origin||!/^\/api\/drs\/data-pull\/download\/[a-f0-9-]+$/i.test(target.pathname)||target.search||target.hash)throw new ImportError('UNTRUSTED_SOURCE_URL');
+      return read(target.href,undefined,10_000_000);
+    },
+    async attachments(url) {
+      const target=new URL(url);
+      if(target.origin!==origin||!/^\/api\/drs\/data-pull\/get-other-attachment-details\/[a-f0-9-]+$/i.test(target.pathname)||target.search||target.hash)throw new ImportError('UNTRUSTED_SOURCE_URL');
+      const bytes=await read(target.href,undefined,2_000_000);
+      try{return JSON.parse(bytes.toString('utf8'));}catch{throw new ImportError('INVALID_ATTACHMENT_JSON');}
+    },
     async metadata(type, filters, offset = 0, since) {
       if (!['ADFRAWD','STC','CAR'].includes(type)) throw new ImportError('UNSUPPORTED_DOCUMENT_TYPE');
       const bytes = await read(`/api/drs/data-pull/${type}/filtered`, {

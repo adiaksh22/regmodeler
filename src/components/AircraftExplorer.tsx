@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { ExplorerDetails } from '../domain/explorer';
 import type { CatalogDocument } from '../domain/catalog';
@@ -9,6 +9,9 @@ import AircraftProfileEditor from './AircraftProfileEditor';
 import ProfileRelevance from './ProfileRelevance';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 
+const NodeGraph=lazy(()=>import('./NodeGraph'));
+const ReviewQueue=lazy(()=>import('./ReviewQueue'));
+
 export function sourceDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return 'Not recorded';
   return new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(value));
@@ -18,10 +21,11 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [params, setParams] = useSearchParams();
   const models = doc.model.split('|').map(m=>m.trim()).filter(Boolean);
   const selected = models.includes(params.get('model') ?? '') ? params.get('model')! : models.includes('PA-28-181') ? 'PA-28-181' : models[0];
-  const [tab, setTab] = useState<'relationships'|'history'|'related'>('relationships');
+  const [tab, setTab] = useState<'relationships'|'history'|'related'|'review'>('relationships');
   const [expanded, setExpanded] = useState('');
-  const [view, setView] = useState<'graph'|'list'>(()=>typeof window!=='undefined' && window.matchMedia?.('(max-width: 639px)').matches?'list':'graph');
+  const [view, setView] = useState<'graph'|'list'|'nodes'>(()=>typeof window!=='undefined' && window.matchMedia?.('(max-width: 639px)').matches?'list':'graph');
   const [evidenceId, setEvidenceId] = useState('');
+  const [compareModels,setCompareModels]=useState(false);
   const [showAll, setShowAll] = useState(false);
   const [profile,setProfile] = useState<AircraftProfile|null>(null);
   const [profileDirty,setProfileDirty] = useState(false);
@@ -31,7 +35,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const rowHeight = activeProfile?104:78;
   const links = allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).filter(r=>!profileOnly||profileRelevance(activeProfile,r)?.category!=='outside').sort((a,b)=>
     Number(b.relationship_type==='covered_by')-Number(a.relationship_type==='covered_by') || a.target.localeCompare(b.target,undefined,{numeric:true}));
-  const evidence = links.find(r=>r.id===evidenceId) ?? links[0];
+  const nodeLinks=details.relationships.filter(r=>compareModels||r.model===selected).filter(r=>!profileOnly||r.model!==selected||profileRelevance(activeProfile,r)?.category!=='outside');
+  const evidence = (view==='nodes'?nodeLinks:links).find(r=>r.id===evidenceId) ?? (view==='nodes'?nodeLinks:links)[0];
   const revisions = [...details.revisions].sort((a,b)=>Number(b.is_current)-Number(a.is_current) || (b.revision_date ?? '').localeCompare(a.revision_date ?? ''));
   return <section className="bg-white rounded-xl border border-slate-200 p-5 mb-6" aria-label="Aircraft data explorer">
     <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
@@ -44,21 +49,22 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
     </div>
     <p className="text-sm text-slate-600 mb-4">Reviewed coverage includes certification-basis references and selected AD/STC connections for PA-28-140 and PA-28-181. Related records contain additional model-index matches. Individual-aircraft applicability and compliance are not determined here.</p>
     <AircraftProfileEditor key={selected} model={selected} onChange={setProfile} onDirty={setProfileDirty}/>
-    <div className="flex gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data">
-      {(['relationships','history','related'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
-        {name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':`Revision history (${details.revisions.length})`}
+    <div className="flex flex-wrap gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data">
+      {(['relationships','history','related','review'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
+        {name==='review'?'Review coverage':name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':`Revision history (${details.revisions.length})`}
       </button>)}
     </div>
     {details.notice && <p role="status" className="text-amber-900 mb-4">{details.notice}</p>}
     {tab==='relationships' && <div role="tabpanel" id="panel-relationships" aria-labelledby="tab-relationships">
       <div className="flex flex-wrap justify-between gap-2 mb-3"><h2 className="font-bold text-lg">How {expanded||selected} connects</h2>
-        <div className="flex gap-2">{(['graph','list'] as const).map(mode=><button key={mode} onClick={()=>setView(mode)} aria-pressed={view===mode} className={`px-3 py-1 rounded border ${view===mode?'bg-blue-50 border-blue-400':'border-slate-200'}`}>{mode==='graph'?'Graph':'List'}</button>)}</div>
+        <div className="flex gap-2">{(['graph','nodes','list'] as const).map(mode=><button key={mode} onClick={()=>setView(mode)} aria-pressed={view===mode} className={`px-3 py-1 rounded border ${view===mode?'bg-blue-50 border-blue-400':'border-slate-200'}`}>{mode==='nodes'?'Nodes':mode==='graph'?'Graph':'List'}</button>)}</div>
       </div>
       <p className="text-sm text-slate-600 mb-4">Select a connection to read its source evidence. Amendment dates identify the historical certification basis.</p>
       {activeProfile&&<label className="block text-sm mb-4"><input type="checkbox" checked={profileOnly} onChange={e=>setProfileOnly(e.target.checked)}/> Hide connections outside reviewed serial ranges. Unknown relevance remains visible.</label>}
-      {expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
-      {links.length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
-        <div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
+      {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> Show shared relationships across both supported models</label>}
+      {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
+      {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
+        {view==='nodes'?<Suspense fallback={<p>Loading node view?</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} selectedId={evidence?.id??''} onSelect={r=>setEvidenceId(r.id)}/></Suspense>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
               <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>
@@ -72,15 +78,17 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
             </button>)}</div>
           </div>
         </div>
+        }
         {evidence && <aside aria-label="Relationship source evidence" className="rounded-lg border border-blue-200 bg-blue-50 p-4 lg:sticky lg:top-6">
-          <h3 className="font-bold mb-2">{evidence.target}</h3>
+          <h3 className="font-bold mb-2">{evidence.target}</h3><p className="text-xs mb-2">Model context: {evidence.model}</p>
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
           {Object.entries(evidence.applicability_conditions).map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
           <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">Open FAA source · see page {evidence.evidence_page}</a>
-          {evidence.evidence_version_id&&<SourcePdf key={evidence.evidence_version_id} versionId={evidence.evidence_version_id} page={evidence.evidence_page}/>}
+          {evidence.evidence_version_id&&<SourcePdf key={evidence.evidence_version_id+(evidence.evidence_attachment_id??'')} versionId={evidence.evidence_version_id} attachmentId={evidence.evidence_attachment_id??undefined} page={evidence.evidence_page}/>}
           {allLinks.some(r=>r.path_via===evidence.target)&&<button className="block text-blue-700 underline mt-3 text-sm" onClick={()=>{setExpanded(evidence.target);setEvidenceId('');}}>Explore referenced documents</button>}
+          {evidence.evidence_file_name&&<p className="text-xs mt-2">Cited attachment: {evidence.evidence_file_name}</p>}
           {evidence.target_type==='regulatory_provision'&&<div className="mt-4 space-y-3">
             {(details.sourceMaterials??[]).filter(s=>s.basis_key===evidence.basis_key).map(s=><details key={s.id} className="border-t border-blue-200 pt-3"><summary className="cursor-pointer text-sm font-semibold">{s.title}</summary><p className="text-xs my-2">{s.source_kind==='later_reference'?'Later reference edition dated '+s.edition_date+'. This is not the historical amendment wording cited by the TCDS.':'Historical original dated '+s.edition_date+'. The baseline and selected amendments do not form a complete consolidated certification basis.'}</p>{s.body_text?<pre className="text-xs whitespace-pre-wrap max-h-80 overflow-auto">{s.body_text}</pre>:<SourcePdf versionId={s.id} label="View historical original"/>}<a className="text-xs text-blue-700 underline block mt-2" href={s.source_url} target="_blank" rel="noopener noreferrer">Open official regulation source</a></details>)}
             {!(details.sourceMaterials??[]).some(s=>s.basis_key===evidence.basis_key)&&<p className="text-xs text-slate-600">The cited historical wording has not been imported yet.</p>}
@@ -101,6 +109,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       </li>)}</ol>
       {revisions.length>5 && <button onClick={()=>setShowAll(!showAll)} className="text-blue-700 font-semibold mt-4">{showAll?'Show fewer revisions':`Show all ${revisions.length} revisions`}</button>}
     </div>}
+    {tab==='review'&&<div role="tabpanel" id="panel-review" aria-labelledby="tab-review"><Suspense fallback={<p>Loading review coverage?</p>}><ReviewQueue key={selected} model={selected}/></Suspense></div>}
     {tab==='related'&&<div role="tabpanel" id="panel-related" aria-labelledby="tab-related"><RelatedDocuments model={selected} relationships={allLinks} profile={activeProfile}/></div>}
   </section>;
 }

@@ -45,9 +45,9 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | Foundation | Active/archive separation; repeatable lint, tests, types and build | Ongoing maintenance |
 | Infrastructure | GitHub; local/hosted Supabase; migrations; private archives; controlled public API and PDF viewer | Release operations, recovery and monitoring |
 | TCDS | 23 imported 2A13 revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
-| Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and unattended operation |
+| Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | 19 reviewed connections; directed graph/list; AD-to-service-bulletin traversal | More reviewed paths, relation filters and historical graph exploration |
+| Relationships | 31 reviewed connections; directed graph/list/node views; shared-model navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial labels; reported installation | Backup import, additional rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
@@ -157,3 +157,7 @@ Measure tasks, not counts alone: users find the correct model, distinguish evide
 - [Aircraft profiles](aircraft-profiles.md)
 - [Source-change tracking](source-change-tracking.md)
 - [Feasibility report](../data-feasibility/REPORT.txt)
+
+## Node graph and review coverage update
+
+The additional node view and read-only source review queue are implemented. Four more reviewed primary sources and three attachments are archived in the hosted catalog, including an evidence-linked AML. There are 31 model-scoped graph rows and nine reviewed AD/STC model connections. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled; attachment retrieval remains manual. Next work is additional evidence-backed configuration rules, more reviewed sources, attachment freshness and actual content comparisons, followed by beta accessibility/content review and a release decision.

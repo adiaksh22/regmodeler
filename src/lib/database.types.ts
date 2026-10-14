@@ -1,5 +1,6 @@
 import type { OfficialRevision, EvidenceRelationship, RelatedDocument, RegulationSource } from '../domain/explorer';
 import type {SourceChange,SourceMonitoring} from '../domain/sourceChanges';
+import type {ReviewQueueRow} from './relatedCatalog';
 // Public read contract. Keep view columns and RPC signatures in sync with migrations.
 export type TCDSCatalogRow = {
   id: string;
@@ -23,6 +24,7 @@ export interface Database {
       tcds_versions: { Row: OfficialRevision; Relationships: [] };
       tcds_relationships: { Row: EvidenceRelationship; Relationships: [] };
       model_graph: { Row: EvidenceRelationship; Relationships: [] };
+      source_review_queue: {Row:ReviewQueueRow;Relationships:[]};
       related_documents: { Row: RelatedDocument & {regulatory_text: string | null}; Relationships: [] };
       regulation_sources: { Row: RegulationSource; Relationships: [] };
       source_change_feed:{Row:SourceChange;Relationships:[]};
