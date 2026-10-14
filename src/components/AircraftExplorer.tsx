@@ -85,7 +85,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
           {Object.entries(evidence.applicability_conditions).map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
-          <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">Open FAA source · see page {evidence.evidence_page}</a>
+          <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">{evidence.original_source_url?'Open FAA record':`Open FAA source · see page ${evidence.evidence_page}`}</a>
+          {evidence.original_source_url&&<a href={evidence.original_source_url} target="_blank" rel="noopener noreferrer" className="block text-blue-700 underline text-sm mt-3">Open published original · see PDF page {evidence.evidence_page}</a>}
           {evidence.evidence_version_id&&<SourcePdf key={evidence.evidence_version_id+(evidence.evidence_attachment_id??'')} versionId={evidence.evidence_version_id} attachmentId={evidence.evidence_attachment_id??undefined} page={evidence.evidence_page}/>}
           {allLinks.some(r=>r.path_via===evidence.target)&&<button className="block text-blue-700 underline mt-3 text-sm" onClick={()=>{setExpanded(evidence.target);setEvidenceId('');}}>Explore referenced documents</button>}
           {evidence.evidence_file_name&&<p className="text-xs mt-2">Cited attachment: {evidence.evidence_file_name}</p>}

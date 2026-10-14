@@ -11,6 +11,7 @@ export type EvidenceRelationship = {
   path_via?: string | null; direction?: string; evidence_version_id?: string;
   source_entity_id?: string; target_entity_id?: string; model_entity_id?: string; via_entity_id?: string | null;
   evidence_attachment_id?: string | null; evidence_file_name?: string | null;
+  original_source_url?: string | null;
 };
 export type RegulationSource = {
   id: string; basis_key: string; section: string | null; title: string; edition_date: string;

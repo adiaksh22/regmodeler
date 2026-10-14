@@ -225,6 +225,33 @@ try {
   await assert.rejects(query('select public.complete_attachment_check($1,1)',[expandedIds[2]]),/Incomplete/);
   await assert.rejects(query('select public.complete_attachment_check($1,null)',[expandedIds[2]]),/Incomplete/);
   console.log('Expanded graph checks passed: exact-source guards, shared identities, repeat review, parent-bound attachments, changed AML and private operator decisions.');
+
+  const batch2=JSON.parse(readFileSync(new URL('../apps/worker/src/review-batch2.json',import.meta.url)));const batchIds=[];
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_batch2_graph()')),/permission denied/);
+  await assert.rejects(query('select public.review_pa28_batch2_graph()'),/provenance missing/);
+  for(const entry of batch2){
+   const document=(await query("insert into public.documents(authority,document_type,document_number,title,is_published) values('FAA',$1,$2,$2,true) returning id",[entry.type,entry.number])).rows[0].id;
+   const version=(await query("insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,content_sha256,storage_path,is_published) values($1,$2,'reviewed','current','https://drs.faa.gov',now(),$3,$4,true) returning id",[document,entry.number,entry.hash,'FAA/'+entry.type+'/reviewed/'+entry.hash+'.pdf'])).rows[0].id;batchIds.push(version);
+   for(const model of entry.models)await query("insert into public.related_document_matches(source,version_id,model) values('test-batch2',$1,$2)",[version,model]);
+  }
+  await assert.rejects(query('select public.review_pa28_batch2_graph()'),/provenance missing/);
+  await query('select public.attach_source_original($1,$2,$3,$4::jsonb)',[batchIds[0],batch2[0].hash,'FAA/AD/reviewed/'+batch2[0].hash+'.pdf',JSON.stringify({original_source_url:batch2[0].published_url,original_source_kind:'final_federal_register'})]);
+  await assert.rejects(query('select public.review_pa28_batch2_graph()'),/series membership missing/);
+  assert.equal((await query('select count(*)::integer n from public.relationships where evidence_version_id=any($1::uuid[])',[batchIds])).rows[0].n,0,'A missing series anchor rolls back the whole review batch');
+  await query("update public.documents set current_version_id='20000000-0000-4000-8000-000000000001' where document_number='2A13'");
+  assert.equal((await query('select public.review_pa28_batch2_graph() as n')).rows[0].n,14);
+  const batchGraph=()=>asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[batchIds]));
+  const batchRows=(await batchGraph()).rows;assert.equal(batchRows.length,16);
+  assert.equal(batchRows.filter(r=>r.source_document_number==='SA09252AC-D').every(r=>r.model==='PA-28-181'),true);
+  assert.equal(batchRows.filter(r=>r.source_document_number==='SA09257AC-D').every(r=>r.model==='PA-28-140'),true);
+  assert.ok(batchRows.find(r=>r.model==='PA-28-181'&&r.basis_key==='AFMS:891444:1997-06-30'));
+  assert.ok(batchRows.find(r=>r.model==='PA-28-140'&&r.basis_key==='AFMS:891454:1997-07-11'));
+  assert.equal(batchRows.some(r=>/SA2969SW|SA2143WE/.test(r.target)),false,'Other variants do not create installed-STC dependencies for supported models');
+  assert.ok(batchRows.filter(r=>r.source_document_number==='2024-10-04').every(r=>r.original_source_url===batch2[0].published_url));
+  const n=(await query('select count(*)::integer n from public.relationships')).rows[0].n;await query('select public.review_pa28_batch2_graph()');assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,n);
+  await query('update public.related_document_matches set is_active=false where version_id=$1',[batchIds[0]]);assert.equal((await batchGraph()).rows.length,14,'An inactive AD observation hides both scope and service-bulletin reference');
+  console.log('Batch 2 checks passed: publication provenance, atomic review, series membership, model-specific supplements, repeat review and inactive-source boundaries.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

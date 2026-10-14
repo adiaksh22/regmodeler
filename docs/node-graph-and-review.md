@@ -1,6 +1,6 @@
 # Node navigation and evidence review
 
-Implemented October 14, 2026. The website remains unpublished. Hosted source data now exposes 31 model-scoped graph rows: the previous 19 plus 12 rows from four additional reviewed sources. Shared reference relationships appear once per supported model in the database view and once as a directed edge in the combined node canvas. Nine AD/STC model connections have reviewed evidence; other FAA index matches remain candidates.
+Implemented October 14, 2026. The website remains unpublished. Hosted source data now exposes 47 model-scoped graph rows: the initial 19, 12 from the first expansion and 16 from the second. Shared reference relationships appear once per supported model in the database view and once as a directed edge in the combined node canvas. Fourteen AD/STC model connections have reviewed evidence; other FAA index matches remain candidates.
 
 ## User workflow
 
@@ -39,8 +39,10 @@ Attachment evidence has a composite foreign key tying it to its parent source ve
 
 Schema migrations are applied locally and hosted; additional originals and attachment data were imported into the hosted catalog. Local schema application used transactional Docker `psql` because Windows host database access remains unavailable. The local data archive was not expanded in this step.
 
-Validation passed: 65 frontend/domain tests, 19 worker tests, embedded PostgreSQL access/integrity checks, lint, typechecking and production build. Checks cover graph identity/direction, duplicate reference rows, exact source guards, idempotent review, changed AML visibility, attachment-parent integrity and private operator access. Browser checks cover shared nodes, dragging, traversal, the cited AML PDF, review filters, profiles, mobile layout and existing source workflows. The node canvas and review queue have been visually inspected at desktop and mobile sizes. Repeating the hosted review preserved 31 graph rows without duplicate connections.
+Validation passed: 65 frontend/domain tests, 21 worker tests, embedded PostgreSQL access/integrity checks, lint, typechecking and production build. Checks cover graph identity/direction, duplicate reference rows, exact source guards, idempotent review, changed AML visibility, attachment-parent integrity and private operator access. Browser checks cover shared nodes, dragging, traversal, the cited AML PDF, review filters, profiles, mobile layout and existing source workflows. The node canvas and review queue have been visually inspected at desktop and mobile sizes. Repeating the hosted review preserved 47 graph rows without duplicate connections.
 
 Daily AD/STC jobs currently reconcile metadata observations. Attachment retrieval and review remain operator-driven; silent PDF/attachment byte changes without changed metadata are not promised to be detected daily. Most discovered sources and exact historical regulation editions still need review. Aircraft hours, spar replacement and maintenance-record history are not profile fields, so connections requiring those conditions remain **Configuration needs review**. There is no compliance determination, alert subscription or historical node graph yet.
 
 Next: expand reviewed rules and aircraft configuration only where originals support them; add attachment freshness checks and actual source-content comparisons; complete beta accessibility/content review before deciding to publish.
+
+See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.

@@ -1,0 +1,42 @@
+[
+  {
+    "type":"AD","number":"2024-10-04","hash":"db153059646d6ceeb8b85a66be8d9609cf47d6c2c4ef5ed87572dc312e8205d4",
+    "models":["PA-28-181"],"page":4,
+    "published_url":"https://www.govinfo.gov/content/pkg/FR-2024-05-22/pdf/2024-11143.pdf",
+    "excerpt":"Paragraph (c) includes PA-28-181 airplanes, certificated in any category, with serial numbers identified in Piper Service Bulletin No. 1413, dated April 9, 2024.",
+    "conditions":{"serial_scope":"The serial list is incorporated by reference from Piper SB 1413. That bulletin has not been retrieved; the profile cannot determine serial applicability.","effective_date":"2024-06-06","compliance":"Required actions, exceptions, prior work and reporting must be evaluated from the complete AD. Compliance is not recorded.","publication":"Final published rule, 89 FR 44914-44917, FR document 2024-11143; physical PDF page 4 is printed page 44917."},
+    "references":[{"authority":"PIPER","key":"SB:1413:2024-04-09","label":"Piper SB 1413 - April 9, 2024","page":4,"section":"(k)(2)(i)","excerpt":"Paragraph (k)(2)(i) incorporates Piper Service Bulletin No. 1413, dated April 9, 2024.","conditions":{"source_text":"The AD reference is verified. The bulletin text and its serial list have not been retrieved."}}]
+  },
+  {
+    "type":"STC","number":"SA09252AC-D","hash":"22c9c66fedeed94d1b9d7ae92c1bb380b923b8941676858dcae25a5781a74bdd",
+    "models":["PA-28-181"],"page":1,
+    "excerpt":"The certificate lists PA-28-181 under type certificate 2A13 for installation of S-TEC System 30 ALT Altitude Hold System, Model ST-704, with a 14-volt system.",
+    "conditions":{"installation":"Not confirmed on an individual aircraft. The installer must determine compatibility with previously approved modifications (page 2, condition 5).","required_data":"Bulletin No. 804 and Master Drawing List No. 921010, both June 25, 1997, or later FAA-approved revisions; 14-volt system.","flight_manual":"For PA-28-181, approved POH/AFM supplement P/N 891444, June 30, 1997, or later FAA-approved revision, is required (page 2, condition 2).","other_models":"The SA2969SW engine-conversion condition concerns PA-28-151; it is not asserted as a PA-28-181 dependency."},
+    "references":[
+      {"authority":"STEC","key":"AFMS:891444:1997-06-30","label":"S-TEC AFM supplement 891444 - June 30, 1997","page":2,"section":"Condition 2","excerpt":"Condition 2 requires approved POH/AFM supplement P/N 891444, dated June 30, 1997, for PA-28-181, or later FAA-approved revisions.","conditions":{"source_text":"The reference is verified in the certificate. The supplement text has not been retrieved."}},
+      {"authority":"STEC","key":"BULLETIN:804:1997-06-25","label":"S-TEC Bulletin 804 - June 25, 1997","page":1,"excerpt":"Installation is according to Bulletin No. 804, dated June 25, 1997, or later FAA-approved revision.","conditions":{"source_text":"The referenced design-data document has not been retrieved."}},
+      {"authority":"STEC","key":"MDL:921010:1997-06-25","label":"S-TEC drawing list 921010 - June 25, 1997","page":1,"excerpt":"Installation is according to Master Drawing List No. 921010, dated June 25, 1997, or later FAA-approved revision.","conditions":{"source_text":"The referenced design-data document has not been retrieved."}}
+    ]
+  },
+  {
+    "type":"STC","number":"SA09257AC-D","hash":"9d3fe37e2a6e667fe482ebebc29415605fec920c08ea14e6014085389a556849",
+    "models":["PA-28-140"],"page":1,
+    "excerpt":"The certificate lists PA-28-140 under type certificate 2A13 for installation of S-TEC System 30 ALT Altitude Hold System, Model ST-712, with a 14-volt system.",
+    "conditions":{"installation":"Not confirmed on an individual aircraft. The installer must determine compatibility with previously approved modifications (page 2, condition 6).","required_data":"Bulletin No. 812 and Master Drawing List No. 921012, both July 8, 1997, or later FAA-approved revisions; 14-volt system.","flight_manual":"For PA-28-140, approved POH/AFM supplement P/N 891454, July 11, 1997, or later FAA-approved revision, is required (page 2, condition 3).","other_models":"Serial limitations and the SA2143WE Robertson STOL condition concern PA-28-235, not PA-28-140."},
+    "references":[
+      {"authority":"STEC","key":"AFMS:891454:1997-07-11","label":"S-TEC AFM supplement 891454 - July 11, 1997","page":2,"section":"Condition 3","excerpt":"Condition 3 requires approved POH/AFM supplement P/N 891454, dated July 11, 1997, for PA-28-140, or later FAA-approved revisions.","conditions":{"source_text":"The reference is verified in the certificate. The supplement text has not been retrieved."}},
+      {"authority":"STEC","key":"BULLETIN:812:1997-07-08","label":"S-TEC Bulletin 812 - July 8, 1997","page":1,"excerpt":"Installation is according to Bulletin No. 812, dated July 8, 1997, or later FAA-approved revision.","conditions":{"source_text":"The referenced design-data document has not been retrieved."}},
+      {"authority":"STEC","key":"MDL:921012:1997-07-08","label":"S-TEC drawing list 921012 - July 8, 1997","page":1,"excerpt":"Installation is according to Master Drawing List No. 921012, dated July 8, 1997, or later FAA-approved revision.","conditions":{"source_text":"The referenced design-data document has not been retrieved."}}
+    ]
+  },
+  {
+    "type":"STC","number":"SA4930SW","hash":"7b34636f3f05ca717f324f604774141db72b69ccf0ffa93736aef0fd892227bc",
+    "models":["PA-28-140","PA-28-181"],"page":1,"series_scope":true,
+    "excerpt":"The certificate identifies PA-28 Series under type certificate 2A13 for installation of the Safe Flight SC-150 Angle of Attack System.",
+    "conditions":{"scope_basis":"The original states PA-28 Series, rather than enumerating variants. The selected models are independently reviewed members of type certificate 2A13; only these two supported models are mapped.","installation":"Not confirmed on an individual aircraft. The installer must determine compatibility with previously approved modifications.","required_data":"Installation Manual Supplement dated June 1982, or later FAA-approved revision, and FAA-approved Airplane Flight Manual Supplement dated February 15, 1983."},
+    "references":[
+      {"authority":"STC-SA4930SW","key":"AFMS:1983-02-15","label":"SC-150 AFM supplement - February 15, 1983","page":1,"excerpt":"An FAA-approved Airplane Flight Manual Supplement dated February 15, 1983, is required.","conditions":{"source_text":"The reference is verified in the certificate. The supplement text has not been retrieved; identity is scoped to STC SA4930SW."}},
+      {"authority":"STC-SA4930SW","key":"INSTALLATION-SUPPLEMENT:1982-06","label":"SC-150 installation supplement - June 1982","page":1,"excerpt":"Installation is in accordance with the Installation Manual Supplement dated June 1982, or later FAA-approved revision.","conditions":{"source_text":"The reference is verified in the certificate. The manual text has not been retrieved; identity is scoped to STC SA4930SW."}}
+    ]
+  }
+]

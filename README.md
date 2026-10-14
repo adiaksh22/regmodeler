@@ -2,7 +2,7 @@
 
 Aircraft regulatory exploration for owners and maintenance professionals. The first release focuses on FAA general aviation data; the planned data model will support commercial aircraft, other product categories, and additional authorities.
 
-The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 31 reviewed relationships for PA-28-140 and PA-28-181. Related AD/STC records show current FAA status first with an optional history filter. The graph supports interactive nodes with shared-model navigation, a read-only review coverage queue, source traversal, cited-page PDF viewing, historical CAR originals, and separately labeled 2016 CFR reference text. Archived revisions can be compared by metadata and PDF fingerprints. Full historical amendment wording, equipment coverage, and individual-aircraft applicability remain incomplete. Daily scoped TCDS/AD/STC checks are enabled. Personal cross-references and browser-recorded prototype history remain local.
+The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 47 reviewed relationships for PA-28-140 and PA-28-181. Related AD/STC records show current FAA status first with an optional history filter. The graph supports interactive nodes with shared-model navigation, a read-only review coverage queue, source traversal, cited-page PDF viewing, historical CAR originals, and separately labeled 2016 CFR reference text. Archived revisions can be compared by metadata and PDF fingerprints. Full historical amendment wording, equipment coverage, and individual-aircraft applicability remain incomplete. Daily scoped TCDS/AD/STC checks are enabled. Personal cross-references and browser-recorded prototype history remain local.
 
 ## Local development
 
@@ -44,6 +44,7 @@ This runs linting, frontend tests, embedded PostgreSQL schema/access tests, type
 | `npm run import:reference` | Import seven dated 2016 GovInfo Part 23 reference sections |
 | `npm run review:pa28` | Archive the exact reviewed originals and publish their guarded connections |
 | `npm run review:expanded` | Archive four additional reviewed originals and three attachments; publish hash-guarded connections |
+| `npm run review:batch2` | Archive four more reviewed originals, including a matched final-publication PDF, and publish model-specific reference paths |
 | `npm run review:decision` | Privately defer/reject a current unreviewed candidate |
 | `npm run worker:test` | Test the importer offline |
 
@@ -102,3 +103,5 @@ Browser aircraft profiles are now available for PA-28-140 and PA-28-181. Expand 
 The Change Log now includes a shared FAA source-change feed with baseline/freshness status, stored before/after metadata and model-explorer links. The hosted baseline is established. Daily automation is enabled after protected credential configuration and a successful manual GitHub run. See [source-change tracking](docs/source-change-tracking.md).
 
 See [node navigation and evidence review](docs/node-graph-and-review.md) for the new views, validation and coverage limits.
+
+See [PA-28 review batch 2](docs/pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.

@@ -24,7 +24,7 @@ const out=path.join(__dirname,'../.artifacts/graph');fs.mkdirSync(out,{recursive
   await page.$eval('[aria-label="Interactive relationship nodes"]',e=>e.scrollIntoView({block:'center'}));await page.screenshot({path:path.join(out,'nodes-desktop.png')});
   phase='review queue';await page.click('#tab-review');await page.waitForFunction(()=>document.body.innerText.includes('reviewed model connections')&&!document.body.innerText.includes('Loading review coverage'));
   assert.ok(await page.$$eval('#panel-review li',e=>e.length)>0);await page.evaluate(()=>{const s=document.querySelector('#panel-review select');s.value='reviewed';s.dispatchEvent(new Event('change',{bubbles:true}));});await page.waitForFunction(()=>document.querySelector('#panel-review').textContent.includes('SA01941LA'));
-  assert.equal(await page.$$eval('#panel-review li',e=>e.length),5);
+  assert.ok(await page.$$eval('#panel-review li',e=>e.length)>=5,'Reviewed coverage must include the previously verified model connections');
   await page.setViewport({width:390,height:844});await page.$eval('#panel-review',e=>e.scrollIntoView());await page.screenshot({path:path.join(out,'review-mobile.png'),fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'Review queue must not overflow mobile');
   phase='mobile nodes';await page.click('#tab-relationships');await page.$eval('[aria-label="Interactive relationship nodes"]',e=>e.scrollIntoView());await page.screenshot({path:path.join(out,'nodes-mobile.png'),fullPage:true});
