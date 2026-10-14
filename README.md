@@ -96,3 +96,5 @@ See [data presentation](docs/data-presentation.md) for the implemented navigatio
 See [related-source validation](docs/related-sources.md) for the AD/STC/CAR source contracts, reviewed-original identities, and source-viewer setup.
 
 Browser aircraft profiles are now available for PA-28-140 and PA-28-181. Expand **Aircraft configuration**, enter an optional serial number and STC installation details, then save to apply reviewed relevance labels to the graph and related records. Profiles remain on this browser/device; no account is required. See [aircraft profiles](docs/aircraft-profiles.md) for storage behavior, unknown-state handling and tests. Automatic tracking and private cross-device accounts remain future work.
+
+The Change Log now includes a shared FAA source-change feed with baseline/freshness status, stored before/after metadata and model-explorer links. The hosted baseline is established. Daily automation is prepared but remains disabled pending explicit credential-transfer approval and a successful manual GitHub run. See [source-change tracking](docs/source-change-tracking.md).

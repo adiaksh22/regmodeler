@@ -4,6 +4,7 @@ import IssuesTable from '../components/IssuesTable';
 import { TCDSChangeLogEntry, Issue } from '../types/tcds';
 import { getChangeLogEntries, getIssues } from '../utils/storageManager';
 import { getIssuesOverTime, getCurrentIssueStats } from '../utils/issuesAnalytics';
+import SourceChanges from '../components/SourceChanges';
 
 export default function ChangeLogPage() {
   const [entries, setEntries] = useState<TCDSChangeLogEntry[]>([]);
@@ -25,7 +26,9 @@ export default function ChangeLogPage() {
 
   return (
     <div className="p-6 space-y-8">
-      <p className="text-sm text-gray-600">Local prototype records. Aircraft monitoring and notifications will be connected during ingestion.</p>
+      <SourceChanges/>
+      <details className="border rounded-lg p-4 overflow-x-auto"><summary className="font-semibold cursor-pointer">Local prototype records in this browser</summary>
+      <p className="text-sm text-gray-600 my-3">These browser records are separate from the shared source-change feed above.</p>
       {stats && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold mb-4 text-gray-900">Issue Statistics</h2>
@@ -79,7 +82,7 @@ export default function ChangeLogPage() {
       )}
 
       <div>
-        <h1 className="text-2xl font-bold mb-4 text-gray-900">TCDS Change Log</h1>
+        <h2 className="text-2xl font-bold mb-4 text-gray-900">Browser prototype TCDS log</h2>
         <ChangeLogEntriesTable data={entries} />
       </div>
 
@@ -87,6 +90,7 @@ export default function ChangeLogPage() {
         <h2 className="text-2xl font-bold mb-4 text-gray-900">Issues</h2>
         <IssuesTable data={issues} onUpdate={refresh} />
       </div>
+      </details>
     </div>
   );
 }

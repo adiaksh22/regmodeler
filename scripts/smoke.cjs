@@ -99,6 +99,18 @@ const apiResponses=[];
     assert.match(await page.evaluate(() => document.body.innerText), /not included in this catalog/);
     await page.goto('http://127.0.0.1:4173/changelog', { waitUntil: 'networkidle0' });
     assert.match(await page.evaluate(() => document.body.innerText), /Local prototype records/);
+    if(requireDatabase){
+      await page.waitForFunction(()=>document.body.innerText.includes('baseline established'));
+      assert.match(await page.evaluate(()=>document.body.innerText),/No recorded events/);
+      await page.screenshot({path:path.join(out,'source-changes.png'),fullPage:true});
+      const fixture={id:'00000000-0000-4000-8000-000000000001',document_type:'AD',document_number:'TEST-FIXTURE',kind:'changed',models:['PA-28-140'],changed_fields:['metadata','source_status'],detected_at:'2026-10-14T00:00:00Z',old_version_id:null,new_version_id:null,old_source_status:'current',new_source_status:'historical',old_revision:'Before',new_revision:'After',old_source_url:'https://drs.faa.gov/',new_source_url:'https://drs.faa.gov/',old_metadata:{title:'Previous fixture title'},new_metadata:{title:'Changed fixture title'}};
+      await page.setRequestInterception(true);const fixtureHandler=request=>{if(new URL(request.url()).pathname==='/rest/v1/source_change_feed')void request.respond({status:request.method()==='OPTIONS'?204:200,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':request.headers()['access-control-request-headers']??'*','Access-Control-Allow-Methods':'GET,OPTIONS','Access-Control-Expose-Headers':'Content-Range','Content-Range':'0-0/1'},body:request.method()==='OPTIONS'?'':JSON.stringify([fixture])});else void request.continue();};page.on('request',fixtureHandler);
+      await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Reload source checks').click());
+      await page.waitForFunction(()=>document.body.innerText.includes('TEST-FIXTURE'));
+      await page.evaluate(()=>[...document.querySelectorAll('summary')].find(b=>b.textContent==='Compare stored metadata observations').click());
+      assert.match(await page.evaluate(()=>document.body.innerText),/Previous fixture title/);assert.match(await page.evaluate(()=>document.body.innerText),/Changed fixture title/);assert.match(await page.evaluate(()=>document.body.innerText),/current → historical/);
+      await page.setRequestInterception(false);page.off('request',fixtureHandler);
+    }
     phase='mobile';
     await page.setViewport({ width: 390, height: 844 });
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle0' });

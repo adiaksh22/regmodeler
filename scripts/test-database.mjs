@@ -124,6 +124,7 @@ try {
   const relatedStart=id=>query("insert into public.ingestion_runs(id,source,status) values($1,'FAA:STC:PA28','running')",[id]);
   const relatedCommit=(id,rows)=>query("select public.commit_pa28_related($1,'STC',$2::jsonb)",[id,JSON.stringify(rows)]);
   await relatedStart(relatedRun);await relatedCommit(relatedRun,[relatedRow]);
+  assert.equal((await query("select * from public.source_change_events where source='FAA:STC:PA28'")).rows.length,0,'First scoped observation is a baseline, not a new regulation');
   await asRole('anon',null,async()=>{
     const found=(await query("select * from public.related_documents where model='PA-28-181' and is_active and status='current'")).rows;
     assert.equal(found.length,1);assert.equal(found[0].original_archived,false);assert.match(found[0].candidate_reason,/not verified/);
@@ -132,12 +133,17 @@ try {
   const second='60000000-0000-4000-8000-000000000002';await relatedStart(second);
   const correctedRelated=relatedSnapshot('STC',{...sourceRecord,'drs:title':'Corrected approval'},'2026-10-13T01:00:00Z').row;
   await relatedCommit(second,[correctedRelated]);
+  const firstChange=(await query("select * from public.source_change_events where source='FAA:STC:PA28'")).rows;
+  assert.equal(firstChange.length,1);assert.equal(firstChange[0].kind,'changed');assert.deepEqual(firstChange[0].changed_fields,['metadata']);
+  assert.notEqual(firstChange[0].old_version_id,firstChange[0].new_version_id);
   assert.equal((await query('select * from public.related_documents where is_active')).rows.length,1);
   assert.equal((await query('select * from public.related_documents where not is_active')).rows.length,1,'Prior registry observations remain available');
   const third='60000000-0000-4000-8000-000000000003';await relatedStart(third);await relatedCommit(third,[correctedRelated]);
+  assert.equal((await query("select * from public.source_change_events where source='FAA:STC:PA28'")).rows.length,1,'Repeated unchanged import adds no events');
   assert.equal((await query('select * from public.related_documents')).rows.length,2,'Repeat discovery does not duplicate metadata');
   const badRun='60000000-0000-4000-8000-000000000004';await relatedStart(badRun);
   await assert.rejects(relatedCommit(badRun,[{...correctedRelated,models:['UNKNOWN']}]),/check constraint/);
+  assert.equal((await query("select * from public.source_change_events where source='FAA:STC:PA28'")).rows.length,1,'Failed import cannot create an event');
   assert.equal((await query('select * from public.related_documents where is_active')).rows.length,1,'A failed batch cannot deactivate the previous index');
   assert.equal((await query("select last_successful_run_id from public.ingestion_checkpoints where source='FAA:STC:PA28'")).rows[0].last_successful_run_id,third);
   const reference={section:'23.955',title:'Fuel flow.',body_text:'Reference fixture.',source_kind:'later_reference',edition_date:'2016-01-01',basis_key:'FAR:23.955:amendment:23-7',source_url:'https://www.govinfo.gov/content/pkg/CFR-2016-title14-vol1/xml/CFR-2016-title14-vol1-part23.xml',content_sha256:'e'.repeat(64),storage_path:'US/CFR/2016/fixture.xml',retrieved_at:'2026-10-13T00:00:00Z'};
@@ -172,6 +178,22 @@ try {
   await query('update public.document_versions set is_published=true where id=$1',[reviewIds[1]]);
   await query('update public.related_document_matches set is_active=false where version_id=$1',[reviewIds[1]]);
   assert.equal((await publicGraph()).rows.length,2,'A changed discovery observation cannot retain a current reviewed path without renewed review');
+  const events=(await asRole('anon',null,()=>query('select * from public.source_change_feed'))).rows;
+  assert.ok(events.some(e=>e.kind==='missing_from_index'),'Missing observations are distinguished from regulatory withdrawal');
+  const changed=events.find(e=>e.kind==='changed'&&e.document_number==='SA_TEST');assert.ok(changed);
+  await query('update public.document_versions set is_published=false where id=$1',[changed.old_version_id]);
+  assert.equal((await asRole('anon',null,()=>query('select * from public.source_change_feed where id=$1',[changed.id]))).rows.length,0,'Unpublished previous evidence hides the event');
+  await assert.rejects(asRole('anon',null,()=>query('select * from public.source_observations')),/permission denied/);
+  await assert.rejects(asRole('service_role',null,()=>query('select public.commit_pa28_related_core($1,$2,$3::jsonb)',[third,'STC','[]'])),/permission denied/);
+  const returning=relatedSnapshot('STC',{...sourceRecord,'drs:title':'Corrected approval','drs:status':'Historical'},'2026-10-14T00:00:00Z').row;
+  const returnRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:STC:PA28','running') returning id")).rows[0].id;
+  await relatedCommit(returnRun,[returning]);
+  const returned=(await query("select * from public.source_change_events where run_id=$1 and kind='returned_to_index'",[returnRun])).rows[0];
+  assert.ok(returned);assert.equal(returned.old_source_status,'current');assert.equal(returned.new_source_status,'historical');
+  const countBeforeRepeat=(await query('select count(*)::integer n from public.source_change_events')).rows[0].n;
+  const repeatRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:STC:PA28','running') returning id")).rows[0].id;
+  await relatedCommit(repeatRun,[returning]);assert.equal((await query('select count(*)::integer n from public.source_change_events')).rows[0].n,countBeforeRepeat);
+  console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');
   console.log('Importer transaction checks passed: private RPC, stable evidence IDs, deduplication, correction history, rollback, checkpoint integrity, stale-run rejection.');

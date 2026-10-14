@@ -1,0 +1,35 @@
+name: Daily PA-28 source check
+on:
+  schedule:
+    - cron: '17 13 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pa28-all-source-checks
+  cancel-in-progress: false
+jobs:
+  import:
+    # Enable only after credential approval and a successful manual run.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.SOURCE_CHECKS_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      FAA_DRS_API_KEY: ${{ secrets.FAA_DRS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Reconcile TCDS originals and metadata
+        run: npm run import:tcds
+      - name: Reconcile AD metadata
+        if: ${{ !cancelled() }}
+        run: npm run import:related -- --type=AD
+      - name: Reconcile STC metadata including undated records
+        if: ${{ !cancelled() }}
+        run: npm run import:related -- --type=STC

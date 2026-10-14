@@ -50,7 +50,7 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | Relationships | 19 reviewed connections; directed graph/list; AD-to-service-bulletin traversal | More reviewed paths, relation filters and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial labels; reported installation | Backup import, additional rules and optional private accounts |
-| Changes/alerts | Immutable source snapshots, checkpoints and manual workflows | Scheduling, shared change events, watchlists and notifications |
+| Changes/alerts | Atomic observation/change events, a shared evidence-linked feed, hosted baseline and a prepared daily workflow | Credential-transfer approval, manual hosted workflow verification, schedule enablement, watchlists and notifications |
 | Publication | Cloudflare account and build setup selected | Website remains unpublished; beta review/release decision pending |
 
 Counts describe validated scoped observations, not complete FAA coverage or a fully reviewed applicability catalog. CAR scans and the 2016 reference edition do not form the full cited historical basis or today's regulation. Browser prototype history is separate from official imported source history.
@@ -74,6 +74,12 @@ React/TypeScript lives in `src/`; server-only jobs in `apps/worker/`; versioned 
 Retain authority, stable identity, revision/effective dates, retrieval time, original sources, page/section evidence, conditions and review status. Approval scope and actual installation are separate relationships. Credentials stay in protected worker configuration. Browser source reads use public configuration; private originals are exposed only through publication-checked temporary PDF links. Profile data remains separate from the source catalog.
 
 ## Recommended next phase: dependable change tracking
+
+The first change-tracking implementation is complete: source events and public comparison views, model/type feed filters and hosted baseline checks. The user selected daily checks. Enabling the prepared workflow awaits explicit approval to transfer FAA and hosted Supabase worker credentials to GitHub Actions, followed by a successful manual run. See [source-change tracking](source-change-tracking.md).
+
+### Agreed regulatory boundary
+
+Use TCDS/certificate identity to anchor models, while treating ADs and STCs as many-to-many source relationships and individual configurations as separate data. The initial research scope is selected Part 21 context, applicable Part 23/historical CAR certification basis and Part 39 ADs. Next add selected Part 43 and Part 91 Subpart E maintenance/record responsibilities. Preserve relevant cross-references outside those parts without claiming their full coverage. Engines, propellers and appliances can introduce additional AD relationships as actual configuration coverage grows.
 
 Build a shared source-change feed for supported models before automated email delivery or broad relevance conclusions.
 
@@ -149,4 +155,5 @@ Measure tasks, not counts alone: users find the correct model, distinguish evide
 - [Related sources and reviewed dependencies](related-sources.md)
 - [Data presentation](data-presentation.md)
 - [Aircraft profiles](aircraft-profiles.md)
+- [Source-change tracking](source-change-tracking.md)
 - [Feasibility report](../data-feasibility/REPORT.txt)
