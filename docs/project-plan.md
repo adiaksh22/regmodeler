@@ -45,7 +45,7 @@ Scoped positive-result last-modified filtering and model retrieval have passed. 
 
 ## Next selected phase
 
-The user selected aircraft configuration profiles before automatic change tracking. Start with model, serial number, installed STCs/modifications, and explicit unknown values. Keep approval scope distinct from installation evidence. Use these details to refine candidate relevance; do not infer compliance from a model match. Ask about profile storage and the first supported configuration checks before implementing this phase.
+The user selected aircraft configuration profiles before automatic change tracking, then chose browser storage first. The editor supports PA-28-140 and PA-28-181, optional serials, named profiles and explicitly reported STC installation details. Current reviewed graph conditions drive serial-range labels; unknowns remain visible. See [aircraft profiles](aircraft-profiles.md). Next, review this profile workflow with the user, then prioritize further reviewed configuration rules, automated change tracking and eventual private accounts. Notification channels and publication still require product decisions.
 
 ## Decisions to ask the user
 

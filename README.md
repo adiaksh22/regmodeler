@@ -93,4 +93,6 @@ Piper PA-28 is the first supported live TCDS import. See [PA-28 ingestion](docs/
 
 See [data presentation](docs/data-presentation.md) for the implemented navigation, evidence and date semantics, coverage, and next source connections. Try searching `PA-28-181` locally, open its result, and select a graph connection or the imported revision history tab.
 
-See [related-source validation](docs/related-sources.md) for the AD/STC/CAR source contracts, reviewed-original identities, and source-viewer setup. The next selected phase is aircraft configuration profiles before automatic change tracking.
+See [related-source validation](docs/related-sources.md) for the AD/STC/CAR source contracts, reviewed-original identities, and source-viewer setup.
+
+Browser aircraft profiles are now available for PA-28-140 and PA-28-181. Expand **Aircraft configuration**, enter an optional serial number and STC installation details, then save to apply reviewed relevance labels to the graph and related records. Profiles remain on this browser/device; no account is required. See [aircraft profiles](docs/aircraft-profiles.md) for storage behavior, unknown-state handling and tests. Automatic tracking and private cross-device accounts remain future work.

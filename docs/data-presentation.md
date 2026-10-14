@@ -15,6 +15,7 @@ Search `PA-28-181` → select the Piper PA-28 result → view the selected model
 | Evidence | Exact source snapshot and page, excerpt, amendment/effective date or scope, official link, archived PDF viewer |
 | Imported history | Current revision identified by the database pointer, issuance and first-retrieval dates, archival status, every imported source link |
 | Related records | AD/STC type, text filter, current-first results, optional history, reviewed-source badges, extracted AD text |
+| Aircraft configuration | Named browser profiles, optional serials, reported STC installation, reviewed relevance labels and filters that retain unknowns |
 | Regulation originals | Historical CAR scans and 2016 CFR text labeled by edition and completeness |
 | Comparison | Two archived revision selections, issuance metadata and PDF byte identity; both originals available |
 | Coverage | Reviewed connections distinguished from index candidates; missing amendments, equipment and applicability stated explicitly |
@@ -38,9 +39,9 @@ A revised document is not automatically an applicable change for every aircraft.
 
 ## Next data and interface layers
 
-1. Build aircraft configuration profiles first, as selected by the user: model, serial number, installed modifications and explicit unknown details.
+1. Extend the implemented browser profiles with more reviewed configuration conditions; retain explicit unknowns and separate user-reported installation from approval scope.
 2. Extend source review to relevant ADs/STCs, AMLs and exact historical amendment wording.
 3. Add more graph paths, relationship-type filters and historical relationship exploration.
 4. Add actual source-content change summaries and configuration-aware watchlists before scheduled alerts. PDF fingerprint differences alone do not describe changed wording.
 
-Verified on October 13, 2026: 53 frontend tests, 17 worker tests, PostgreSQL importer/dependency/access checks, lint, types and production build passed. Local and hosted Supabase expose 19 reviewed connections. The browser smoke flow covers model search, dated reference labels, AD-to-bulletin traversal, cited PDF viewing, current/history discovery, archived revision comparison, unreviewed-model coverage, personal-link preservation, mobile layout and outage fallback. See [related-source validation](related-sources.md) for source counts and remaining coverage.
+Verified on October 14, 2026: 62 frontend tests, 17 worker tests, PostgreSQL importer/dependency/access checks, lint, types and production build passed. Local and hosted Supabase expose 19 reviewed connections. Browser checks cover source exploration, history, profile persistence, reviewed serial boundaries, user-reported installation, filters retaining unknowns, storage failures, model isolation, mobile layout and outage fallback. See [related-source validation](related-sources.md) and [aircraft profiles](aircraft-profiles.md) for scope and remaining coverage.

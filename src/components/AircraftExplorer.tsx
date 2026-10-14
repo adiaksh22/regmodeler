@@ -5,6 +5,9 @@ import type { CatalogDocument } from '../domain/catalog';
 import RelatedDocuments from './RelatedDocuments';
 import SourcePdf from './SourcePdf';
 import RevisionComparison from './RevisionComparison';
+import AircraftProfileEditor from './AircraftProfileEditor';
+import ProfileRelevance from './ProfileRelevance';
+import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 
 export function sourceDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return 'Not recorded';
@@ -20,21 +23,27 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [view, setView] = useState<'graph'|'list'>(()=>typeof window!=='undefined' && window.matchMedia?.('(max-width: 639px)').matches?'list':'graph');
   const [evidenceId, setEvidenceId] = useState('');
   const [showAll, setShowAll] = useState(false);
+  const [profile,setProfile] = useState<AircraftProfile|null>(null);
+  const [profileDirty,setProfileDirty] = useState(false);
+  const [profileOnly,setProfileOnly] = useState(false);
   const allLinks = details.relationships.filter(r=>r.model===selected);
-  const links = allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).sort((a,b)=>
+  const activeProfile = profile?.model===selected?profile:null;
+  const rowHeight = activeProfile?104:78;
+  const links = allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).filter(r=>!profileOnly||profileRelevance(activeProfile,r)?.category!=='outside').sort((a,b)=>
     Number(b.relationship_type==='covered_by')-Number(a.relationship_type==='covered_by') || a.target.localeCompare(b.target,undefined,{numeric:true}));
   const evidence = links.find(r=>r.id===evidenceId) ?? links[0];
   const revisions = [...details.revisions].sort((a,b)=>Number(b.is_current)-Number(a.is_current) || (b.revision_date ?? '').localeCompare(a.revision_date ?? ''));
   return <section className="bg-white rounded-xl border border-slate-200 p-5 mb-6" aria-label="Aircraft data explorer">
     <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
       <div><label htmlFor="aircraft-model" className="block text-sm font-semibold text-slate-600 mb-1">Aircraft model</label>
-        <select id="aircraft-model" value={selected} onChange={e=>{setParams({model:e.target.value},{replace:true});setEvidenceId('');setExpanded('');}} className="border rounded-lg p-2 font-semibold max-w-full">
+        <select id="aircraft-model" value={selected} onChange={e=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model:e.target.value},{replace:true});setEvidenceId('');setExpanded('');}} className="border rounded-lg p-2 font-semibold max-w-full">
           {models.map(model=><option key={model}>{model}</option>)}
         </select>
       </div>
       <div className="text-sm text-slate-600">TCDS last successful source check<br/><strong>{details.lastChecked ? new Date(details.lastChecked).toLocaleString() : 'Not available'}</strong></div>
     </div>
     <p className="text-sm text-slate-600 mb-4">Reviewed coverage includes certification-basis references and selected AD/STC connections for PA-28-140 and PA-28-181. Related records contain additional model-index matches. Individual-aircraft applicability and compliance are not determined here.</p>
+    <AircraftProfileEditor key={selected} model={selected} onChange={setProfile} onDirty={setProfileDirty}/>
     <div className="flex gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data">
       {(['relationships','history','related'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
         {name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':`Revision history (${details.revisions.length})`}
@@ -46,18 +55,20 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
         <div className="flex gap-2">{(['graph','list'] as const).map(mode=><button key={mode} onClick={()=>setView(mode)} aria-pressed={view===mode} className={`px-3 py-1 rounded border ${view===mode?'bg-blue-50 border-blue-400':'border-slate-200'}`}>{mode==='graph'?'Graph':'List'}</button>)}</div>
       </div>
       <p className="text-sm text-slate-600 mb-4">Select a connection to read its source evidence. Amendment dates identify the historical certification basis.</p>
+      {activeProfile&&<label className="block text-sm mb-4"><input type="checkbox" checked={profileOnly} onChange={e=>setProfileOnly(e.target.checked)}/> Hide connections outside reviewed serial ranges. Unknown relevance remains visible.</label>}
       {expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {links.length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
         <div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
-              <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*78} viewBox={`0 0 80 ${links.length*78}`}>
+              <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>
                 <defs><marker id="graph-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M0 0 L6 3 L0 6 Z" fill="#64748b"/></marker></defs>
-                {links.map((link,index)=><path key={link.id} d={`M4 ${links.length*39} L30 ${links.length*39} L30 ${index*78+39} L76 ${index*78+39}`} fill="none" stroke="#94a3b8" strokeWidth="2" markerStart={link.direction==='incoming'?'url(#graph-arrow)':undefined} markerEnd={link.direction==='incoming'?undefined:'url(#graph-arrow)'}/>)}
+                {links.map((link,index)=><path key={link.id} d={`M4 ${links.length*rowHeight/2} L30 ${links.length*rowHeight/2} L30 ${index*rowHeight+rowHeight/2} L76 ${index*rowHeight+rowHeight/2}`} fill="none" stroke="#94a3b8" strokeWidth="2" markerStart={link.direction==='incoming'?'url(#graph-arrow)':undefined} markerEnd={link.direction==='incoming'?undefined:'url(#graph-arrow)'}/>)}
               </svg></>}
-            <div className={view==='graph'?'flex-1 space-y-2':'space-y-2'}>{links.map(link=><button key={link.id} onClick={()=>setEvidenceId(link.id)} aria-pressed={evidence?.id===link.id} className={`block w-full text-left rounded-lg border p-3 ${view==='graph'?'h-[70px]':''} ${evidence?.id===link.id?'border-blue-600 bg-blue-50':'border-slate-200 hover:bg-slate-50'}`}>
+            <div className={view==='graph'?'flex-1 space-y-2':'space-y-2'}>{links.map(link=><button key={link.id} onClick={()=>setEvidenceId(link.id)} aria-pressed={evidence?.id===link.id} className={`block w-full text-left rounded-lg border p-3 ${view==='graph'?(activeProfile?'h-[96px]':'h-[70px]'):''} ${evidence?.id===link.id?'border-blue-600 bg-blue-50':'border-slate-200 hover:bg-slate-50'}`}>
               <span className="block text-xs text-slate-600">{{covered_by:'Covered by',certified_against:'Certification basis',applies_to:'Conditional applicability',approved_for:'Approved modification scope',references:'References'}[link.relationship_type]??link.relationship_type.replaceAll('_',' ')}</span>
               <span className="font-semibold text-sm">{link.target}</span>
+              {profileRelevance(activeProfile,link)&&<span className="block text-xs text-blue-800">{profileRelevance(activeProfile,link)!.label}</span>}
             </button>)}</div>
           </div>
         </div>
@@ -65,6 +76,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <h3 className="font-bold mb-2">{evidence.target}</h3>
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
+          <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
           {Object.entries(evidence.applicability_conditions).map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
           <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">Open FAA source · see page {evidence.evidence_page}</a>
           {evidence.evidence_version_id&&<SourcePdf key={evidence.evidence_version_id} versionId={evidence.evidence_version_id} page={evidence.evidence_page}/>}
@@ -89,6 +101,6 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       </li>)}</ol>
       {revisions.length>5 && <button onClick={()=>setShowAll(!showAll)} className="text-blue-700 font-semibold mt-4">{showAll?'Show fewer revisions':`Show all ${revisions.length} revisions`}</button>}
     </div>}
-    {tab==='related'&&<div role="tabpanel" id="panel-related" aria-labelledby="tab-related"><RelatedDocuments model={selected} relationships={allLinks}/></div>}
+    {tab==='related'&&<div role="tabpanel" id="panel-related" aria-labelledby="tab-related"><RelatedDocuments model={selected} relationships={allLinks} profile={activeProfile}/></div>}
   </section>;
 }

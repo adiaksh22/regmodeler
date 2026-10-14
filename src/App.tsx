@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import {lazy,Suspense} from 'react';
 import HomePage from './pages/HomePage';
-import TCDSDetail from './pages/TCDSDetail';
-import ChangeLogPage from './pages/ChangeLogPage';
+const TCDSDetail=lazy(()=>import('./pages/TCDSDetail'));
+const ChangeLogPage=lazy(()=>import('./pages/ChangeLogPage'));
 
 function App() {
   return (
@@ -17,11 +18,11 @@ function App() {
           Prototype: FAA catalog, imported revisions, and reviewed relationship evidence. Automatic updates are not enabled yet.
         </p>
 
-        <Routes>
+        <Suspense fallback={<p role="status" className="p-6">Loading page…</p>}><Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/tcds/:tcdsNumber" element={<TCDSDetail />} />
           <Route path="/changelog" element={<ChangeLogPage />} />
-        </Routes>
+        </Routes></Suspense>
       </div>
     </BrowserRouter>
   );
