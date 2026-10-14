@@ -15,7 +15,7 @@ function App() {
           </div>
         </nav>
         <p className="container mx-auto px-4 mb-4 text-sm text-amber-900" role="note">
-          Prototype: FAA catalog, imported revisions, and reviewed relationship evidence. Automatic updates are not enabled yet.
+          Prototype: daily FAA source checks for PA-28-140 and PA-28-181, with imported revisions and reviewed relationship evidence.
         </p>
 
         <Suspense fallback={<p role="status" className="p-6">Loading page…</p>}><Routes>

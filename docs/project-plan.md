@@ -50,7 +50,7 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | Relationships | 19 reviewed connections; directed graph/list; AD-to-service-bulletin traversal | More reviewed paths, relation filters and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial labels; reported installation | Backup import, additional rules and optional private accounts |
-| Changes/alerts | Atomic observation/change events, a shared evidence-linked feed, hosted baseline and a prepared daily workflow | Credential-transfer approval, manual hosted workflow verification, schedule enablement, watchlists and notifications |
+| Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
 | Publication | Cloudflare account and build setup selected | Website remains unpublished; beta review/release decision pending |
 
 Counts describe validated scoped observations, not complete FAA coverage or a fully reviewed applicability catalog. CAR scans and the 2016 reference edition do not form the full cited historical basis or today's regulation. Browser prototype history is separate from official imported source history.
@@ -75,7 +75,7 @@ Retain authority, stable identity, revision/effective dates, retrieval time, ori
 
 ## Recommended next phase: dependable change tracking
 
-The first change-tracking implementation is complete: source events and public comparison views, model/type feed filters and hosted baseline checks. The user selected daily checks. Enabling the prepared workflow awaits explicit approval to transfer FAA and hosted Supabase worker credentials to GitHub Actions, followed by a successful manual run. See [source-change tracking](source-change-tracking.md).
+The first change-tracking implementation is complete: source events and public comparison views, model/type feed filters and hosted baseline checks. The user approved daily checks and the specific credential transfer to encrypted GitHub Actions secrets. A manual hosted run succeeded and the daily schedule is enabled. Next prioritize source-quality review, further configuration conditions and operator visibility for failures. See [source-change tracking](source-change-tracking.md).
 
 ### Agreed regulatory boundary
 
@@ -85,7 +85,7 @@ Build a shared source-change feed for supported models before automated email de
 
 ### 1. Establish scheduled imports
 
-Configure repository secrets privately and complete each manual hosted workflow. Begin with daily scoped TCDS/AD/STC checks, subject to source limits and measured runtime. Retain full STC reconciliation because 49 discovered legacy records have no modification timestamp. Consider more frequent AD checks after measuring source behavior and budget. No schedule is currently enabled.
+Daily scoped TCDS/AD/STC checks are enabled after protected secret configuration and a successful manual hosted workflow. Retain full STC reconciliation because 49 discovered legacy records have no modification timestamp. Consider more frequent AD checks after measuring source behavior and budget. Scheduled run timing may be delayed; monitor actual successful source checkpoints.
 
 Keep retries, byte limits, pagination validation and overlap windows. Advance checkpoints only after a complete successful transaction. Failure preserves the previous valid catalog and marks freshness as stale, rather than claiming no changes. Add operator visibility for failures/interrupted runs.
 

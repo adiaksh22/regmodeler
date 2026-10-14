@@ -46,7 +46,7 @@ npm.cmd run import:reference
 npm.cmd run review:pa28
 ```
 
-`-- --type=AD`, `STC`, or `CAR` limits related-source jobs. Review downloads only the four known originals and refuses changed hashes or metadata not yet imported. The manual GitHub related-source workflow defaults to verification; imports require private repository secrets. No schedule is enabled.
+`-- --type=AD`, `STC`, or `CAR` limits related-source jobs. Review downloads only the four known originals and refuses changed hashes or metadata not yet imported. The manual related-source workflow defaults to verification. Daily TCDS/AD/STC checks are now enabled with protected repository secrets; CAR and reference-text imports remain manual. See [source-change tracking](source-change-tracking.md).
 
 Deploy the PDF viewer backend with `npx.cmd supabase functions deploy source-viewer --use-api`. The function uses the platform-injected Supabase server credential, never the FAA key. Its public endpoint accepts a version UUID, checks document/version publication, FAA type and exact hash-addressed PDF path, then issues a five-minute signed URL. Callers cannot choose arbitrary storage paths or obtain raw metadata JSON. Direct bucket access remains private. `verify_jwt=false` allows reading public FAA snapshots through these explicit publication checks; this is not an account-authentication endpoint. Local Docker startup excludes the edge runtime, so local PDF viewing requires serving this function separately. The hosted-data preview uses the deployed function.
 

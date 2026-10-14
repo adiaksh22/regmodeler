@@ -39,7 +39,7 @@ The import targets `SUPABASE_URL` and `SUPABASE_SECRET_KEY`, not the frontend's 
 
 GitHub has a manual **PA-28 TCDS import** workflow. Its default is verification only; importing requires explicitly turning off `verify_only` and configuring repository secrets `FAA_DRS_API_KEY`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY`. Apply the importer migration to the hosted project before a hosted import. This workflow does not deploy the website.
 
-No unattended schedule is enabled yet. First and repeated live imports are validated; the next scheduling requirement is repository Actions secrets and a successful manual hosted workflow run. Log messages contain only counts, certificate identity, timestamps, and controlled error codes; never raw client errors or credentials.
+Daily TCDS/AD/STC checks are enabled after the user approved encrypted repository secrets and a manual hosted workflow passed. See [source-change tracking](source-change-tracking.md). Log messages contain only counts, certificate identity, timestamps, and controlled error codes; never raw client errors or credentials.
 
 ## Validation status
 
@@ -54,4 +54,4 @@ Verified October 13, 2026:
 
 `retrieved_at` preserves the first observation of an unchanged snapshot. Use the checkpoint's successful run for last-check freshness; repeated polling does not rewrite historical retrieval dates.
 
-Primary PDFs and raw metadata are archived. Additional attachments and complete amendment-specific text remain pending. No unattended schedule or public website deployment has been enabled. Hosted server credentials were used only in memory and were not saved in frontend configuration or committed. Anonymous direct bucket downloads remain denied; the new source viewer provides short-lived access only to published FAA PDF snapshots.
+Primary PDFs and raw metadata are archived. Additional attachments and complete amendment-specific text remain pending. Daily checks are enabled; the website remains unpublished. Hosted worker credentials are kept in protected backend configuration and encrypted repository secrets, outside frontend configuration and Git commits. Anonymous direct bucket downloads remain denied; the source viewer provides short-lived access only to published FAA PDF snapshots.

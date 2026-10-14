@@ -10,7 +10,7 @@ Chosen October 12, 2026: Cloudflare Pages for the website, Supabase Free for Pos
 - Original source files have a private storage bucket. A viewer/download mechanism can be added later without making every file public.
 - The frontend reads the shared catalog when configured, uses verified bundled snapshots when unconfigured, and labels fallback after an API failure.
 - Build-time rejection of server credentials in browser variables.
-- A server-only worker connectivity check and a manual GitHub Actions workflow. Scheduled FAA imports are not enabled yet.
+- Server-only worker checks, manual import workflows and an enabled daily scoped FAA source check. See [source-change tracking](source-change-tracking.md) for protected configuration and validation.
 
 The app remains a prototype. Accounts/watchlist UI is step 7; the database permissions are prepared now. Step 3 has validated first and repeated live PA-28 TCDS imports with 23 revisions. The other two catalog entries remain verified seed snapshots; related AD/STC/regulation imports and automatic scheduling are still planned.
 
