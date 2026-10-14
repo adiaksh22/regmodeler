@@ -1,54 +1,152 @@
-# Implementation plan
+# RegModeler product and delivery plan
 
-## Product scope
+Updated October 14, 2026. This is the main project plan. It separates completed features, proposed work and unresolved decisions; supporting documents contain implementation details.
 
-Primary users: aircraft owners and maintenance professionals. Initial coverage: FAA general aviation, starting with a small reviewed catalog of aircraft families. Commercial airplanes, other aircraft categories, engines, propellers, appliances, and additional authorities must fit the future domain model without replacing its fundamentals.
+## Purpose and scope
 
-First selected aircraft family: Piper PA-28. Begin live ingestion with FAA TCDS `2A13`, then add related AD/STC discovery and the model-specific certification-basis evidence needed for the graph.
+Help aircraft owners and maintenance professionals find regulatory sources, understand their connections and identify changes worth reviewing for a specific aircraft. Start with FAA general aviation: Piper PA-28-140 and PA-28-181 under TCDS 2A13. Later expand to other GA families, commercial aircraft, engines, propellers, appliances and additional authorities.
 
-The published product will support source-linked search, aircraft profiles, regulatory relationship exploration, revision comparisons, and aircraft/configuration watchlists. It will distinguish certification-basis amendments from current regulations and distinguish potential relevance from confirmed applicability.
+Users can browse model information without a profile. Profiles add user-reported aircraft details to explain selected relevance conditions. Source review, installation verification and compliance assessment remain separate activities.
 
-## Publication decision
+## User workflows and profile use cases
 
-The user chose to keep the website unpublished until live imports and the relationship graph are ready. Cloudflare account and build settings are prepared, but the three-sample prototype should not be deployed publicly. Review imported coverage and a working model-to-regulation graph before returning to the publishing decision.
-
-The GitHub foundation is pushed and its automated quality checks passed. Hosted Supabase is initialized. PA-28 ingestion includes 23 TCDS revisions, scoped AD/STC discovery, CAR originals and dated GovInfo reference text. Nineteen reviewed connections support model-centered exploration and one AD-to-service-bulletin path. Scheduling and broader applicability review remain pending. See [the PA-28 validation record](pa28-ingestion.md) and [related sources](related-sources.md).
-
-## Execution steps
-
-| Step | Deliverable | Completion gate |
+| User and task | What they do | What the tool contributes |
 | --- | --- | --- |
-| 1. Foundation and cleanup | Active/archived code separation, verified sample data, documented setup, repeatable quality checks | Lint, tests, typecheck, production build, and browser smoke checks pass |
-| 2. Shared infrastructure | PostgreSQL schema and migrations, API, ingestion worker, environment configuration | Services start locally; configuration boundaries and database migration checks pass |
-| 3. Verified ingestion | FAA TCDS/AD/STC and eCFR connectors, archived sources, version history, scheduled jobs | Reviewed records have citations; pagination and positive-result incremental retrieval pass |
-| 4. Relationships | Canonical product/model identities and typed, directed, evidenced relationships | Representative aircraft/configuration connections are reviewed |
-| 5. Search and aircraft interface | Search, aircraft profiles, source reader, filters, revision comparison | Owners and maintenance users can retrieve representative information with evidence |
-| 6. Graph explorer | Expandable graph, relationship labels, source panel, filters, historical views | A user can follow and explain a model-to-regulation path |
-| 7. Watchlists and alerts | Accounts, configuration-aware subscriptions, change relevance, notifications | Scheduled jobs detect changes without browser activity and avoid duplicate delivery |
-| 8. Public beta | Hosting, backups, monitoring, accessibility, supported-catalog audit | Coverage and freshness are visible; operating and recovery procedures are tested |
+| Owner researching their aircraft | Search a model, save serial/modification details, select graph connections and read cited originals | Reusable aircraft context and explanations of reviewed conditions |
+| Maintenance professional preparing a review | Select the intended aircraft, inspect current/history AD/STC records and compare source conditions with aircraft records | Organized sources, exact evidence and unresolved questions |
+| Prospective buyer organizing research | Record supplied aircraft details and identify source material to discuss with a seller or maintenance professional | Research context; seller-supplied details remain unverified |
+| User managing several aircraft | Keep separately named profiles and switch between them | Avoid repeated entry and prevent one model's profile from being applied to another |
+| Future user monitoring changes | Subscribe to model/aircraft source changes and investigate new events | Planned traceable change feed and later explicit notifications |
 
-## Chosen service boundaries
+The normal workflow is: search model -> open certificate family -> select/create profile -> browse graph or related records -> inspect relevance and unknowns -> open the source excerpt and cited PDF -> use the original material in the user's review process.
 
-The user selected a $0 portfolio target: Cloudflare Pages, Supabase Free, and GitHub Actions. Keep the frontend at the repository root for simple Pages builds. Supabase supplies the database API through access-controlled views/RPCs, so a separate paid API server is not needed initially. `apps/worker` contains server-only jobs, `supabase/migrations` contains schema changes, and `src/domain` contains the initial frontend domain contract. GitHub Actions will run scheduled imports after step 3 validation. See [setup instructions](free-stack-setup.md).
+The current app does not record maintenance performed, sign off work or determine compliance. Prospective-buyer and multi-aircraft uses build on existing profiles; there is no dedicated inspection or team-management workflow yet.
 
-Use PostgreSQL for canonical records, document versions, search, and relationship edges. Use object storage for original PDF/XML files. Start with relational queries for graph traversal; evaluate a separate graph database only when measured workloads require it.
+## Profile behavior today
 
-The model must retain regulatory authority, stable product/certificate identity, revision/effective dates, configuration conditions, retrieval timestamps, original sources, page/section evidence, and review status. "Approved for this model" and "installed on this individual aircraft" are separate relationships.
+Profiles support PA-28-140 and PA-28-181. Fields are a name, optional manufacturer serial, STC numbers, installation status (installed, not installed or unknown) and optional record-reference notes. Saving applies a draft; unsaved edits do not change relevance. Users can keep multiple profiles, select them independently by model, delete them and export JSON.
 
-## Data access and scheduling
+| Profile information | Current use | Remaining uncertainty |
+| --- | --- | --- |
+| Model | Selects scoped discovery and the reviewed model graph | Other models' unreviewed coverage |
+| Serial | Compared with reviewed structured serial ranges where available | Other conditions, prior work, compliance and unsupported formats |
+| STC installation entry | Labels reviewed approval connections with user-reported installation | Verified installation, compatibility and design-data rights |
+| Missing fields/unlisted STCs | Keeps relevance unknown | Requires investigation, not an assumption of absence |
+| Record-reference note | Preserves user context | No uploaded-record verification or maintenance sign-off |
 
-Authenticated FAA DRS access passed sample metadata, PDF-download, and pagination checks for TCDSs, STCs, and emergency ADs. eCFR/Federal Register/GovInfo retrieval also passed. The detailed evidence remains in `data-feasibility/`.
+The first reviewed serial example is the AD 2020-24-05 connection. Most discovered records have no reviewed configuration rule. Filters hide only records outside reviewed serial ranges; unknowns remain visible. Historical observations without corresponding reviewed current evidence do not receive current configuration rules.
 
-Proposed polling: daily for TCDSs, STCs, and eCFR metadata; every four hours for AD and Federal Register discovery where supported; weekly reconciliation. Validate source limits and source update cadence before enabling unattended jobs. Store checkpoints only after complete successful batches and overlap incremental windows to accommodate corrections and delayed records.
+Profiles stay in this browser/device, need no account and are not uploaded. Clearing browser storage removes them. JSON export provides a backup; import is not implemented. Future private accounts would allow cross-device profiles, watchlists and notification preferences. An account would not make self-reported details verified. See [aircraft profiles](aircraft-profiles.md).
 
-Scoped positive-result last-modified filtering and model retrieval have passed. STCs include undated legacy records, so full reconciliation is required even when using incremental filtering. Outstanding work includes additional attachments, unattended polling, broader model coverage and exact historical amendment text. Manufacturer manuals and referenced service material may need separate access/licensing.
+## Current delivery status
 
-## Next selected phase
+| Area | Implemented | Remaining |
+| --- | --- | --- |
+| Foundation | Active/archive separation; repeatable lint, tests, types and build | Ongoing maintenance |
+| Infrastructure | GitHub; local/hosted Supabase; migrations; private archives; controlled public API and PDF viewer | Release operations, recovery and monitoring |
+| TCDS | 23 imported 2A13 revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
+| Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and unattended operation |
+| Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
+| Relationships | 19 reviewed connections; directed graph/list; AD-to-service-bulletin traversal | More reviewed paths, relation filters and historical graph exploration |
+| Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
+| Profiles | Named browser profiles; unknowns; reviewed serial labels; reported installation | Backup import, additional rules and optional private accounts |
+| Changes/alerts | Immutable source snapshots, checkpoints and manual workflows | Scheduling, shared change events, watchlists and notifications |
+| Publication | Cloudflare account and build setup selected | Website remains unpublished; beta review/release decision pending |
 
-The user selected aircraft configuration profiles before automatic change tracking, then chose browser storage first. The editor supports PA-28-140 and PA-28-181, optional serials, named profiles and explicitly reported STC installation details. Current reviewed graph conditions drive serial-range labels; unknowns remain visible. See [aircraft profiles](aircraft-profiles.md). Next, review this profile workflow with the user, then prioritize further reviewed configuration rules, automated change tracking and eventual private accounts. Notification channels and publication still require product decisions.
+Counts describe validated scoped observations, not complete FAA coverage or a fully reviewed applicability catalog. CAR scans and the 2016 reference edition do not form the full cited historical basis or today's regulation. Browser prototype history is separate from official imported source history.
 
-## Decisions to ask the user
+## Architecture and sources
 
-Before step 2: development database and hosting preferences, and source-control destination. Before expanding coverage: the aircraft families and configurations to prioritize. Before graph implementation: review a concrete navigation example. Before notifications: channels and digest frequency. Before publishing: domain, account/access policy, and reviewed coverage.
+Chosen portfolio target: Cloudflare Pages frontend, Supabase PostgreSQL/private storage/controlled APIs, GitHub Actions server-only imports. Aim to remain within ordinary free allocations; check usage, availability and operating costs before publication or expansion. Student-pack benefits are optional.
 
-Ask questions when a user preference changes the implementation, and continue independent work while an answer is pending. Report each step's changes, validation, and remaining limits.
+React/TypeScript lives in `src/`; server-only jobs in `apps/worker/`; versioned backend changes in `supabase/migrations/` and `supabase/functions/`. PostgreSQL stores canonical identities, source versions and typed relationships. No separate graph database is needed for the initial workload. Archived research is excluded from the active app.
+
+| Source | Retrieval/preservation strategy | Purpose |
+| --- | --- | --- |
+| FAA DRS TCDS | Authenticated filtered TCDSMODEL API; immutable PDF and canonical metadata | Certificates, model coverage, history and certification-basis citations |
+| FAA DRS AD | Scoped ADFRAWD API; distinguish emergency sources; archive observations and reviewed originals | Discovery, conditions, supersedence and service-document paths |
+| FAA DRS STC | Associated certificate/model tuples; retain current and historical observations | Approval discovery; review AMLs and limitations before asserting further scope |
+| FAA DRS CAR | Filter CAR 3; establish identity from dated originals, not amendment number alone | Historical basis originals and later reviewed text |
+| GovInfo | Publisher XML and original publications with edition identity/fingerprints | Dated regulatory text and publication evidence |
+| eCFR/Federal Register | Feasibility access checked; production connectors/edition mapping remain to build | Current dated reference text and rulemaking/change context |
+| Manufacturer/service material | Preserve reference identity; retrieve when access/reuse terms allow | Referenced material; missing full text remains explicit |
+
+Retain authority, stable identity, revision/effective dates, retrieval time, original sources, page/section evidence, conditions and review status. Approval scope and actual installation are separate relationships. Credentials stay in protected worker configuration. Browser source reads use public configuration; private originals are exposed only through publication-checked temporary PDF links. Profile data remains separate from the source catalog.
+
+## Recommended next phase: dependable change tracking
+
+Build a shared source-change feed for supported models before automated email delivery or broad relevance conclusions.
+
+### 1. Establish scheduled imports
+
+Configure repository secrets privately and complete each manual hosted workflow. Begin with daily scoped TCDS/AD/STC checks, subject to source limits and measured runtime. Retain full STC reconciliation because 49 discovered legacy records have no modification timestamp. Consider more frequent AD checks after measuring source behavior and budget. No schedule is currently enabled.
+
+Keep retries, byte limits, pagination validation and overlap windows. Advance checkpoints only after a complete successful transaction. Failure preserves the previous valid catalog and marks freshness as stale, rather than claiming no changes. Add operator visibility for failures/interrupted runs.
+
+Gate: a scheduled check succeeds without browser activity; repeated unchanged checks add no duplicate snapshots/events; simulated failure preserves prior valid state.
+
+### 2. Create source-change events
+
+Compare successful observations. Distinguish first discovery, changed metadata, changed original bytes, changed source status and records no longer returned by the scoped index. Absence is not automatically regulatory withdrawal. Keep observation time, source modification, issuance/effective date and old/new evidence IDs distinct.
+
+Create idempotent events after committed imports. Test changed/unchanged fixtures. First ingestion is not a newly issued regulation; a different PDF fingerprint does not describe changed wording.
+
+Gate: a controlled change creates one traceable event; repeating the run creates none; events link to source observations.
+
+### 3. Add the shared model change feed
+
+Show real source events alongside the clearly labeled browser prototype log. Filter by model, source type and date. Explain what changed and link old/new evidence. Keep source events separate from user profile edits.
+
+Apply a profile relevance explanation only where supporting conditions are reviewed. Otherwise show needs review. Browser profiles alone cannot notify someone while their browser is closed; server subscriptions require a separate identity/preference design.
+
+Gate: a user can explain what observation changed, when it was detected, which model index connects to it and what remains unknown.
+
+### 4. Expand reviewed configuration/source coverage
+
+Prioritize more records for the existing two models. Retrieve originals/attachments, review serial/equipment/approval conditions and attach page/section evidence. Add an operator review queue: changed sources suspend stale reviewed paths pending renewed review.
+
+Add engine/propeller/equipment fields when reviewed rules can use them. Improve revision comparison with actual content differences and extraction limits. Retrieve exact historical amendments before calling a basis complete.
+
+Gate: representative owner/maintenance tasks reach the needed originals and explain known/unresolved conditions.
+
+## Subsequent phases
+
+| Order | Phase | Deliverables and gate |
+| --- | --- | --- |
+| A | Optional private accounts/profile sync | Sign-in, owner-only access, deliberate local-profile migration and recovery; cross-user access tests pass |
+| B | Watchlists/notifications | Explicit subscriptions, selected channels/frequency, deduplication, unsubscribe and delivery failure handling; controlled changes notify the intended user exactly once |
+| C | Public beta preparation | Coverage/freshness audit, desktop/mobile/accessibility review, source/reuse terms, usage budgets, backup/recovery and monitoring |
+| D | Cloudflare release | Reviewable build, domain/repository setup and post-deployment checks; publish after the user's release decision |
+| E | Coverage expansion | Additional PA-28 models and selected GA families; repeat source/review gates for each expansion |
+| F | Broader aircraft/authorities | Commercial and other categories/jurisdictions, preserving authority-specific identities and rule differences |
+
+Accounts can move earlier if cross-device access becomes the main need. Notifications follow reliable change detection and explicit subscriptions. Richer diagrams, exact historical text and broader coverage can proceed incrementally with incomplete areas visible.
+
+## Decisions still to make
+
+Already decided: owners/maintenance professionals; FAA GA first; PA-28 first; model-first search; current-first AD/STC browsing with history; browser profiles before accounts; free portfolio target; no public prototype release yet.
+
+Ask at the relevant implementation point:
+
+- Change tracking: initial cadence and equal coverage for both supported models.
+- Source review: which additional ADs/STCs and equipment conditions matter most.
+- Accounts: sign-in method, local-profile migration and whether team sharing is needed.
+- Notifications: on-site watchlists versus email/other channels, digest frequency and review-needed messaging.
+- Beta: supported-model claims, access policy, domain and release readiness.
+- Expansion: next aircraft family and authority after initial workflows are dependable.
+
+## Validation and success criteria
+
+Run checks appropriate to each change: lint, domain/frontend and worker tests, database access/transaction checks, types, production build and targeted browser checks. Current coverage includes 62 frontend tests and 17 worker tests plus database checks. Desktop/mobile source-exploration and profile checks pass; GitHub quality checks pass on the profile commit.
+
+Measure tasks, not counts alone: users find the correct model, distinguish evidence from candidates, follow source paths, understand profile unknowns and identify traceable changes. Observe representative owners and maintenance users performing these tasks before beta and correct confusing navigation or wording.
+
+## Supporting documents
+
+- [Foundation and cleanup](foundation.md)
+- [Free-stack setup](free-stack-setup.md)
+- [TCDS import validation](pa28-ingestion.md)
+- [Related sources and reviewed dependencies](related-sources.md)
+- [Data presentation](data-presentation.md)
+- [Aircraft profiles](aircraft-profiles.md)
+- [Feasibility report](../data-feasibility/REPORT.txt)
