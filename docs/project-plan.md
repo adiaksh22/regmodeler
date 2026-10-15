@@ -35,7 +35,7 @@ Profiles support PA-28-140 and PA-28-181. Fields are a name, optional manufactur
 | Missing fields/unlisted STCs | Keeps relevance unknown | Requires investigation, not an assumption of absence |
 | Record-reference note | Preserves user context | No uploaded-record verification or maintenance sign-off |
 
-The first reviewed serial example is the AD 2020-24-05 connection. Four installed-equipment ADs now exercise equipment-aware relevance for Garmin transponders, Aero Advantage vacuum pumps, Shadin air-data computers and ECi cylinders. Most discovered records still have no reviewed configuration rule. Filters hide only connections outside a reviewed serial range or user-reported equipment scope; unknowns remain visible. Historical observations without corresponding reviewed current evidence do not receive current configuration rules.
+The first reviewed serial example is the AD 2020-24-05 connection. Seven installed-equipment ADs now exercise equipment-aware relevance for Garmin avionics/autopilot configurations, Aero Advantage vacuum pumps, Shadin air-data computers and ECi cylinders. Most discovered records still have no reviewed configuration rule. Filters hide only connections outside a reviewed serial range or user-reported equipment scope; unknowns remain visible. Historical observations without corresponding reviewed current evidence do not receive current configuration rules.
 
 Profiles stay in this browser/device, need no account and are not uploaded. Clearing browser storage removes them. JSON export provides a backup; import is not implemented. Future private accounts would allow cross-device profiles, watchlists and notification preferences. An account would not make self-reported details verified. See [aircraft profiles](aircraft-profiles.md).
 
@@ -48,7 +48,7 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | TCDS | 23 imported 2A13 revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
 | Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | 110 reviewed model-scoped graph rows and 30 reviewed AD/STC model connections; directed graph/list/node views; shared-model/component navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
+| Relationships | 136 reviewed model-scoped graph rows and 36 reviewed AD/STC model connections; directed graph/list/node views; shared-model/component navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial and equipment labels; reported installation | Backup import, compound rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
@@ -195,16 +195,17 @@ Measure tasks, not counts alone: users find the correct model, distinguish evide
 - [Aircraft profiles](aircraft-profiles.md)
 - [Source-change tracking](source-change-tracking.md)
 - [Installed-equipment review](pa28-installed-equipment-review.md)
+- [Garmin publication review](pa28-garmin-publication-review.md)
 - [Feasibility report](../data-feasibility/REPORT.txt)
 
 ## Node graph and review coverage update
 
-The additional node view and read-only source review queue are implemented. The hosted catalog now exposes 110 model-scoped graph rows and 30 reviewed AD/STC model connections. Canonical component nodes let both models share reviewed equipment identities while preserving model-specific evidence paths. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled. Reviewed attachment inventories are checked during source review; broader automatic attachment retrieval, freshness comparison and content-difference summaries remain future work.
+The additional node view and read-only source review queue are implemented. The hosted catalog now exposes 136 model-scoped graph rows and 36 reviewed AD/STC model connections. Canonical component nodes let both models share reviewed equipment identities while preserving model-specific evidence paths. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled. Reviewed attachment inventories and official final-publication identities are checked during source review; broader automatic attachment retrieval, freshness comparison and content-difference summaries remain future work.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
 
 See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-specific scope, supersession, publisher links and graph search.
 
-### Latest source review: component ADs
+### Latest source review: Garmin publication and configuration paths
 
-Four additional AD originals now connect the supported models to reviewed Garmin transponder, Aero Advantage vacuum pump, Shadin air-data computer and ECi cylinder conditions. Profiles can report those reviewed equipment families as installed, not installed or unknown; exact part/software/serial/configuration and compliance remain explicit review tasks. See [installed-equipment review](pa28-installed-equipment-review.md). The website remains unpublished; compound configuration rules, more source review and beta review precede release work.
+Three additional Garmin ADs now use verified GovInfo final publications when the current FAA DRS main-document delivery is HTML. The graph preserves distinct GFC 500/GSA 28, G3X/GI 275/GEA 24 and affected GNS 430 configurations, their STC alternatives and cited bulletin paths. See [Garmin publication review](pa28-garmin-publication-review.md). The website remains unpublished; compound configuration rules, another 2A13 model and beta review precede release work.

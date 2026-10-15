@@ -1,5 +1,6 @@
 import batch4 from '../../apps/worker/src/review-batch4.json';
 import batch5 from '../../apps/worker/src/review-batch5.json';
+import batch6 from '../../apps/worker/src/review-batch6.json';
 import {describe,it,expect} from 'vitest';
 import {profileRelevance,validateProfile,type AircraftProfile} from './aircraftProfile';
 import type {EvidenceRelationship} from './explorer';
@@ -23,6 +24,13 @@ describe('reviewed profile relevance',()=>{
     expect(profileRelevance(installed,equipmentEdge)).toMatchObject({category:'reported',label:'Affected equipment installed — user reported'});
     expect(profileRelevance({...installed,equipment:[{...installed.equipment[0],status:'not_installed' as const}]},equipmentEdge)?.category).toBe('outside');
     expect(profileRelevance({...installed,equipment:[{...installed.equipment[0],key:'SHADIN:ADC2000-962830A-S8'}]},equipmentEdge)?.category).toBe('unknown');
+  });
+  it('applies every reviewed Garmin configuration key while leaving detailed predicates for review',()=>{
+    for(const item of batch6){
+      const equipmentEdge={...edge,source_document_number:item.number,applicability_conditions:Object.fromEntries(Object.entries(item.conditions).filter(([,value])=>typeof value==='string'))};
+      const configured={...profile,equipment:[{key:item.conditions.equipment_key,status:'installed' as const,note:'Aircraft equipment record'}]};
+      expect(profileRelevance(configured,equipmentEdge)).toMatchObject({category:'reported',label:'Affected equipment installed — user reported'});
+    }
   });
   it('includes both endpoints of each reviewed serial range and excludes adjacent serials',()=>{
     for(const serial of ['28-20001','28-26946','28-7125001','28-7725290'])expect(profileRelevance({...profile,serial},edge)?.category).toBe('match');

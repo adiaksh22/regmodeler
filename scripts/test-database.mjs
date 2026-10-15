@@ -334,6 +334,27 @@ try {
   assert.equal((await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[equipmentIds]))).rows.length,16,'Changed equipment AD hides its two model paths and all scoped component/reference paths');
   console.log('Installed-equipment checks passed: exact manifest parity, canonical component nodes, model scope, equipment predicates, supersession, repeat review and inactive-source boundaries.');
 
+  const batch6=JSON.parse(readFileSync(new URL('../apps/worker/src/review-batch6.json',import.meta.url)));const publicationIds=[];
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_batch6_graph()')),/permission denied/);
+  await assert.rejects(query('select public.review_pa28_batch6_graph()'),/publication missing/);
+  for(const entry of batch6){
+   const document=(await query("insert into public.documents(authority,document_type,document_number,title,is_published) values('FAA','AD',$1,$1,true) returning id",[entry.number])).rows[0].id;
+   const version=(await query("insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,content_sha256,storage_path,metadata,is_published) values($1,$2,'final publication','current','https://drs.faa.gov',now(),$3,$4,$5,true) returning id",[document,entry.number,entry.hash,'FAA/AD/reviewed/'+entry.hash+'.pdf',JSON.stringify({original_source_url:entry.published_url,original_source_kind:'final_federal_register'})])).rows[0].id;publicationIds.push(version);
+   for(const model of entry.models)await query("insert into public.related_document_matches(source,version_id,model) values('test-batch6',$1,$2)",[version,model]);
+  }
+  assert.equal((await query('select public.review_pa28_batch6_graph() as n')).rows[0].n,16);
+  const publicationRows=(await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[publicationIds]))).rows;
+  assert.equal(publicationRows.length,26);assert.equal(publicationRows.filter(r=>!r.path_via).length,6);assert.equal(publicationRows.filter(r=>r.relationship_type==='affects_component').length,6);
+  for(const entry of batch6){
+   const reviewedRows=publicationRows.filter(r=>r.source_document_number===entry.number);
+   for(const row of reviewedRows.filter(r=>!r.path_via)){assert.equal(row.evidence_excerpt,entry.excerpt);assert.deepEqual(row.applicability_conditions,entry.conditions);assert.equal(row.original_source_url,entry.published_url);}
+   for(const reference of entry.references){const row=reviewedRows.find(r=>r.path_via&&r.basis_key===reference.key);assert.ok(row);assert.equal(row.relationship_type,reference.relationship??'references');assert.equal(row.evidence_excerpt,reference.excerpt);assert.deepEqual(row.applicability_conditions,reference.conditions);}
+  }
+  const publicationCount=(await query('select count(*)::integer n from public.relationships')).rows[0].n;await query('select public.review_pa28_batch6_graph()');assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,publicationCount);
+  await query('update public.related_document_matches set is_active=false where version_id=$1',[publicationIds[0]]);
+  assert.equal((await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[publicationIds]))).rows.length,18,'Changed publication hides its two model paths and all scoped references');
+  console.log('Garmin publication checks passed: modern and legacy provenance, exact manifest parity, alternative configuration paths, repeat review and inactive-source boundaries.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

@@ -25,7 +25,7 @@ Desktop keeps evidence beside the diagram so a user can inspect connections with
 
 ## Current relationship coverage
 
-The hosted graph contains 110 model-scoped rows for PA-28-140 and PA-28-181, including 30 reviewed model-to-AD/STC connections. The remainder represent TCDS/certification-basis connections and reviewed paths from source documents to components, prior ADs, STCs, AMLs and service documents. TCDS evidence comes from pages 1, 35 and 36 of revision 66. Review functions require the exact SHA-256 of inspected PDFs; they cannot publish against arbitrary source originals.
+The hosted graph contains 136 model-scoped rows for PA-28-140 and PA-28-181, including 36 reviewed model-to-AD/STC connections. The remainder represent TCDS/certification-basis connections and reviewed paths from source documents to components, prior ADs, STCs, AMLs and service documents. TCDS evidence comes from pages 1, 35 and 36 of revision 66. Review functions require the exact SHA-256 of inspected PDFs; they cannot publish against arbitrary source originals.
 
 The graph distinguishes `covered_by`, `certified_against`, `applies_to`, `approved_for`, `affects_component`, `references` and `supersedes`, with directed arrows and a matching list. CAR 3 baseline identity is shared, while model-specific amendment scope stays on each relationship. Individual FAR sections include the cited amendment in their identity. Selecting AD 2020-24-05 for PA-28-140 shows conditional serial scope and lets the user expand to the referenced Piper SB 1304A. Installed-equipment ADs traverse through canonical component nodes, so a Garmin or vacuum-pump identity can be shared across both supported models. Approved STC scope and user-reported equipment do not establish installation or compliance. Optional-equipment and serial-specific noise connections remain pending. Other PA-28 models show explicit unreviewed coverage.
 
@@ -48,7 +48,7 @@ Validation covers frontend and worker tests, PostgreSQL importer/dependency/acce
 
 ## Node navigation and review coverage
 
-An additional Nodes view now supports zoom/pan, automatic layout, canonical shared nodes, directed arrows, node/relationship selection, type filters and shared-model comparisons. A keyboard-accessible incident-connection list opens the same exact evidence inspector. The Review coverage tab distinguishes current FAA candidates from reviewed model evidence. The hosted catalog has 110 model-scoped graph rows, including seven installed-component paths in the latest batch. See [node graph and review](node-graph-and-review.md) for the implemented boundary and validation.
+An additional Nodes view now supports zoom/pan, automatic layout, canonical shared nodes, directed arrows, node/relationship selection, type filters and shared-model comparisons. A keyboard-accessible incident-connection list opens the same exact evidence inspector. The Review coverage tab distinguishes current FAA candidates from reviewed model evidence. The hosted catalog has 136 model-scoped graph rows. The latest batch adds six model-scoped installed-component paths and official final-publication links. See [node graph and review](node-graph-and-review.md) for the implemented boundary and validation.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
 

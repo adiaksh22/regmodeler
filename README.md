@@ -2,7 +2,7 @@
 
 Aircraft regulatory exploration for owners and maintenance professionals. The first release focuses on FAA general aviation data; the planned data model will support commercial aircraft, other product categories, and additional authorities.
 
-The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 110 reviewed model-scoped graph rows for PA-28-140 and PA-28-181, including 30 reviewed AD/STC model connections. Related AD/STC records show current FAA status first with an optional history filter. The graph supports interactive nodes with shared-model and installed-equipment navigation, a read-only review coverage queue, source traversal, cited-page PDF viewing, historical CAR originals, and separately labeled 2016 CFR reference text. Browser aircraft profiles can report reviewed equipment families as installed, not installed or unknown. Archived revisions can be compared by metadata and PDF fingerprints. Full historical amendment wording and individual-aircraft applicability remain incomplete. Daily scoped TCDS/AD/STC checks are enabled. Personal cross-references and browser-recorded prototype history remain local.
+The current app is a prototype with model-first search, TCDS detail, and change-log pages. It reads the shared Supabase catalog or displays three verified demo snapshots. PA-28 details connect 23 imported TCDS revisions and 136 reviewed model-scoped graph rows for PA-28-140 and PA-28-181, including 36 reviewed AD/STC model connections. Related AD/STC records show current FAA status first with an optional history filter. The graph supports interactive nodes with shared-model and installed-equipment navigation, a read-only review coverage queue, source traversal, cited-page PDF viewing, historical CAR originals, and separately labeled 2016 CFR reference text. Browser aircraft profiles can report reviewed equipment families as installed, not installed or unknown. Archived revisions can be compared by metadata and PDF fingerprints. Full historical amendment wording and individual-aircraft applicability remain incomplete. Daily scoped TCDS/AD/STC checks are enabled. Personal cross-references and browser-recorded prototype history remain local.
 
 ## Local development
 
@@ -48,6 +48,7 @@ This runs linting, frontend tests, embedded PostgreSQL schema/access tests, type
 | `npm run review:batch3` | Review fuel-system/airframe originals, verify publisher links, and publish guarded serial-specific paths |
 | `npm run review:batch4` | Review component AD originals, verify three Piper links, and preserve equipment/group conditions |
 | `npm run review:batch5` | Archive four installed-equipment AD originals and publish guarded component/configuration paths |
+| `npm run review:batch6` | Verify three GovInfo final publications and publish guarded Garmin configuration paths |
 | `npm run review:decision` | Privately defer/reject a current unreviewed candidate |
 | `npm run worker:test` | Test the importer offline |
 
@@ -111,4 +112,4 @@ See [PA-28 review batch 2](docs/pa28-review-batch2.md) for additional model-spec
 
 See [fuel-system and airframe review](docs/pa28-fuel-airframe-review.md) for serial-specific scope, supersession, publisher links and graph search.
 
-Latest source review: [PA-28 installed-equipment relationships](docs/pa28-installed-equipment-review.md). The [product and delivery plan](docs/project-plan.md#how-the-system-scales) describes how canonical sources, components, profiles and aircraft families expand without copying regulatory records per aircraft.
+Latest source review: [PA-28 Garmin publication and configuration relationships](docs/pa28-garmin-publication-review.md). The [product and delivery plan](docs/project-plan.md#how-the-system-scales) describes how canonical sources, components, profiles and aircraft families expand without copying regulatory records per aircraft.

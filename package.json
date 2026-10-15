@@ -34,7 +34,8 @@
     "review:batch2": "node --env-file-if-exists=.env.local apps/worker/src/review-batch2.mjs",
     "review:batch3": "node --env-file-if-exists=.env.local apps/worker/src/review-batch3.mjs",
     "review:batch4": "node --env-file-if-exists=.env.local apps/worker/src/review-batch4.mjs",
-    "review:batch5": "node --env-file-if-exists=.env.local apps/worker/src/review-batch5.mjs"
+    "review:batch5": "node --env-file-if-exists=.env.local apps/worker/src/review-batch5.mjs",
+    "review:batch6": "node --env-file-if-exists=.env.local apps/worker/src/review-batch6.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",

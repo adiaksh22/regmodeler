@@ -4,7 +4,7 @@ Verified October 14, 2026, for PA-28-140 and PA-28-181 under TCDS 2A13. This bat
 
 ## What was added
 
-Four current FAA AD originals were downloaded, fingerprinted, rendered and visually inspected. The guarded database transaction publishes six model-to-AD connections and 13 document-to-component/reference connections. Model scoping produces 26 graph rows across the two supported aircraft, including seven `affects_component` paths. Hosted totals are now 110 model-scoped graph rows and 30 reviewed AD/STC model connections.
+Four current FAA AD originals were downloaded, fingerprinted, rendered and visually inspected. The guarded database transaction publishes six model-to-AD connections and 13 document-to-component/reference connections. Model scoping produces 26 graph rows across the two supported aircraft, including seven `affects_component` paths. This batch brought the catalog to 110 model-scoped graph rows and 30 reviewed AD/STC model connections; later Garmin publication review increased those totals further.
 
 | Current source | Supported model path | Reviewed equipment condition | Evidence pages |
 | --- | --- | --- | --- |
@@ -50,9 +50,10 @@ Adding another model therefore means reviewing and storing model/configuration e
 
 The next useful review work is:
 
-1. Build a provenance path for three newer Garmin records whose current FAA DRS main-document response is HTML rather than the stable PDF pattern used here: AD 2024-14-03, AD 2022-03-15 and AD 2001-23-17.
-2. Add compound conditions where an outcome depends on more than one profile fact, beginning with engine plus cylinder identity and software/configuration ranges.
-3. Review one additional 2A13 model so the same TCDS and component nodes can be reused across a wider model set.
-4. Add profile import and later optional private accounts only after local relevance behavior is stable; accounts will support cross-device profiles and watchlists, not certify user-entered data.
+1. Add compound conditions where an outcome depends on more than one profile fact, beginning with engine plus cylinder identity and software/configuration ranges.
+2. Review one additional 2A13 model so the same TCDS and component nodes can be reused across a wider model set.
+3. Add profile import and later optional private accounts only after local relevance behavior is stable; accounts will support cross-device profiles and watchlists, not certify user-entered data.
+
+The three formerly deferred Garmin records now use exact official final publications; see [Garmin publication review](pa28-garmin-publication-review.md).
 
 The broader sequence and capacity boundaries are documented in [the product and delivery plan](project-plan.md#how-the-system-scales).
