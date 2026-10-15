@@ -2,7 +2,7 @@
 
 Aircraft regulatory exploration for owners and maintenance professionals. The first release focuses on FAA general aviation data; the planned data model will support commercial aircraft, other product categories, and additional authorities.
 
-The current app is a prototype with model-first search, TCDS detail, and source-change pages. It reads the shared Supabase catalog or displays four verified FAA snapshots. PA-28 details connect 23 imported 2A13 revisions and 136 reviewed model-scoped graph rows for PA-28-140 and PA-28-181, including 36 reviewed AD/STC model connections. The Boeing 737 slice adds all 57 A16WE revisions, six reviewed FAA-approved variants, 42 page-cited facts and 18 family/certificate/engine graph paths; 737 MAX 10 is clearly marked as absent from current A16WE rather than approved. The node-link map supports shared identities, directed dependencies, evidence inspection and structured alternative applicability paths. Browser aircraft profiles can report reviewed PA-28 equipment families as installed, not installed or unknown. Full related-source coverage and individual-aircraft applicability remain incomplete. Daily scoped source checks are enabled. Personal cross-references and profiles remain local.
+The current app is a prototype with model-first search, TCDS detail, and source-change pages. It reads the shared Supabase catalog or displays four verified FAA snapshots. PA-28 details connect 23 imported 2A13 revisions and 136 reviewed model-scoped graph rows for PA-28-140 and PA-28-181, including 36 reviewed AD/STC model connections. The Boeing 737 slice adds all 57 A16WE revisions, six reviewed FAA-approved variants, 42 page-cited facts and 18 family/certificate/engine graph paths; 737 MAX 10 is clearly marked as absent from current A16WE rather than approved. Its live discovery index contains 418 FAA AD records and 2,601 STC records, normalized to the reviewed model identities while retaining exact A16WE/model tuples. The node-link map supports shared identities, directed dependencies, evidence inspection and structured alternative applicability paths. Browser aircraft profiles can report reviewed PA-28 equipment families as installed, not installed or unknown. Individual-aircraft applicability remains incomplete. Daily scoped source checks are enabled. Personal cross-references and profiles remain local.
 
 ## Local development
 
@@ -40,8 +40,8 @@ This runs linting, frontend tests, embedded PostgreSQL schema/access tests, type
 | `npm run import:verify` | Verify live PA-28 TCDS metadata and incremental filtering |
 | `npm run import:tcds` | Archive and import PA-28 TCDS revisions to the configured database |
 | `npm run import:tcds:family -- --certificate=A16WE` | Reconcile and archive a validated FAA TCDS family catalog |
-| `npm run import:related:verify` | Verify scoped AD/STC/CAR pagination and incremental filtering |
-| `npm run import:related` | Archive scoped FAA metadata and reconcile model matches |
+| `npm run import:related:verify -- --scope=B737 --type=AD` | Verify a family-scoped AD/STC catalog, pagination and incremental filtering |
+| `npm run import:related -- --scope=B737 --type=STC` | Archive family-scoped FAA metadata and reconcile exact model matches |
 | `npm run import:reference` | Import seven dated 2016 GovInfo Part 23 reference sections |
 | `npm run review:pa28` | Archive the exact reviewed originals and publish their guarded connections |
 | `npm run review:expanded` | Archive four additional reviewed originals and three attachments; publish hash-guarded connections |

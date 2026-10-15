@@ -5,6 +5,7 @@ import SourcePdf from './SourcePdf';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import ProfileRelevance from './ProfileRelevance';
 export default function RelatedDocuments({model,relationships,profile=null}:{model:string;relationships:EvidenceRelationship[];profile?:AircraftProfile|null}) {
+  const configuredModels=['PA-28-140','PA-28-181','737-700','737-800','737-900ER','737-7','737-8','737-9'];
   const [documents,setDocuments]=useState<RelatedDocument[]>([]);const [notice,setNotice]=useState('');const [busy,setBusy]=useState(true);
   const [checked,setChecked]=useState<{document_type:string;last_checked:string}[]>([]);
   const [kind,setKind]=useState('AD');const [history,setHistory]=useState(false);const [query,setQuery]=useState('');const [limit,setLimit]=useState(12);
@@ -28,7 +29,7 @@ export default function RelatedDocuments({model,relationships,profile=null}:{mod
     {checked.find(c=>c.document_type===kind)&&<p className="text-xs text-slate-600 mb-3">{kind} index last checked {new Date(checked.find(c=>c.document_type===kind)!.last_checked).toLocaleString()}</p>}
     {busy&&<p role="status">Loading related FAA records…</p>}{notice&&<p role="status" className="text-amber-900">{notice}</p>}
     {!busy&&!notice&&<p className="text-sm mb-3">{shown.length} source records {history?'including history':'with current FAA status'}.</p>}
-    {!busy&&shown.length===0&&<p>{['PA-28-140','PA-28-181'].includes(model)?'No matches in this view. This is not a complete applicability determination.':'Related-source discovery has not been configured for this model yet.'}</p>}
+    {!busy&&shown.length===0&&<p>{configuredModels.includes(model)?'No matches in this view. This is not a complete applicability determination.':'Related-source discovery has not been configured for this model yet.'}</p>}
     <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
       <div className="space-y-2">{shown.slice(0,limit).map(d=><button key={d.id} onClick={()=>setSelectedId(d.id)} aria-pressed={selected?.id===d.id} className={`block text-left w-full rounded-lg border p-3 ${selected?.id===d.id?'border-blue-600 bg-blue-50':'border-slate-200'}`}>
         <span className="font-semibold">{d.document_type} {d.document_number}</span><span className="block text-sm text-slate-700 mt-1">{d.title}</span>

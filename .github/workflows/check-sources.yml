@@ -35,3 +35,9 @@ jobs:
       - name: Reconcile STC metadata including undated records
         if: ${{ !cancelled() }}
         run: npm run import:related -- --type=STC
+      - name: Reconcile Boeing 737 AD metadata
+        if: ${{ !cancelled() }}
+        run: npm run import:related -- --scope=B737 --type=AD
+      - name: Reconcile Boeing 737 STC metadata including undated records
+        if: ${{ !cancelled() }}
+        run: npm run import:related -- --scope=B737 --type=STC

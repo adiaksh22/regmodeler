@@ -1,6 +1,6 @@
 # RegModeler autonomous run memory
 
-Last updated: 2026-10-14 (phase committed, pushed, and CI verified)
+Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted verified)
 
 ## Five-Hour Phase Plan
 
@@ -61,3 +61,12 @@ Last updated: 2026-10-14 (phase committed, pushed, and CI verified)
 - Main implementation commit `1a61b09` (`Add FAA-backed Boeing family architecture`) was pushed to `origin/main`.
 - GitHub Actions quality run `38690556727` completed successfully for the exact implementation commit.
 - Workspace resume point: the production site remains deliberately unpublished. The next evidence phase is to review a small, high-value set of current Boeing 737 ADs/STCs and encode serial/configuration applicability against the new predicate architecture before preparing the portfolio beta.
+- Follow-on Boeing related-source phase completed locally and on hosted Supabase:
+  - added family-scoped AD/STC contracts with exact FAA label-to-canonical-model mappings and A16WE tuple validation;
+  - added foreign-keyed source/model scope tables, service-only atomic catalog commits, generalized monitoring and public last-checked data;
+  - replaced the initial row-by-row family transaction after a safe statement-timeout rollback with a tested set-based transaction;
+  - archived and committed 418 AD records (971 model matches) and 2,601 STC records (4,722 model matches, 84 undated) with both hosted checkpoints baseline-ready;
+  - included all six approved family variants in discovery; 737-7 currently returns zero exact FAA AD/STC records, while 737-10 remains outside the approved-model scope;
+  - expanded the isolated browser smoke to verify live 737-8 related records and the metadata-versus-reviewed-evidence boundary.
+- Final verification passed: 75 frontend tests, 26 worker tests, all database migration/integrity checks, lint, typecheck, production build, and the expanded hosted browser smoke including live 737-8 AD discovery.
+- Current resume point: commit/push the related-source phase, verify CI, then begin page-level review of selected high-value 737 AD originals. The production site remains deliberately unpublished.

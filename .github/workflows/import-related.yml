@@ -1,4 +1,4 @@
-name: PA-28 related-source import
+name: FAA related-source import
 on:
   workflow_dispatch:
     inputs:
@@ -11,10 +11,15 @@ on:
         type: choice
         options: [AD, STC, CAR]
         default: AD
+      aircraft_scope:
+        description: Aircraft family scope (CAR is available only for PA28)
+        type: choice
+        options: [PA28, B737]
+        default: PA28
 permissions:
   contents: read
 concurrency:
-  group: pa28-related-import
+  group: faa-related-import-${{ inputs.aircraft_scope }}
   cancel-in-progress: false
 jobs:
   import:
@@ -25,6 +30,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       DOCUMENT_TYPE: ${{ inputs.document_type }}
+      AIRCRAFT_SCOPE: ${{ inputs.aircraft_scope }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,7 +40,7 @@ jobs:
       - run: npm ci
       - name: Verify scoped source contract
         if: inputs.verify_only
-        run: npm run import:related:verify -- --type="$DOCUMENT_TYPE"
+        run: npm run import:related:verify -- --scope="$AIRCRAFT_SCOPE" --type="$DOCUMENT_TYPE"
       - name: Archive and import scoped records
         if: ${{ !inputs.verify_only }}
-        run: npm run import:related -- --type="$DOCUMENT_TYPE"
+        run: npm run import:related -- --scope="$AIRCRAFT_SCOPE" --type="$DOCUMENT_TYPE"

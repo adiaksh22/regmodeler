@@ -37,6 +37,14 @@ const out=path.join(__dirname,'../.artifacts/boeing-family');fs.mkdirSync(out,{r
   assert.match(await page.$eval('[aria-label="Node connections"]',node=>node.textContent),/Approved engine family/);
   await page.screenshot({path:path.join(out,'boeing-node-map.png'),fullPage:true});
 
+  phase='live related-source index';await page.click('#tab-related');
+  await page.waitForFunction(()=>document.body.innerText.includes('38 source records with current FAA status.'),{timeout:30000});
+  await page.type('input[aria-label="Filter related records"]','2021-09-08');
+  await page.waitForFunction(()=>document.body.innerText.includes('AD 2021-09-08'));
+  await page.evaluate(()=>[...document.querySelectorAll('#panel-related button')].find(node=>node.textContent.includes('AD 2021-09-08'))?.click());
+  assert.match(await page.$eval('aside[aria-label="Related record details"]',node=>node.textContent),/model-index match|applicability or installation is not verified/i);
+  await page.click('#tab-relationships');
+
   phase='variant switching and cited evidence';await clickText('737 MAX 7');await page.waitForFunction(()=>document.body.innerText.includes('177,000 lb'));
   await page.evaluate(()=>document.querySelector('[aria-label="Node connections"] button')?.click());
   const aside='aside[aria-label="Relationship source evidence"]';await page.waitForSelector(aside);assert.match(await page.$eval(aside,node=>node.textContent),/A16WE|Revision 81/);
@@ -51,6 +59,6 @@ const out=path.join(__dirname,'../.artifacts/boeing-family');fs.mkdirSync(out,{r
   phase='mobile';await page.setViewport({width:390,height:844});await page.goto('http://127.0.0.1:4173/tcds/A16WE?model=737-8',{waitUntil:'domcontentloaded',timeout:60000});await page.waitForFunction(()=>document.body.innerText.includes('737 MAX 10: not listed'),{timeout:30000});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(out,'boeing-mobile.png'),fullPage:true});
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',checks:['57 hosted revisions','7 variant/project records','MAX 10 boundary','page-cited technical facts','default node-link map','shared engine traversal','variant switching','archived TCDS citation','structured OR/AND applicability','mobile layout'],screenshots:out}));
+  console.log(JSON.stringify({status:'passed',checks:['57 hosted revisions','7 variant/project records','MAX 10 boundary','page-cited technical facts','default node-link map','shared engine traversal','live 737 AD/STC discovery','variant switching','archived TCDS citation','structured OR/AND applicability','mobile layout'],screenshots:out}));
  }catch(error){console.error(JSON.stringify({status:'failed',phase,message:error.message}));process.exitCode=1;}finally{await browser.close();}
 })().catch(error=>{console.error(error.stack);process.exitCode=1;});

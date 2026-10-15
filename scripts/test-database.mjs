@@ -142,7 +142,7 @@ try {
   assert.equal((await query("select * from public.source_change_events where source='FAA:STC:PA28'")).rows.length,1,'Repeated unchanged import adds no events');
   assert.equal((await query('select * from public.related_documents')).rows.length,2,'Repeat discovery does not duplicate metadata');
   const badRun='60000000-0000-4000-8000-000000000004';await relatedStart(badRun);
-  await assert.rejects(relatedCommit(badRun,[{...correctedRelated,models:['UNKNOWN']}]),/check constraint/);
+  await assert.rejects(relatedCommit(badRun,[{...correctedRelated,models:['UNKNOWN']}]),/constraint/);
   assert.equal((await query("select * from public.source_change_events where source='FAA:STC:PA28'")).rows.length,1,'Failed import cannot create an event');
   assert.equal((await query('select * from public.related_documents where is_active')).rows.length,1,'A failed batch cannot deactivate the previous index');
   assert.equal((await query("select last_successful_run_id from public.ingestion_checkpoints where source='FAA:STC:PA28'")).rows[0].last_successful_run_id,third);
@@ -193,6 +193,13 @@ try {
   const countBeforeRepeat=(await query('select count(*)::integer n from public.source_change_events')).rows[0].n;
   const repeatRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:STC:PA28','running') returning id")).rows[0].id;
   await relatedCommit(repeatRun,[returning]);assert.equal((await query('select count(*)::integer n from public.source_change_events')).rows[0].n,countBeforeRepeat);
+  for(const [source,scopeKey,archiveSlug] of [
+    ['test-expanded','TEST_EXPANDED','TEST1'],['test-batch2','TEST_BATCH2','TEST2'],['test-batch3','TEST_BATCH3','TEST3'],
+    ['test-batch4','TEST_BATCH4','TEST4'],['test-batch5','TEST_BATCH5','TEST5'],['test-batch6','TEST_BATCH6','TEST6'],
+  ]){
+    await query("insert into public.related_source_scopes(source,scope_key,document_type,archive_slug) values($1,$2,'AD',$3)",[source,scopeKey,archiveSlug]);
+    for(const model of ['PA-28-140','PA-28-181'])await query("insert into public.related_scope_models(source,model,source_model,model_entity_id) select $1,$2,$2,id from public.catalog_entities where authority='FAA' and entity_type='aircraft_model' and natural_key=$2",[source,model]);
+  }
   const expanded=JSON.parse(readFileSync(new URL('../apps/worker/src/expanded-review.json',import.meta.url)));
   await assert.rejects(query('select public.review_pa28_expanded_graph()'),/original missing/);
   const expandedIds=[];
@@ -381,6 +388,26 @@ try {
   assert.equal((await query('select count(*)::integer n from public.relationship_applicability_rules')).rows[0].n,16,'Repeat review replaces rule groups atomically');
   await assert.rejects(query("update public.aircraft_variant_profiles set faa_status='faa_approved' where display_name='737 MAX 10'"),/check constraint/);
   console.log('Boeing family checks passed: guarded A16WE import, six approved variants, explicit MAX 10 boundary, canonical engines, structured facts, compound applicability, RLS and idempotence.');
+
+  const b737Source={'drs:documentNumber':'2026-13-02','drs:title':'Boeing 737 test directive','drs:status':'Current',
+    'drs:adfrawdModel':['737-700 Series','737-800 Series','737-8'],documentGuid:'B737RELATEDTEST',
+    documentURL:'https://drs.faa.gov/browse/excelExternalWindow/B737RELATEDTEST.0001',docLastModifiedDate:'2026-09-01T00:00:00Z','drs:adfrawdIssueDate':'2026-07-01'};
+  const b737Row=relatedSnapshot('AD',b737Source,'2026-10-14T00:00:00Z','B737').row;
+  const b737RelatedRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:ADFRAWD:B737','running') returning id")).rows[0].id;
+  await assert.rejects(asRole('anon',null,()=>query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[b737RelatedRun,'B737','AD',JSON.stringify([b737Row])])),/permission denied/);
+  assert.equal((await query('select public.commit_related_catalog($1,$2,$3,$4::jsonb) n',[b737RelatedRun,'B737','AD',JSON.stringify([b737Row])])).rows[0].n,1);
+  const b737Matches=(await asRole('anon',null,()=>query("select model from public.related_documents where document_number='2026-13-02' order by model"))).rows.map(row=>row.model);
+  assert.deepEqual(b737Matches,['737-700','737-8','737-800']);
+  assert.deepEqual((await asRole('anon',null,()=>query("select document_type from public.related_last_checked('737-8')"))).rows.map(row=>row.document_type),['AD']);
+  const monitored=(await asRole('anon',null,()=>query("select source,baseline_ready from public.source_monitoring() where source like '%:B737' order by source"))).rows;
+  assert.deepEqual(monitored,[{source:'FAA:ADFRAWD:B737',baseline_ready:true},{source:'FAA:STC:B737',baseline_ready:false}]);
+  const badB737Run=(await query("insert into public.ingestion_runs(source,status) values('FAA:ADFRAWD:B737','running') returning id")).rows[0].id;
+  await assert.rejects(query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[badB737Run,'B737','AD',JSON.stringify([{...b737Row,models:['737-10']}])]),/Unmapped model/);
+  assert.equal((await query("select count(*)::integer n from public.related_document_matches where source='FAA:ADFRAWD:B737' and is_active")).rows[0].n,3,'Failed family batch preserves the current index');
+  const repeatB737Run=(await query("insert into public.ingestion_runs(source,status) values('FAA:ADFRAWD:B737','running') returning id")).rows[0].id;
+  await query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[repeatB737Run,'B737','AD',JSON.stringify([b737Row])]);
+  assert.equal((await query("select count(*)::integer n from public.related_document_matches where source='FAA:ADFRAWD:B737'")).rows[0].n,3,'Repeat family import does not duplicate matches');
+  console.log('Family related-source checks passed: canonical model aliases, guarded service writes, public indexes, monitoring, rollback and repeat imports.');
 
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');

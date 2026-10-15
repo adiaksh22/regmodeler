@@ -1,14 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchingModels,relatedSnapshot,collectRelated,importRelated } from '../src/related.mjs';
+import { matchingModels,relatedSnapshot,collectRelated,importRelated,relatedSourceKey } from '../src/related.mjs';
 import { extractReference } from '../src/reference-text.mjs';
 
-const record=(id='TEST',more={})=>({'drs:documentNumber':'SA_TEST','drs:status':'Current',documentGuid:id,documentURL:`https://drs.faa.gov/browse/excelExternalWindow/${id}.0001`,docLastModifiedDate:'2025-12-01T00:00:00Z',...more});
+const record=(id='TEST',more={})=>({'drs:documentNumber':'SA_TEST','drs:status':'Current','drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-181'],documentGuid:id,documentURL:`https://drs.faa.gov/browse/excelExternalWindow/${id}.0001`,docLastModifiedDate:'2025-12-01T00:00:00Z',...more});
 const page=(documents,offset=0,more=false,total=documents.length)=>({documents,summary:{count:documents.length,offset,hasMoreItems:more,totalItems:total}});
 test('STC matches require the model and certificate to belong to the same tuple',()=>{
   assert.deepEqual(matchingModels('STC',{'drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-140','OTHER -- Other -- PA-28-181']}),['PA-28-140']);
   assert.deepEqual(matchingModels('STC',{'drs:stcTCNumbers':['2A13','OTHER'],'drs:stcModel':['OTHER MODEL','PA-28-181']}),[]);
   assert.deepEqual(matchingModels('STC',{'drs:stcTCNumbers':['2A13'],'drs:stcModel':['PA-28-181','PA-28-140']}),[]);
+});
+test('Boeing scope maps FAA series names to certified model identities',async()=>{
+  const stc={'drs:stcTCNumbersMakeModel':['A16WE -- The Boeing Company -- 737-800 Series','A16WE -- The Boeing Company -- 737-8','OTHER -- Other -- 737-9']};
+  assert.deepEqual(matchingModels('STC',stc,'B737'),['737-800','737-8']);
+  const ad=record('B737',{'drs:documentNumber':'2026-13-02','drs:adfrawdModel':['737-700 Series','737-900ER Series','737-9']});
+  assert.deepEqual(matchingModels('AD',ad,'B737'),['737-700','737-900ER','737-9']);
+  const calls=[];await collectRelated({metadata:async(type,filters)=>{calls.push({type,filters});return page([ad]);}},'AD',undefined,'B737');
+  assert.deepEqual(calls,[{type:'ADFRAWD',filters:{'drs:adfrawdModel':['737-700 Series','737-800 Series','737-900ER Series','737-7','737-8','737-9']}}]);
+  const snapshot=relatedSnapshot('AD',ad,'2026-10-14T00:00:00Z','B737');
+  assert.match(snapshot.row.metadata.metadata_storage_path,/^FAA\/AD\/B737\//);
+  assert.equal(relatedSourceKey('STC','B737'),'FAA:STC:B737');
+  assert.throws(()=>relatedSourceKey('CAR','B737'),/UNSUPPORTED_DOCUMENT_TYPE/);
 });
 test('registry metadata is archived without asserting installation or PDF retrieval',()=>{
   const r=record('A',{'drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-181']});

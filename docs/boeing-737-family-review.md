@@ -1,6 +1,6 @@
 # Boeing 737 family review
 
-Verified October 14, 2026, against the official FAA DRS record for TCDS A16WE, Revision 81, dated August 3, 2026. The website remains unpublished.
+Verified October 15, 2026, against the official FAA DRS record for TCDS A16WE, Revision 81, dated August 3, 2026. The website remains unpublished.
 
 ## Source and import result
 
@@ -44,8 +44,19 @@ Each approved variant connects to:
 
 The six variants therefore produce 18 evidence-backed graph paths while reusing two engine nodes and one family node. The node-link diagram is the default desktop view. Selecting a node isolates its direct dependencies; selecting a link opens the exact FAA revision, page, excerpt, conditions, and archived PDF viewer.
 
+## Related-source discovery
+
+The same family contract now reconciles FAA AD and STC metadata for every reviewed approved variant, including the newly approved 737-7 even though its current scoped query returns no related records. FAA series labels such as `737-800 Series` map to the canonical user-facing `737-800` identity. STCs must carry an exact `A16WE -- The Boeing Company -- <model>` tuple; independently matching certificate and model arrays is rejected.
+
+| Catalog | FAA records | Canonical model matches | Undated records |
+| --- | ---: | ---: | ---: |
+| AD | 418 | 971 | 0 |
+| STC | 2,601 | 4,722 | 84 |
+
+These rows are discovery candidates. They do not become graph edges until the primary original, limitations, serial/configuration scope and exact evidence pages are reviewed. Metadata objects are privately archived by hash. Complete indexes and monitoring checkpoints commit atomically; the initial STC batch required a set-based transaction because a row-by-row transaction exceeded the hosted statement limit.
+
 ## Change behavior
 
 The scheduled FAA source job now reconciles A16WE alongside 2A13. The family review is pinned to Revision 81, its issue date, exact PDF hash, expected current model list, and absence of 737-10. If the FAA publishes a new current version, the old reviewed TCDS paths stop qualifying as current until the new original is inspected and a new review migration is applied.
 
-No AD/STC applicability has yet been published for the 737 variants. The next evidence phase should select a small, high-value set of current 737 ADs, archive their official originals, and add serial/configuration predicates without treating a model-index match as individual-aircraft applicability.
+No AD/STC applicability graph edge has yet been published for the 737 variants. The next evidence phase should select a small, high-value set of current 737 ADs, archive their official originals, and add serial/configuration predicates without treating a model-index match as individual-aircraft applicability.

@@ -1,6 +1,6 @@
 # Relationship and applicability architecture
 
-Updated October 14, 2026. This document describes the public evidence graph and the structured conditions added for multi-family expansion.
+Updated October 15, 2026. This document describes the public evidence graph and the structured conditions added for multi-family expansion.
 
 ## Canonical graph
 
@@ -18,6 +18,7 @@ The public `model_graph` view follows row-level security and exposes only publis
 | `applicability_rule_sets` | Outcome attached to one reviewed relationship | One rule set per relationship and matching evidence version |
 | `applicability_rule_groups` | Alternative branch | Ordered `ALL` or `ANY` groups with cascading ownership |
 | `applicability_predicates` | Exact model, serial, component, STC, software, drawing, or action test | Controlled subject/comparison types, JSON expected value, page citation |
+| `related_source_scopes` / `related_scope_models` | Family-specific discovery contract and FAA-to-canonical model mapping | Exact source name, certificate tuple, reviewed model foreign key, no unmapped records |
 
 All new tables deny client writes. Anonymous/authenticated reads require the parent entity, source version, and relationship to remain published. Service-role transactions are the only publication path.
 
@@ -55,3 +56,5 @@ Adding an aircraft family now follows one repeatable flow:
 8. watch the TCDS and related-source checkpoints for changes.
 
 New user aircraft remain small profile overlays. They reference canonical model/component keys and never duplicate regulatory documents or turn user-entered facts into publisher data.
+
+Large related-source catalogs use set-based service transactions. The transaction validates the complete batch, deactivates the prior index, writes documents, versions and model matches, records source observations/change events, and advances the checkpoint atomically. A failed or timed-out transaction leaves the prior public index and checkpoint intact.

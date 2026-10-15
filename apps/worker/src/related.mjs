@@ -1,11 +1,48 @@
 import { ImportError, sha256 } from './drs.mjs';
 
-export const models = ['PA-28-140','PA-28-181'];
+export const relatedScopes = {
+  PA28: {
+    certificate: '2A13', archiveSlug: 'PA28', types: ['AD','STC','CAR'],
+    models: [
+      { canonical: 'PA-28-140', source: 'PA-28-140' },
+      { canonical: 'PA-28-181', source: 'PA-28-181' },
+    ],
+  },
+  B737: {
+    certificate: 'A16WE', archiveSlug: 'B737', types: ['AD','STC'],
+    models: [
+      { canonical: '737-700', source: '737-700 Series' },
+      { canonical: '737-800', source: '737-800 Series' },
+      { canonical: '737-900ER', source: '737-900ER Series' },
+      { canonical: '737-7', source: '737-7' },
+      { canonical: '737-8', source: '737-8' },
+      { canonical: '737-9', source: '737-9' },
+    ],
+  },
+};
+export const models = relatedScopes.PA28.models.map(model=>model.canonical);
 export const scopes = {
   AD: { type: 'ADFRAWD', filters: { 'drs:adfrawdModel': models } },
   STC: { type: 'STC', filters: { 'drs:stcTCNumbers': ['2A13'], 'drs:stcModel': models } },
   CAR: { type: 'CAR', filters: { 'drs:documentNumber': ['CAR 3'] } },
 };
+function scopeDefinition(scopeKey) {
+  const definition=relatedScopes[scopeKey];
+  if(!definition)throw new ImportError('UNSUPPORTED_RELATED_SCOPE');
+  return definition;
+}
+function sourceContract(type,scopeKey) {
+  const definition=scopeDefinition(scopeKey);
+  if(!definition.types.includes(type))throw new ImportError('UNSUPPORTED_DOCUMENT_TYPE');
+  const sourceModels=definition.models.map(model=>model.source);
+  if(type==='AD')return { type:'ADFRAWD', filters:{'drs:adfrawdModel':sourceModels} };
+  if(type==='STC')return { type:'STC', filters:{'drs:stcTCNumbers':[definition.certificate],'drs:stcModel':sourceModels} };
+  return { type:'CAR', filters:{'drs:documentNumber':['CAR 3']} };
+}
+export function relatedSourceKey(type,scopeKey='PA28') {
+  const definition=scopeDefinition(scopeKey);sourceContract(type,scopeKey);
+  return `FAA:${type==='AD'?'ADFRAWD':type}:${definition.archiveSlug}`;
+}
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value==='object') return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
@@ -13,20 +50,21 @@ function canonical(value) {
 }
 const clean = value => typeof value==='string' ? value.replaceAll('\\n','\n').replaceAll('\\t',' ').trim() : '';
 const date = value => typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) ? value : null;
-export function matchingModels(type, record) {
-  if (type==='AD') return models.filter(m=>record['drs:adfrawdModel']?.includes(m));
+export function matchingModels(type, record, scopeKey='PA28') {
+  const definition=scopeDefinition(scopeKey);sourceContract(type,scopeKey);
+  if (type==='AD') return definition.models.filter(model=>record['drs:adfrawdModel']?.includes(model.source)).map(model=>model.canonical);
   if (type==='CAR') return [];
   // Preserve TC/model tuple association; independently matching two arrays is unsafe.
   const tuples=record['drs:stcTCNumbersMakeModel'];
-  if (Array.isArray(tuples)) return models.filter(model=>tuples.some(tuple=>{
+  if (Array.isArray(tuples)) return definition.models.filter(model=>tuples.some(tuple=>{
     if(typeof tuple!=='string')return false;
-    const parts=tuple.split('--').map(x=>x.trim());return parts.length===3 && parts[0]==='2A13' && parts[2]===model;
-  }));
+    const parts=tuple.split('--').map(x=>x.trim());return parts.length===3 && parts[0]===definition.certificate && parts[2]===model.source;
+  })).map(model=>model.canonical);
   const tc=record['drs:stcTCNumbers'],names=record['drs:stcModel'];
-  return Array.isArray(tc)&&Array.isArray(names)&&tc.length===names.length ? models.filter(m=>names.some((name,i)=>name===m&&tc[i]==='2A13')) : [];
+  return Array.isArray(tc)&&Array.isArray(names)&&tc.length===names.length ? definition.models.filter(model=>names.some((name,i)=>name===model.source&&tc[i]===definition.certificate)).map(model=>model.canonical) : [];
 }
-export async function collectRelated(source,type,since) {
-  const scope=scopes[type];if(!scope)throw new ImportError('UNSUPPORTED_DOCUMENT_TYPE');
+export async function collectRelated(source,type,since,scopeKey='PA28') {
+  const scope=sourceContract(type,scopeKey);
   const rows=[];const seen=new Set();let total;
   for(let page=0;page<10;page++){
     const offset=page*750;const result=await source.metadata(scope.type,scope.filters,offset,since);
@@ -38,13 +76,15 @@ export async function collectRelated(source,type,since) {
       if(url.origin!=='https://drs.faa.gov'||url.username||url.password||url.search||url.hash||!/^\/browse\/excelExternalWindow\/[A-Za-z0-9._-]+$/.test(url.pathname)||!row.documentGuid||!url.pathname.endsWith(row.documentGuid+'.0001')||!['Current','Historical','Pending'].includes(row['drs:status'])||!clean(row['drs:documentNumber'])||(row.docLastModifiedDate!==null&&!Number.isFinite(Date.parse(row.docLastModifiedDate))))throw new ImportError('INVALID_RELATED_RECORD');
       if(seen.has(row.documentURL))throw new ImportError('DUPLICATE_PAGE_RECORD');
       if(since&&(!Number.isFinite(Date.parse(row.docLastModifiedDate))||Date.parse(row.docLastModifiedDate)<=Date.parse(since)))throw new ImportError('INCREMENTAL_FILTER_MISMATCH');
+      if(type!=='CAR'&&!matchingModels(type,row,scopeKey).length)throw new ImportError('OUT_OF_SCOPE_RELATED_RECORD');
       seen.add(row.documentURL);rows.push(row);
     }
     if(!s.hasMoreItems){if(rows.length!==total)throw new ImportError('INCOMPLETE_CATALOG');return rows;}
     if(result.documents.length!==750)throw new ImportError('INCOMPLETE_PAGE');
   }throw new ImportError('PAGE_LIMIT_EXCEEDED');
 }
-export function relatedSnapshot(type,record,retrievedAt) {
+export function relatedSnapshot(type,record,retrievedAt,scopeKey='PA28') {
+  const definition=scopeDefinition(scopeKey);sourceContract(type,scopeKey);
   const bytes=Buffer.from(JSON.stringify(canonical(record)));const hash=sha256(bytes);
   const identity=new URL(record.documentURL).pathname.split('/').at(-1);
   const title=clean(record['drs:title']) || clean(record['drs:adfrawdSubject']) || record['drs:documentNumber'];
@@ -53,9 +93,9 @@ export function relatedSnapshot(type,record,retrievedAt) {
     document_number:record['drs:documentNumber'].trim().toUpperCase(),title,
     source_version_id:identity+'@'+hash,revision_label:type==='CAR'?clean(record['drs:amendRegNo'])||'Historical CAR source':clean(record['drs:stcStatusDate']??record['drs:adfrawdIssueDate'])||'Registry snapshot',
     revision_date:date(record['drs:stcStatusDate']??record['drs:adfrawdIssueDate']??record['drs:effectiveDate']),status:rawStatus,
-    source_url:record.documentURL,retrieved_at:retrievedAt,models:matchingModels(type,record),
+    source_url:record.documentURL,retrieved_at:retrievedAt,models:matchingModels(type,record,scopeKey),
     metadata:{ title,source_identity:identity,source_guid:record.documentGuid,source_modified_at:record.docLastModifiedDate,
-      source_status:rawStatus,missing_modified_date:record.docLastModifiedDate===null,metadata_sha256:hash,metadata_storage_path:`FAA/${type}/PA28/${hash}.json`,
+      source_status:rawStatus,missing_modified_date:record.docLastModifiedDate===null,metadata_sha256:hash,metadata_storage_path:`FAA/${type}/${definition.archiveSlug}/${hash}.json`,
       effective_date:date(record['drs:effectiveDate']),holder:clean(record['drs:stcHolder']),
       summary:clean(record['drs:adfrawdSummary']).slice(0,3000),regulatory_text:clean(record['drs:adfrawdRegulatoryText']),
       superseded_by:record['drs:adfrawdSupersededBy']??[],supersedes:record['drs:adfrawdSupersededAD']??[],
@@ -64,20 +104,21 @@ export function relatedSnapshot(type,record,retrievedAt) {
     },
   }};
 }
-export async function importRelated(client,source,type,{verifyOnly=false,now=()=>new Date().toISOString()}={}) {
+export async function importRelated(client,source,type,{verifyOnly=false,now=()=>new Date().toISOString(),scope='PA28'}={}) {
+  const definition=scopeDefinition(scope);sourceContract(type,scope);
   let runId;
   try{
-    if(!verifyOnly){const run=await client.from('ingestion_runs').insert({source:`FAA:${scopes[type]?.type}:PA28`,status:'running'}).select('id').single();if(run.error)throw new ImportError('RUN_START_FAILED');runId=run.data.id;}
-    const records=await collectRelated(source,type);
+    if(!verifyOnly){const run=await client.from('ingestion_runs').insert({source:relatedSourceKey(type,scope),status:'running'}).select('id').single();if(run.error)throw new ImportError('RUN_START_FAILED');runId=run.data.id;}
+    const records=await collectRelated(source,type,undefined,scope);
     if(!records.length)throw new ImportError('EMPTY_RELATED_CATALOG');
     const knownDates=records.map(r=>Date.parse(r.docLastModifiedDate)).filter(Number.isFinite);
     if(!knownDates.length)throw new ImportError('NO_SOURCE_MODIFICATION_DATES');
     const since=new Date(Math.max(...knownDates)-86400000).toISOString();
-    const incremental=await collectRelated(source,type,since);
+    const incremental=await collectRelated(source,type,since,scope);
     const hashes=records.filter(r=>Date.parse(r.docLastModifiedDate)>Date.parse(since)).map(r=>sha256(Buffer.from(JSON.stringify(canonical(r))))).sort();
     if(JSON.stringify(hashes)!==JSON.stringify(incremental.map(r=>sha256(Buffer.from(JSON.stringify(canonical(r))))).sort()))throw new ImportError('INCREMENTAL_RECONCILIATION_MISMATCH');
-    if(verifyOnly)return {type,records:records.length,undatedRecords:records.length-knownDates.length,positiveIncrementalRecords:incremental.length};
-    const retrievedAt=now();const prepared=records.map(record=>relatedSnapshot(type,record,retrievedAt));
+    if(verifyOnly)return {scope,type,records:records.length,undatedRecords:records.length-knownDates.length,positiveIncrementalRecords:incremental.length};
+    const retrievedAt=now();const prepared=records.map(record=>relatedSnapshot(type,record,retrievedAt,scope));
     let next=0;
     const results=await Promise.allSettled(Array.from({length:4},async()=>{while(next<prepared.length){
       const {bytes,row}=prepared[next++];
@@ -90,8 +131,8 @@ export async function importRelated(client,source,type,{verifyOnly=false,now=()=
     }}));
     const failed=results.find(r=>r.status==='rejected');if(failed)throw failed.reason;
     const batch=prepared.map(p=>p.row);
-    const committed=await client.rpc('commit_pa28_related',{p_run_id:runId,p_type:type,p_records:batch});if(committed.error)throw new ImportError('BATCH_COMMIT_FAILED');
-    return {type,records:records.length,undatedRecords:records.length-knownDates.length,modelMatches:batch.reduce((n,r)=>n+r.models.length,0),positiveIncrementalRecords:incremental.length};
+    const committed=await client.rpc('commit_related_catalog',{p_run_id:runId,p_scope:scope,p_type:type,p_records:batch});if(committed.error)throw new ImportError('BATCH_COMMIT_FAILED');
+    return {scope,type,records:records.length,undatedRecords:records.length-knownDates.length,modelMatches:batch.reduce((n,r)=>n+r.models.length,0),positiveIncrementalRecords:incremental.length};
   }catch(error){
     const code=error instanceof ImportError?error.code:'RELATED_IMPORT_FAILED';
     if(runId)await client.from('ingestion_runs').update({status:'failed',completed_at:now(),error_code:code}).eq('id',runId).eq('status','running');
