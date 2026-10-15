@@ -309,6 +309,31 @@ try {
   await query('update public.related_document_matches set is_active=false where version_id=$1',[componentIds[0]]);assert.equal((await query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[componentIds])).rows.length,7);
   console.log('Component checks passed: atomic provenance, stable enrichment IDs, equipment unknowns, action groups, publisher dates, supersession, repeat review and inactive-source boundaries.');
 
+  const batch5=JSON.parse(readFileSync(new URL('../apps/worker/src/review-batch5.json',import.meta.url)));const equipmentIds=[];
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_batch5_graph()')),/permission denied/);
+  await assert.rejects(query('select public.review_pa28_batch5_graph()'),/original missing/);
+  for(const entry of batch5){
+   const document=(await query("insert into public.documents(authority,document_type,document_number,title,is_published) values('FAA','AD',$1,$1,true) returning id",[entry.number])).rows[0].id;
+   const version=(await query("insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,content_sha256,storage_path,is_published) values($1,$2,'reviewed','current','https://drs.faa.gov',now(),$3,$4,true) returning id",[document,entry.number,entry.hash,'FAA/AD/reviewed/'+entry.hash+'.pdf'])).rows[0].id;equipmentIds.push(version);
+   for(const model of entry.models)await query("insert into public.related_document_matches(source,version_id,model) values('test-batch5',$1,$2)",[version,model]);
+  }
+  assert.equal((await query('select public.review_pa28_batch5_graph() as n')).rows[0].n,19);
+  const equipmentRows=(await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[equipmentIds]))).rows;
+  assert.equal(equipmentRows.length,26);assert.equal(equipmentRows.filter(r=>!r.path_via).length,6);
+  assert.equal(equipmentRows.filter(r=>r.relationship_type==='affects_component').length,7);
+  assert.equal(equipmentRows.filter(r=>r.relationship_type==='supersedes').length,3);
+  assert.deepEqual([...new Set(equipmentRows.filter(r=>r.relationship_type==='affects_component').map(r=>r.target_type))].sort(),['appliance_model','engine_model']);
+  for(const entry of batch5){
+   const reviewedRows=equipmentRows.filter(r=>r.source_document_number===entry.number);
+   for(const row of reviewedRows.filter(r=>!r.path_via)){assert.equal(row.evidence_excerpt,entry.excerpt);assert.deepEqual(row.applicability_conditions,entry.conditions);}
+   const equipmentReference=entry.references.find(r=>r.key===entry.conditions.equipment_key);assert.ok(equipmentReference,'Every automatic equipment key must have a reviewed component node');
+   for(const reference of entry.references){const row=reviewedRows.find(r=>r.path_via&&r.basis_key===reference.key);assert.ok(row);assert.equal(row.relationship_type,reference.relationship??'references');assert.equal(row.evidence_excerpt,reference.excerpt);assert.deepEqual(row.applicability_conditions,reference.conditions);}
+  }
+  const graphCount=(await query('select count(*)::integer n from public.relationships')).rows[0].n;await query('select public.review_pa28_batch5_graph()');assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,graphCount);
+  await query('update public.related_document_matches set is_active=false where version_id=$1',[equipmentIds[0]]);
+  assert.equal((await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[equipmentIds]))).rows.length,16,'Changed equipment AD hides its two model paths and all scoped component/reference paths');
+  console.log('Installed-equipment checks passed: exact manifest parity, canonical component nodes, model scope, equipment predicates, supersession, repeat review and inactive-source boundaries.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

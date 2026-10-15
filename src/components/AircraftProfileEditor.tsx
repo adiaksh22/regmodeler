@@ -2,8 +2,8 @@ import {useEffect,useState} from 'react';
 import {profileModels,validateProfile,type AircraftProfile,type InstallationStatus} from '../domain/aircraftProfile';
 import {emptyProfiles,PROFILE_KEY,readProfiles,writeProfiles,profileStoreFingerprint,type ProfileStore} from '../lib/profileStorage';
 
-const blank = (model:string):AircraftProfile => ({id:crypto.randomUUID(),model,name:`My ${model}`,serial:'',modifications:[],updatedAt:new Date().toISOString()});
-export default function AircraftProfileEditor({model,onChange,onDirty}:{model:string;onChange:(profile:AircraftProfile|null)=>void;onDirty?:(dirty:boolean)=>void}) {
+const blank = (model:string):AircraftProfile => ({id:crypto.randomUUID(),model,name:`My ${model}`,serial:'',modifications:[],equipment:[],updatedAt:new Date().toISOString()});
+export default function AircraftProfileEditor({model,equipmentOptions,onChange,onDirty}:{model:string;equipmentOptions:{key:string;label:string}[];onChange:(profile:AircraftProfile|null)=>void;onDirty?:(dirty:boolean)=>void}) {
   const [loaded]=useState(readProfiles);
   const [store,setStore]=useState(loaded.store);
   const [writable,setWritable]=useState(loaded.writable);
@@ -23,7 +23,7 @@ export default function AircraftProfileEditor({model,onChange,onDirty}:{model:st
     setStore(next);setDirty(false);setNotice(message);return true;
   }
   function save(){
-    const normalized={...draft,name:draft.name.trim(),serial:draft.serial.trim().toUpperCase(),modifications:draft.modifications.map(m=>({...m,number:m.number.trim().toUpperCase(),note:m.note.trim()})),updatedAt:new Date().toISOString()};
+    const normalized={...draft,name:draft.name.trim(),serial:draft.serial.trim().toUpperCase(),modifications:draft.modifications.map(m=>({...m,number:m.number.trim().toUpperCase(),note:m.note.trim()})),equipment:(draft.equipment??[]).map(e=>({...e,note:e.note.trim()})),updatedAt:new Date().toISOString()};
     const error=validateProfile(normalized);if(error){setNotice(error);return;}
     if(store.profiles.some(p=>p.id!==draft.id&&p.model===model&&p.name.toLowerCase()===normalized.name.toLowerCase())){setNotice('Use a different profile name to distinguish your saved aircraft.');return;}
     if(store.profiles.length>=100&&!store.profiles.some(p=>p.id===draft.id)){setNotice('This browser supports up to 100 profiles. Delete an unused profile before adding another.');return;}
@@ -68,6 +68,14 @@ export default function AircraftProfileEditor({model,onChange,onDirty}:{model:st
       <button className="text-sm text-red-700 underline" onClick={()=>edit({...draft,modifications:draft.modifications.filter((_,i)=>i!==index)})}>Remove entry {index+1}</button>
     </div>)}</div>
     <button disabled={draft.modifications.length>=50} onClick={()=>edit({...draft,modifications:[...draft.modifications,{number:'',status:'unknown',note:''}]})} className="text-sm text-blue-700 underline mt-3">Add STC entry</button>
+    {!!equipmentOptions.length&&<><h3 className="font-semibold text-sm mt-5">Installed equipment</h3><p className="text-xs text-slate-600 mt-1 mb-3">Choose only reviewed equipment families shown in the graph. A reported installation narrows relevance; exact part, software, serial and completed actions still require aircraft-record review.</p>
+    <div className="space-y-3">{(draft.equipment??[]).map((item,index)=><div key={index} className="border rounded p-3 space-y-2">
+      <div className="grid sm:grid-cols-2 gap-2"><label className="text-sm">Equipment<select aria-label={`Equipment item ${index+1}`} value={item.key} onChange={e=>edit({...draft,equipment:(draft.equipment??[]).map((entry,i)=>i===index?{...entry,key:e.target.value}:entry)})} className="block border rounded p-2 w-full mt-1"><option value="">Select reviewed equipment</option>{equipmentOptions.map(option=><option key={option.key} value={option.key}>{option.label}</option>)}</select></label>
+      <label className="text-sm">Installation status<select aria-label={`Equipment installation ${index+1}`} value={item.status} onChange={e=>edit({...draft,equipment:(draft.equipment??[]).map((entry,i)=>i===index?{...entry,status:e.target.value as InstallationStatus}:entry)})} className="block border rounded p-2 w-full mt-1"><option value="unknown">Unknown</option><option value="installed">Installed — user reported</option><option value="not_installed">Not installed — user reported</option></select></label></div>
+      <label className="block text-sm">Record reference or note (optional)<input aria-label={`Equipment record note ${index+1}`} maxLength={300} value={item.note} onChange={e=>edit({...draft,equipment:(draft.equipment??[]).map((entry,i)=>i===index?{...entry,note:e.target.value}:entry)})} className="block border rounded p-2 w-full mt-1"/></label>
+      <button className="text-sm text-red-700 underline" onClick={()=>edit({...draft,equipment:(draft.equipment??[]).filter((_,i)=>i!==index)})}>Remove equipment {index+1}</button>
+    </div>)}</div>
+    <button disabled={(draft.equipment??[]).length>=50} onClick={()=>edit({...draft,equipment:[...(draft.equipment??[]),{key:'',status:'unknown',note:''}]})} className="text-sm text-blue-700 underline mt-3">Add equipment entry</button></>}
     <div className="flex flex-wrap gap-3 mt-4"><button disabled={!writable} onClick={save} className="bg-blue-600 text-white rounded px-3 py-2 disabled:opacity-50">Save and use profile</button><button onClick={()=>{if(!dirty||window.confirm('Discard unsaved profile edits?')){setDraft(blank(model));setDirty(false);setNotice('New draft. Save it to use it for relevance checks.');}}} className="border rounded px-3 py-2">New profile</button>
       {store.profiles.some(p=>p.id===draft.id)&&<button onClick={remove} className="text-red-700 text-sm underline">Delete saved profile</button>}
       {!!store.profiles.length&&<button onClick={exportProfiles} className="text-blue-700 text-sm underline">Export profiles</button>}

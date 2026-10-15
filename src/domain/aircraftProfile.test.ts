@@ -1,4 +1,5 @@
 import batch4 from '../../apps/worker/src/review-batch4.json';
+import batch5 from '../../apps/worker/src/review-batch5.json';
 import {describe,it,expect} from 'vitest';
 import {profileRelevance,validateProfile,type AircraftProfile} from './aircraftProfile';
 import type {EvidenceRelationship} from './explorer';
@@ -13,6 +14,15 @@ describe('reviewed profile relevance',()=>{
     for(const serial of ['2843112','2843565','2843566','2843588'])expect(profileRelevance({...p,serial},reviewed('2004-14-12'))?.category).toBe('match');
     for(const serial of ['2843111','2843589'])expect(profileRelevance({...p,serial},reviewed('2004-14-12'))?.category).toBe('outside');
     for(const number of ['2017-14-04','2024-10-04'])expect(profileRelevance({...p,serial:'2843566'},reviewed(number))?.category).toBe('unknown');
+  });
+  it('uses user-reported reviewed equipment identity without claiming full AD compliance',()=>{
+    const item=batch5.find(e=>e.number==='2005-01-19')!;
+    const equipmentEdge={...edge,source_document_number:item.number,applicability_conditions:Object.fromEntries(Object.entries(item.conditions).filter(([,value])=>typeof value==='string'))};
+    expect(profileRelevance(profile,equipmentEdge)?.label).toBe('Equipment installation unknown');
+    const installed={...profile,equipment:[{key:item.conditions.equipment_key,status:'installed' as const,note:'Equipment list'}]};
+    expect(profileRelevance(installed,equipmentEdge)).toMatchObject({category:'reported',label:'Affected equipment installed — user reported'});
+    expect(profileRelevance({...installed,equipment:[{...installed.equipment[0],status:'not_installed' as const}]},equipmentEdge)?.category).toBe('outside');
+    expect(profileRelevance({...installed,equipment:[{...installed.equipment[0],key:'SHADIN:ADC2000-962830A-S8'}]},equipmentEdge)?.category).toBe('unknown');
   });
   it('includes both endpoints of each reviewed serial range and excludes adjacent serials',()=>{
     for(const serial of ['28-20001','28-26946','28-7125001','28-7725290'])expect(profileRelevance({...profile,serial},edge)?.category).toBe('match');

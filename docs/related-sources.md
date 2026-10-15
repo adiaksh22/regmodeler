@@ -52,7 +52,7 @@ Deploy the PDF viewer backend with `npx.cmd supabase functions deploy source-vie
 
 ## Remaining coverage
 
-Most discovered primary PDFs and additional attachments remain unarchived; the UI states their status. AD extracted text may omit applicability tables and graphics. Selected additional originals and one AML have now been reviewed and archived, bringing hosted coverage to 71 model-scoped graph rows; see [node navigation and review coverage](node-graph-and-review.md). Further AMLs, manufacturer service documents, noise/optional-equipment provisions, other PA-28 model reviews, exact historical CFR amendment wording, configuration-aware applicability and automated attachment retrieval remain future work.
+Most discovered primary PDFs and additional attachments remain unarchived; the UI states their status. AD extracted text may omit applicability tables and graphics. Selected originals, attachments and one AML have now been reviewed and archived, bringing hosted coverage to 110 model-scoped graph rows. Seven current paths now expose canonical installed-component identities, and profiles can use four reviewed equipment families without treating missing details as absence. See [installed-equipment review](pa28-installed-equipment-review.md) and [node navigation and review coverage](node-graph-and-review.md). Further AMLs, manufacturer service documents, noise/optional-equipment provisions, other PA-28 model reviews, exact historical CFR amendment wording, compound configuration rules and broader automated attachment retrieval remain future work.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
 

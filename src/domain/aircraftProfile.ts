@@ -2,9 +2,11 @@ import type {EvidenceRelationship} from './explorer';
 
 export const profileModels = ['PA-28-140', 'PA-28-181'] as const;
 export type InstallationStatus = 'installed' | 'not_installed' | 'unknown';
+export type EquipmentEntry = {key:string; status:InstallationStatus; note:string};
 export type AircraftProfile = {
   id: string; model: string; name: string; serial: string;
   modifications: {number: string; status: InstallationStatus; note: string}[];
+  equipment?: EquipmentEntry[];
   updatedAt: string;
 };
 export type ProfileRelevance = {label: string; explanation: string; category: 'match'|'outside'|'unknown'|'reported';};
@@ -20,6 +22,14 @@ export function validateProfile(profile: AircraftProfile): string | null {
     if (seen.has(mod.number)) return 'Use one installation entry for each STC number.';
     seen.add(mod.number);
   }
+  const equipment=profile.equipment??[];
+  if(equipment.length>50)return 'A profile can contain up to 50 equipment entries.';
+  const equipmentKeys=new Set<string>();
+  for(const item of equipment){
+    if(!/^[A-Z0-9][A-Z0-9 ._:/()-]{0,119}$/.test(item.key)||!['installed','not_installed','unknown'].includes(item.status)||item.note.length>300)return 'Check each equipment selection, installation status and note (up to 300 characters).';
+    if(equipmentKeys.has(item.key))return 'Use one installation entry for each equipment item.';
+    equipmentKeys.add(item.key);
+  }
   return null;
 }
 
@@ -34,6 +44,13 @@ export function profileRelevance(profile: AircraftProfile | null, edge: Evidence
       explanation: 'The source establishes model approval scope. Profile entries do not verify installation, compatibility, design-data rights or compliance.'};
   }
   if (edge.relationship_type !== 'applies_to' || edge.source_document_type !== 'AD') return null;
+  const equipmentKey=edge.applicability_conditions.equipment_key;
+  if(equipmentKey){
+    const item=(profile.equipment??[]).find(entry=>entry.key===equipmentKey);
+    if(item?.status==='not_installed')return {category:'outside',label:'Equipment not installed — user reported',explanation:'This reviewed AD path depends on the identified equipment. The profile entry is user reported and does not clear other ADs or configurations.'};
+    if(item?.status==='installed')return {category:'reported',label:'Affected equipment installed — user reported',explanation:'The profile matches the reviewed equipment family. Part number, software, serial, configuration, prior work and compliance conditions still require source and aircraft-record review.'};
+    return {category:'unknown',label:'Equipment installation unknown',explanation:'This AD path depends on installed equipment. Select an equipment status from aircraft records; missing information remains unknown.'};
+  }
   const raw = edge.applicability_conditions.serial_ranges;
   if (!raw) return {category:'unknown',label:'Configuration needs review',explanation:'No machine-readable reviewed serial scope is available for this connection.'};
   const parse=(value:string)=>{const m=/^(?:(\d+)-)?(\d+)$/.exec(value);return m&&Number.isSafeInteger(Number(m[2]))?{prefix:m[1]??'',digits:m[2],value:Number(m[2])}:null;};

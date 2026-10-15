@@ -24,17 +24,18 @@ The current app does not record maintenance performed, sign off work or determin
 
 ## Profile behavior today
 
-Profiles support PA-28-140 and PA-28-181. Fields are a name, optional manufacturer serial, STC numbers, installation status (installed, not installed or unknown) and optional record-reference notes. Saving applies a draft; unsaved edits do not change relevance. Users can keep multiple profiles, select them independently by model, delete them and export JSON.
+Profiles support PA-28-140 and PA-28-181. Fields are a name, optional manufacturer serial, STC numbers, reviewed equipment families, installation status (installed, not installed or unknown) and optional record-reference notes. Saving applies a draft; unsaved edits do not change relevance. Users can keep multiple profiles, select them independently by model, delete them and export JSON.
 
 | Profile information | Current use | Remaining uncertainty |
 | --- | --- | --- |
 | Model | Selects scoped discovery and the reviewed model graph | Other models' unreviewed coverage |
 | Serial | Compared with reviewed structured serial ranges where available | Other conditions, prior work, compliance and unsupported formats |
 | STC installation entry | Labels reviewed approval connections with user-reported installation | Verified installation, compatibility and design-data rights |
+| Reviewed equipment entry | Labels component-dependent AD connections using installed, not installed or unknown | Exact part/software/serial/configuration, prior work and compliance |
 | Missing fields/unlisted STCs | Keeps relevance unknown | Requires investigation, not an assumption of absence |
 | Record-reference note | Preserves user context | No uploaded-record verification or maintenance sign-off |
 
-The first reviewed serial example is the AD 2020-24-05 connection. Most discovered records have no reviewed configuration rule. Filters hide only records outside reviewed serial ranges; unknowns remain visible. Historical observations without corresponding reviewed current evidence do not receive current configuration rules.
+The first reviewed serial example is the AD 2020-24-05 connection. Four installed-equipment ADs now exercise equipment-aware relevance for Garmin transponders, Aero Advantage vacuum pumps, Shadin air-data computers and ECi cylinders. Most discovered records still have no reviewed configuration rule. Filters hide only connections outside a reviewed serial range or user-reported equipment scope; unknowns remain visible. Historical observations without corresponding reviewed current evidence do not receive current configuration rules.
 
 Profiles stay in this browser/device, need no account and are not uploaded. Clearing browser storage removes them. JSON export provides a backup; import is not implemented. Future private accounts would allow cross-device profiles, watchlists and notification preferences. An account would not make self-reported details verified. See [aircraft profiles](aircraft-profiles.md).
 
@@ -47,9 +48,9 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | TCDS | 23 imported 2A13 revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
 | Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | 84 reviewed connections; directed graph/list/node views; shared-model navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
+| Relationships | 110 reviewed model-scoped graph rows and 30 reviewed AD/STC model connections; directed graph/list/node views; shared-model/component navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
-| Profiles | Named browser profiles; unknowns; reviewed serial labels; reported installation | Backup import, additional rules and optional private accounts |
+| Profiles | Named browser profiles; unknowns; reviewed serial and equipment labels; reported installation | Backup import, compound rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
 | Publication | Cloudflare account and build setup selected | Website remains unpublished; beta review/release decision pending |
 
@@ -72,6 +73,43 @@ React/TypeScript lives in `src/`; server-only jobs in `apps/worker/`; versioned 
 | Manufacturer/service material | Preserve reference identity; retrieve when access/reuse terms allow | Referenced material; missing full text remains explicit |
 
 Retain authority, stable identity, revision/effective dates, retrieval time, original sources, page/section evidence, conditions and review status. Approval scope and actual installation are separate relationships. Credentials stay in protected worker configuration. Browser source reads use public configuration; private originals are exposed only through publication-checked temporary PDF links. Profile data remains separate from the source catalog.
+
+## How the system scales
+
+The data model grows as a shared knowledge graph rather than a separate regulatory file for every aircraft. A regulatory source, certificate, model, component or service document gets one canonical identity. Reviewed, source-cited edges connect those identities. An individual aircraft profile supplies a small configuration overlay at read time.
+
+```text
+FAA source versions and originals
+              |
+       reviewed evidence edges
+              v
+TCDS/certificate -> aircraft models -> installed component families
+       |                    |                    |
+ certification basis      AD/STC scope      service documents
+              \             |             /
+               user aircraft profile overlay
+                    serial + equipment + STCs
+```
+
+This structure has four practical scaling properties:
+
+1. **Shared facts are stored once.** A Garmin transponder node can connect to one reviewed AD and many aircraft models. Adding another aircraft does not copy the AD or its PDF.
+2. **Evidence remains local to each assertion.** Every edge carries its source version, cited page, excerpt, review state and structured conditions. A changed source hides stale current paths until it is reviewed again; historical evidence remains preserved.
+3. **Aircraft profiles compose with the graph.** A model match finds candidates. Serial, installed equipment and STCs refine reviewed conditions. Missing information stays unknown, and user-reported data never becomes an FAA fact or a compliance determination.
+4. **Source adapters can expand independently.** FAA TCDS, AD, STC and CAR jobs already share the version/archive pattern. eCFR, Federal Register, manufacturer documents and future authorities can add their own retrieval adapter while using the same canonical identity, evidence and change-event layers.
+
+The recommended expansion sequence is:
+
+| Stage | Coverage added | Why this order scales safely |
+| --- | --- | --- |
+| Current PA-28 depth | Finish high-value component ADs, STC AMLs and compound configuration rules for PA-28-140/181 | Improves the review method before multiplying models |
+| Same-certificate breadth | Add PA-28-161 and other 2A13 models from the already imported TCDS family | Reuses TCDS history, certification-basis nodes and many source records |
+| Second GA family | Add one common Cessna or Beechcraft family with the same ingestion/review contracts | Proves that certificate-family boundaries and shared components generalize |
+| Product categories | Promote engines, propellers and appliances to searchable primary products | Supports component ADs across many airframes without duplication |
+| Portfolio beta | Add private optional accounts, cross-device profiles and configuration watchlists | Notifications can target reviewed source changes and explicit unknowns |
+| Broader operations | Add commercial models, fleet/team workflows and more authorities | Builds on proven evidence, identity, access and monitoring patterns |
+
+PostgreSQL remains appropriate while the graph is in the thousands or low millions of typed edges because browsing is model/source/component scoped and the relational tables enforce provenance and access rules. Indexes should follow observed query paths. A dedicated graph engine becomes worth evaluating only if multi-hop traversal depth, latency or graph analytics outgrow those bounded queries. Storage growth is driven mostly by immutable source files; content hashes prevent accidental duplication, and retention/usage monitoring should precede wider automated archival.
 
 ## Recommended next phase: dependable change tracking
 
@@ -111,7 +149,7 @@ Gate: a user can explain what observation changed, when it was detected, which m
 
 Prioritize more records for the existing two models. Retrieve originals/attachments, review serial/equipment/approval conditions and attach page/section evidence. Add an operator review queue: changed sources suspend stale reviewed paths pending renewed review.
 
-Add engine/propeller/equipment fields when reviewed rules can use them. Improve revision comparison with actual content differences and extraction limits. Retrieve exact historical amendments before calling a basis complete.
+Extend the implemented equipment fields with compound engine/propeller/part/software rules as reviewed evidence becomes available. Improve revision comparison with actual content differences and extraction limits. Retrieve exact historical amendments before calling a basis complete.
 
 Gate: representative owner/maintenance tasks reach the needed originals and explain known/unresolved conditions.
 
@@ -134,7 +172,7 @@ Already decided: owners/maintenance professionals; FAA GA first; PA-28 first; mo
 
 Ask at the relevant implementation point:
 
-- Change tracking: initial cadence and equal coverage for both supported models.
+- Change tracking: failure monitoring and whether the current daily cadence should change after measuring source behavior.
 - Source review: which additional ADs/STCs and equipment conditions matter most.
 - Accounts: sign-in method, local-profile migration and whether team sharing is needed.
 - Notifications: on-site watchlists versus email/other channels, digest frequency and review-needed messaging.
@@ -143,7 +181,7 @@ Ask at the relevant implementation point:
 
 ## Validation and success criteria
 
-Run checks appropriate to each change: lint, domain/frontend and worker tests, database access/transaction checks, types, production build and targeted browser checks. Current coverage includes 62 frontend tests and 17 worker tests plus database checks. Desktop/mobile source-exploration and profile checks pass; GitHub quality checks pass on the profile commit.
+Run checks appropriate to each change: lint, domain/frontend and worker tests, database access/transaction checks, types, production build and targeted browser checks. Desktop/mobile source-exploration and profile checks include serial, STC and installed-equipment relevance; GitHub quality checks must pass before the branch is considered complete.
 
 Measure tasks, not counts alone: users find the correct model, distinguish evidence from candidates, follow source paths, understand profile unknowns and identify traceable changes. Observe representative owners and maintenance users performing these tasks before beta and correct confusing navigation or wording.
 
@@ -156,11 +194,12 @@ Measure tasks, not counts alone: users find the correct model, distinguish evide
 - [Data presentation](data-presentation.md)
 - [Aircraft profiles](aircraft-profiles.md)
 - [Source-change tracking](source-change-tracking.md)
+- [Installed-equipment review](pa28-installed-equipment-review.md)
 - [Feasibility report](../data-feasibility/REPORT.txt)
 
 ## Node graph and review coverage update
 
-The additional node view and read-only source review queue are implemented. Four more reviewed primary sources and three attachments are archived in the hosted catalog, including an evidence-linked AML. There are 84 model-scoped graph rows and 24 reviewed AD/STC model connections. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled; attachment retrieval remains manual. Next work is additional evidence-backed configuration rules, more reviewed sources, attachment freshness and actual content comparisons, followed by beta accessibility/content review and a release decision.
+The additional node view and read-only source review queue are implemented. The hosted catalog now exposes 110 model-scoped graph rows and 30 reviewed AD/STC model connections. Canonical component nodes let both models share reviewed equipment identities while preserving model-specific evidence paths. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled. Reviewed attachment inventories are checked during source review; broader automatic attachment retrieval, freshness comparison and content-difference summaries remain future work.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
 
@@ -168,4 +207,4 @@ See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-s
 
 ### Latest source review: component ADs
 
-Three more AD originals now connect oil-cooler hose, right-wing rib and control-wheel requirements with exact evidence. Three verified Piper links include the existing SB 1413 reference. Reviewed serial gaps, action groups and equipment unknowns are preserved. See [component source review](pa28-component-review.md). The website remains unpublished; further source review and external serial-table evidence precede release work.
+Four additional AD originals now connect the supported models to reviewed Garmin transponder, Aero Advantage vacuum pump, Shadin air-data computer and ECi cylinder conditions. Profiles can report those reviewed equipment families as installed, not installed or unknown; exact part/software/serial/configuration and compliance remain explicit review tasks. See [installed-equipment review](pa28-installed-equipment-review.md). The website remains unpublished; compound configuration rules, more source review and beta review precede release work.

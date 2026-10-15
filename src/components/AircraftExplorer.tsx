@@ -33,6 +33,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [profileDirty,setProfileDirty] = useState(false);
   const [profileOnly,setProfileOnly] = useState(false);
   const allLinks = details.relationships.filter(r=>r.model===selected);
+  const relevantEquipmentKeys=new Set(allLinks.filter(r=>!r.path_via&&typeof r.applicability_conditions.equipment_key==='string').map(r=>r.applicability_conditions.equipment_key));
+  const equipmentOptions=[...new Map(allLinks.filter(r=>r.relationship_type==='affects_component'&&r.basis_key&&relevantEquipmentKeys.has(r.basis_key)).map(r=>[r.basis_key!,{key:r.basis_key!,label:r.target}])).values()].sort((a,b)=>a.label.localeCompare(b.label));
   const activeProfile = profile?.model===selected?profile:null;
   const rowHeight = activeProfile?104:78;
   const links = allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).filter(r=>!profileOnly||profileRelevance(activeProfile,r)?.category!=='outside').sort((a,b)=>
@@ -50,7 +52,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       <div className="text-sm text-slate-600">TCDS last successful source check<br/><strong>{details.lastChecked ? new Date(details.lastChecked).toLocaleString() : 'Not available'}</strong></div>
     </div>
     <p className="text-sm text-slate-600 mb-4">Reviewed coverage includes certification-basis references and selected AD/STC connections for PA-28-140 and PA-28-181. Related records contain additional model-index matches. Individual-aircraft applicability and compliance are not determined here.</p>
-    <AircraftProfileEditor key={selected} model={selected} onChange={setProfile} onDirty={setProfileDirty}/>
+    <AircraftProfileEditor key={selected} model={selected} equipmentOptions={equipmentOptions} onChange={setProfile} onDirty={setProfileDirty}/>
     <div className="flex flex-wrap gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data">
       {(['relationships','history','related','review'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
         {name==='review'?'Review coverage':name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':`Revision history (${details.revisions.length})`}
@@ -62,7 +64,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
         <div className="flex gap-2">{(['graph','nodes','list'] as const).map(mode=><button key={mode} onClick={()=>setView(mode)} aria-pressed={view===mode} className={`px-3 py-1 rounded border ${view===mode?'bg-blue-50 border-blue-400':'border-slate-200'}`}>{mode==='nodes'?'Nodes':mode==='graph'?'Graph':'List'}</button>)}</div>
       </div>
       <p className="text-sm text-slate-600 mb-4">Select a connection to read its source evidence. Amendment dates identify the historical certification basis.</p>
-      {activeProfile&&<label className="block text-sm mb-4"><input type="checkbox" checked={profileOnly} onChange={e=>setProfileOnly(e.target.checked)}/> Hide connections outside reviewed serial ranges. Unknown relevance remains visible.</label>}
+      {activeProfile&&<label className="block text-sm mb-4"><input type="checkbox" checked={profileOnly} onChange={e=>setProfileOnly(e.target.checked)}/> Hide connections outside reviewed serial or reported equipment scope. Unknown relevance remains visible.</label>}
       {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> Show shared relationships across both supported models</label>}
       {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
@@ -86,7 +88,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
-          {Object.entries(evidence.applicability_conditions).filter(([key])=>!key.startsWith('publisher_')).map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
+          {Object.entries(evidence.applicability_conditions).filter(([key])=>!key.startsWith('publisher_')&&key!=='equipment_key').map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
           <PublisherSource conditions={evidence.applicability_conditions}/>
           <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">{evidence.original_source_url?'Open FAA record':`Open FAA source · see page ${evidence.evidence_page}`}</a>
           {evidence.original_source_url&&<a href={evidence.original_source_url} target="_blank" rel="noopener noreferrer" className="block text-blue-700 underline text-sm mt-3">Open published original · see PDF page {evidence.evidence_page}</a>}
