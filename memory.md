@@ -69,4 +69,5 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - included all six approved family variants in discovery; 737-7 currently returns zero exact FAA AD/STC records, while 737-10 remains outside the approved-model scope;
   - expanded the isolated browser smoke to verify live 737-8 related records and the metadata-versus-reviewed-evidence boundary.
 - Final verification passed: 75 frontend tests, 26 worker tests, all database migration/integrity checks, lint, typecheck, production build, and the expanded hosted browser smoke including live 737-8 AD discovery.
-- Current resume point: commit/push the related-source phase, verify CI, then begin page-level review of selected high-value 737 AD originals. The production site remains deliberately unpublished.
+- Related-source commit `89e62c7` (`Expand Boeing related-source catalogs`) was pushed to `origin/main`; GitHub Actions quality run `38766190206` completed successfully for the exact commit.
+- Current resume point: begin page-level review of selected high-value 737 AD originals and encode serial/configuration predicates before publishing their graph edges. The production site remains deliberately unpublished.
