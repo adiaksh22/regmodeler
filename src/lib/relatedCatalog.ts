@@ -4,21 +4,18 @@ import type {Database} from './database.types';
 import type {RelatedDocument} from '../domain/explorer';
 const config=readPublicConfig(import.meta.env.VITE_SUPABASE_URL,import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 const client=()=>config?createClient<Database>(config.url,config.publishableKey,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(15000)})}}):null;
-export async function loadRelated(model:string) {
-  const c=client();if(!c)return {documents:[],checked:[],notice:'Connect the shared catalog to browse related FAA records.'};
+export async function loadRelatedPage(model:string,type:string,includeHistory=false,query='',offset=0,limit=24) {
+  const c=client();if(!c)return {documents:[],total:0,notice:'Connect the shared catalog to browse related FAA records.'};
   try {
-    const documents:RelatedDocument[]=[];const seen=new Set<string>();let expected:number|null=null;
-    for(let offset=0;offset<10000;offset+=200){
-      const result=await c.from('related_documents').select('id,model,document_type,document_number,title,status,is_active,source_url,retrieved_at,effective_date,holder,summary,candidate_reason,supersedes,superseded_by,original_archived,attachments_pending',{count:'exact'}).eq('model',model).order('document_type').order('document_number').order('id').range(offset,offset+199);
-      if(result.error||result.count===null||(expected!==null&&expected!==result.count))throw new Error('Incomplete index');expected=result.count;
-      for(const row of result.data??[]){if(seen.has(row.id))throw new Error('Changed index');seen.add(row.id);documents.push(row);}
-      if(documents.length===expected)break;
-      if(!result.data?.length||offset>=9800)throw new Error('Incomplete index');
-    }
-    if(documents.length!==expected)throw new Error('Incomplete index');
-    const checked=await c.rpc('related_last_checked',{p_model:model});
-    return {documents,checked:checked.data??[],notice:checked.error?'Source check dates are unavailable.':undefined};
-  }catch{return {documents:[],checked:[],notice:'Related FAA records are temporarily unavailable. Reload to try again.'};}
+    const result=await c.rpc('search_related_documents',{p_model:model,p_type:type,p_include_history:includeHistory,p_query:query.trim().slice(0,120),p_offset:offset,p_limit:limit});
+    if(result.error)throw new Error('Unavailable');
+    const rows=result.data??[];
+    return {documents:rows.map(row=>{const {total_count,...document}=row;void total_count;return document as RelatedDocument;}),total:Number(rows[0]?.total_count??(offset===0?0:offset))};
+  }catch{return {documents:[],total:0,notice:'Related FAA records are temporarily unavailable. Reload to try again.'};}
+}
+export async function loadRelatedChecks(model:string) {
+  const c=client();if(!c)return [];
+  try{const result=await c.rpc('related_last_checked',{p_model:model});return result.error?[]:result.data??[];}catch{return [];}
 }
 export async function loadRelatedText(id:string,model:string) {
   const c=client();if(!c)return null;

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { ExplorerDetails } from '../domain/explorer';
 import type { CatalogDocument } from '../domain/catalog';
@@ -12,6 +12,8 @@ import ProfileRelevance from './ProfileRelevance';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import AircraftFamilySummary from './AircraftFamilySummary';
 import ApplicabilityLogic from './ApplicabilityLogic';
+import {loadRelationshipEvidence,loadRevisionHistory} from '../lib/catalog';
+import type {ApplicabilityRule,OfficialRevision,RegulationSource} from '../domain/explorer';
 
 const NodeGraph=lazy(()=>import('./NodeGraph'));
 const ReviewQueue=lazy(()=>import('./ReviewQueue'));
@@ -34,6 +36,11 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [profile,setProfile] = useState<AircraftProfile|null>(null);
   const [profileDirty,setProfileDirty] = useState(false);
   const [profileOnly,setProfileOnly] = useState(false);
+  const [revisions,setRevisions]=useState<OfficialRevision[]>(details.revisions);
+  const [historyState,setHistoryState]=useState<'idle'|'loading'|'ready'|'error'>('idle');
+  const [evidenceRules,setEvidenceRules]=useState<ApplicabilityRule[]>([]);
+  const [sourceMaterials,setSourceMaterials]=useState<RegulationSource[]>([]);
+  const [evidenceLoading,setEvidenceLoading]=useState(false);
   const allLinks = details.relationships.filter(r=>r.model===selected);
   const relevantEquipmentKeys=new Set(allLinks.filter(r=>!r.path_via&&typeof r.applicability_conditions.equipment_key==='string').map(r=>r.applicability_conditions.equipment_key));
   const equipmentOptions=[...new Map(allLinks.filter(r=>r.relationship_type==='affects_component'&&r.basis_key&&relevantEquipmentKeys.has(r.basis_key)).map(r=>[r.basis_key!,{key:r.basis_key!,label:r.target}])).values()].sort((a,b)=>a.label.localeCompare(b.label));
@@ -43,8 +50,12 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
     Number(b.relationship_type==='covered_by')-Number(a.relationship_type==='covered_by') || a.target.localeCompare(b.target,undefined,{numeric:true}));
   const nodeLinks=details.relationships.filter(r=>compareModels||r.model===selected).filter(r=>!profileOnly||r.model!==selected||profileRelevance(activeProfile,r)?.category!=='outside');
   const evidence = (view==='nodes'?nodeLinks:links).find(r=>r.id===evidenceId) ?? (view==='nodes'?nodeLinks:links)[0];
-  const evidenceRules=(details.applicabilityRules??[]).filter(rule=>rule.relationship_id===evidence?.id);
-  const revisions = [...details.revisions].sort((a,b)=>Number(b.is_current)-Number(a.is_current) || (b.revision_date ?? '').localeCompare(a.revision_date ?? ''));
+  const activeEvidenceId=evidence?.id;
+  const activeBasisKey=evidence?.basis_key;
+  const activeTargetType=evidence?.target_type;
+  const sortedRevisions = [...revisions].sort((a,b)=>Number(b.is_current)-Number(a.is_current) || (b.revision_date ?? '').localeCompare(a.revision_date ?? ''));
+  useEffect(()=>{if(tab!=='history'||historyState!=='idle')return;let stopped=false;setHistoryState('loading');void loadRevisionHistory(doc.tcds_number).then(rows=>{if(!stopped){setRevisions(rows);setHistoryState('ready');}}).catch(()=>{if(!stopped)setHistoryState('error');});return()=>{stopped=true;};},[tab,historyState,doc.tcds_number]);
+  useEffect(()=>{if(!activeEvidenceId)return;let stopped=false;setEvidenceLoading(true);setEvidenceRules([]);setSourceMaterials([]);void loadRelationshipEvidence(activeEvidenceId,activeTargetType==='regulatory_provision'?activeBasisKey:undefined).then(result=>{if(!stopped){setEvidenceRules(result.rules);setSourceMaterials(result.materials);setEvidenceLoading(false);}}).catch(()=>{if(!stopped)setEvidenceLoading(false);});return()=>{stopped=true;};},[activeEvidenceId,activeBasisKey,activeTargetType]);
   const chooseModel=(model:string)=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model},{replace:true});setEvidenceId('');setExpanded('');};
   return <section className="bg-white rounded-xl border border-slate-200 p-5 mb-6" aria-label="Aircraft data explorer">
     <AircraftFamilySummary variants={details.variants??[]} selected={selected} onSelect={chooseModel}/>
@@ -60,7 +71,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
     {selected.startsWith('PA-28')?<AircraftProfileEditor key={selected} model={selected} equipmentOptions={equipmentOptions} onChange={setProfile} onDirty={setProfileDirty}/>:<p className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Configuration profiles will appear for this model after component and AD applicability rules are reviewed. Family and certification links are available now.</p>}
     <div className="flex flex-wrap gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data">
       {(['relationships','history','related','review'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
-        {name==='review'?'Review coverage':name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':`Revision history (${details.revisions.length})`}
+        {name==='review'?'Review coverage':name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':historyState==='ready'?`Revision history (${revisions.length})`:'Revision history'}
       </button>)}
     </div>
     {details.notice && <p role="status" className="text-amber-900 mb-4">{details.notice}</p>}
@@ -93,6 +104,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
+          {evidenceLoading&&<p className="text-xs text-slate-600 mt-2" role="status">Loading detailed evidence...</p>}
           <ApplicabilityLogic rules={evidenceRules}/>
           {Object.entries(evidence.applicability_conditions).filter(([key])=>!key.startsWith('publisher_')&&key!=='equipment_key').map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
           <PublisherSource conditions={evidence.applicability_conditions}/>
@@ -102,8 +114,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           {allLinks.some(r=>r.path_via===evidence.target)&&<button className="block text-blue-700 underline mt-3 text-sm" onClick={()=>{setExpanded(evidence.target);setEvidenceId('');}}>Explore referenced documents</button>}
           {evidence.evidence_file_name&&<p className="text-xs mt-2">Cited attachment: {evidence.evidence_file_name}</p>}
           {evidence.target_type==='regulatory_provision'&&<div className="mt-4 space-y-3">
-            {(details.sourceMaterials??[]).filter(s=>s.basis_key===evidence.basis_key).map(s=><details key={s.id} className="border-t border-blue-200 pt-3"><summary className="cursor-pointer text-sm font-semibold">{s.title}</summary><p className="text-xs my-2">{s.source_kind==='later_reference'?'Later reference edition dated '+s.edition_date+'. This is not the historical amendment wording cited by the TCDS.':'Historical original dated '+s.edition_date+'. The baseline and selected amendments do not form a complete consolidated certification basis.'}</p>{s.body_text?<pre className="text-xs whitespace-pre-wrap max-h-80 overflow-auto">{s.body_text}</pre>:<SourcePdf versionId={s.id} label="View historical original"/>}<a className="text-xs text-blue-700 underline block mt-2" href={s.source_url} target="_blank" rel="noopener noreferrer">Open official regulation source</a></details>)}
-            {!(details.sourceMaterials??[]).some(s=>s.basis_key===evidence.basis_key)&&<p className="text-xs text-slate-600">The cited historical wording has not been imported yet.</p>}
+            {sourceMaterials.filter(s=>s.basis_key===evidence.basis_key).map(s=><details key={s.id} className="border-t border-blue-200 pt-3"><summary className="cursor-pointer text-sm font-semibold">{s.title}</summary><p className="text-xs my-2">{s.source_kind==='later_reference'?'Later reference edition dated '+s.edition_date+'. This is not the historical amendment wording cited by the TCDS.':'Historical original dated '+s.edition_date+'. The baseline and selected amendments do not form a complete consolidated certification basis.'}</p>{s.body_text?<pre className="text-xs whitespace-pre-wrap max-h-80 overflow-auto">{s.body_text}</pre>:<SourcePdf versionId={s.id} label="View historical original"/>}<a className="text-xs text-blue-700 underline block mt-2" href={s.source_url} target="_blank" rel="noopener noreferrer">Open official regulation source</a></details>)}
+            {!evidenceLoading&&!sourceMaterials.some(s=>s.basis_key===evidence.basis_key)&&<p className="text-xs text-slate-600">The cited historical wording has not been imported yet.</p>}
           </div>}
         </aside>}
       </div>}
@@ -111,15 +123,17 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
     {tab==='history' && <div role="tabpanel" id="panel-history" aria-labelledby="tab-history">
       <h2 className="font-bold text-lg mb-2">Imported FAA revision history</h2>
       <p className="text-sm text-slate-600 mb-4">These revisions cover TCDS {doc.tcds_number}. Source corrections can produce multiple snapshots with the same revision number.</p>
-      {revisions.length===0 && <p>No imported revision history is available.</p>}
-      <RevisionComparison revisions={revisions}/>
-      <ol className="space-y-3">{(showAll?revisions:revisions.slice(0,5)).map(rev=><li key={rev.id} className="border rounded-lg p-3 flex flex-wrap justify-between gap-3">
+      {historyState==='loading'&&<p role="status">Loading revision history...</p>}
+      {historyState==='error'&&<p role="status" className="text-amber-900">Revision history is temporarily unavailable.</p>}
+      {historyState==='ready'&&sortedRevisions.length===0 && <p>No imported revision history is available.</p>}
+      {historyState==='ready'&&<RevisionComparison revisions={sortedRevisions}/>}
+      <ol className="space-y-3">{(showAll?sortedRevisions:sortedRevisions.slice(0,5)).map(rev=><li key={rev.id} className="border rounded-lg p-3 flex flex-wrap justify-between gap-3">
         <div><strong>Revision {rev.revision}</strong> <span className={`text-xs rounded px-2 py-1 ${rev.is_current?'bg-green-100 text-green-900':'bg-slate-100 text-slate-700'}`}>{rev.is_current?'Current FAA revision':rev.status}</span>
           <p className="text-sm text-slate-600 mt-2">Issued {sourceDate(rev.revision_date)} · first retrieved {sourceDate(rev.retrieved_at)}</p>
           <p className="text-xs text-slate-500 mt-1">{rev.content_sha256?'Original PDF archived privately':'Verified metadata snapshot'}</p>
         </div><div><a href={rev.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline text-sm block">Open FAA revision {rev.revision}</a>{rev.content_sha256&&<SourcePdf versionId={rev.id} label={`View archived revision ${rev.revision}`}/>}</div>
       </li>)}</ol>
-      {revisions.length>5 && <button onClick={()=>setShowAll(!showAll)} className="text-blue-700 font-semibold mt-4">{showAll?'Show fewer revisions':`Show all ${revisions.length} revisions`}</button>}
+      {sortedRevisions.length>5 && <button onClick={()=>setShowAll(!showAll)} className="text-blue-700 font-semibold mt-4">{showAll?'Show fewer revisions':`Show all ${sortedRevisions.length} revisions`}</button>}
     </div>}
     {tab==='review'&&<div role="tabpanel" id="panel-review" aria-labelledby="tab-review"><Suspense fallback={<p>Loading review coverage?</p>}><ReviewQueue key={selected} model={selected}/></Suspense></div>}
     {tab==='related'&&<div role="tabpanel" id="panel-related" aria-labelledby="tab-related"><RelatedDocuments model={selected} relationships={allLinks} profile={activeProfile}/></div>}

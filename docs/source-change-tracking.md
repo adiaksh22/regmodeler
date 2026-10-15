@@ -16,9 +16,11 @@ Reviewed graph edges continue to depend on the current TCDS snapshot or active c
 
 ## Monitoring and schedule
 
-The user selected daily checks and an in-app feed first; email alerts are deferred. The **Daily FAA source check** workflow reconciles 2A13 and A16WE TCDS originals plus family-scoped AD and STC metadata, including undated legacy records. It uses a single concurrency group and a 35-minute timeout. Each source commits independently so a failed source does not invalidate another source's successful check.
+The user selected daily checks and an in-app feed first; email alerts are deferred. The **Daily FAA source check** requests only records newer than each source checkpoint, with a one-day overlap. Known unchanged overlap records produce a zero-write freshness heartbeat. A new identity, changed metadata, changed status or returned record triggers a complete scoped reconciliation. The **Weekly FAA source reconciliation** performs a complete pass so undated STCs and records missing from the index are still detected. Both jobs share one concurrency group; each source commits independently.
 
-Cron is `17 13 * * *` (13:17 UTC daily; 06:17 Pacific daylight time or 05:17 Pacific standard time). GitHub scheduled runs can be delayed; this is not a guaranteed exact delivery time. See [GitHub schedule behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+The importer has explicit family/type record ceilings and fails closed if an FAA result unexpectedly exceeds them. Current automated scope is limited to exact PA-28 and Boeing 737 model/certificate filters; it does not crawl the FAA archive or widen itself when new families appear.
+
+Daily cron is `17 13 * * *`; weekly reconciliation is `47 13 * * 0`. GitHub scheduled runs can be delayed; these are freshness targets rather than guaranteed delivery times. See [GitHub schedule behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
 **Daily automation is enabled.** On October 14, 2026, the user explicitly approved storing the existing FAA key and hosted Supabase worker secret as encrypted GitHub Actions repository secrets in `adiaksh22/regmodeler`. The three worker settings were configured privately. [Manual hosted run 38627726297](https://github.com/adiaksh22/regmodeler/actions/runs/38627726297) succeeded for the initial PA-28 TCDS, AD and STC checks. Repository variable `SOURCE_CHECKS_ENABLED=true` was then set and verified. On October 15, the hosted baseline expanded to A16WE plus 418 Boeing AD and 2,601 Boeing STC records; the public monitoring RPC reports successful, baseline-ready Boeing checkpoints.
 
@@ -30,7 +32,7 @@ The feed exposes the last successful check, latest database-recorded attempt sta
 
 The hosted baseline passed: 23 TCDS revisions, 58 AD observations, 856 STC observations; all three baselines are established, zero initial events, and 19 reviewed connections preserved. No fabricated change events are inserted into the hosted database.
 
-Database tests cover baseline semantics, corrections, repeated imports, rollback, disappearance/return, immutable observed statuses, publication of both sides and private core functions. Browser tests check the live empty baseline and a mocked before/after event, model navigation, mobile layout, profiles and outages. The controlled browser event exists only in the isolated test response.
+Database tests cover baseline semantics, corrections, repeated imports, no-change heartbeats, bounded public paging, rollback, disappearance/return, immutable observed statuses, publication of both sides and private core functions. Worker tests cover overlap deduplication and TCDS/related delta decisions. Browser tests check the live empty baseline and a mocked before/after event, model navigation, mobile layout, profiles and outages.
 
 Both migrations are applied to hosted and local databases. Local Windows host-port access failed despite healthy containers, so the local migrations were applied transactionally through Docker `psql` and recorded in `supabase_migrations.schema_migrations`. This does not reset existing data.
 

@@ -1,0 +1,32 @@
+name: Weekly FAA source reconciliation
+on:
+  schedule:
+    - cron: '47 13 * * 0'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: faa-reviewed-source-checks
+  cancel-in-progress: false
+jobs:
+  reconcile:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.SOURCE_CHECKS_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FAA_DRS_API_KEY: ${{ secrets.FAA_DRS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run import:tcds
+      - run: npm run import:tcds:family -- --certificate=A16WE
+      - run: npm run import:related -- --type=AD
+      - run: npm run import:related -- --type=STC
+      - run: npm run import:related -- --scope=B737 --type=AD
+      - run: npm run import:related -- --scope=B737 --type=STC

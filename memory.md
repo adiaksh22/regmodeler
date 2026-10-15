@@ -71,3 +71,9 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
 - Final verification passed: 75 frontend tests, 26 worker tests, all database migration/integrity checks, lint, typecheck, production build, and the expanded hosted browser smoke including live 737-8 AD discovery.
 - Related-source commit `89e62c7` (`Expand Boeing related-source catalogs`) was pushed to `origin/main`; GitHub Actions quality run `38766190206` completed successfully for the exact commit.
 - Current resume point: begin page-level review of selected high-value 737 AD originals and encode serial/configuration predicates before publishing their graph edges. The production site remains deliberately unpublished.
+- Lean-loading and bounded-source phase completed locally and applied to hosted Supabase:
+  - initial TCDS exploration now loads only the certificate summary, graph core, variants and freshness; revision history, applicability rules and historical regulation text load only when opened;
+  - related AD/STC browsing uses a server-filtered 24-row page instead of downloading the full model index; the hosted warm benchmark was about 0.25 seconds for summary/core requests and 0.61 seconds for a 24-row 737-800 STC page (about 16 KB);
+  - daily workers now query a one-day-overlap delta window and record a zero-write heartbeat when unchanged; a detected change triggers full scoped reconciliation;
+  - a separate weekly full reconciliation catches undated records and removals, while hard per-family/type record ceilings prevent accidental FAA-wide ingestion;
+  - migration `20261015000300_lean_catalog_reads.sql` is applied to hosted Supabase; local frontend, worker and database tests pass. Hosted daily commands still need verification through GitHub Actions because `.env.local` intentionally points at local Supabase and hosted privileged secrets exist only in GitHub.

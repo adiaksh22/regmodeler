@@ -4,7 +4,7 @@ Verified October 13, 2026, for PA-28-140 and PA-28-181. These are scoped FAA ind
 
 ## Source contracts
 
-FAA DRS uses authenticated `POST /api/drs/data-pull/<type>/filtered`, offsets of 750 and documented `documentFilters`. The normal AD type is `ADFRAWD`; emergency ADs use a separate type. Related jobs fully reconcile each scoped catalog and compare a positive last-modified window with that full response.
+FAA DRS uses authenticated `POST /api/drs/data-pull/<type>/filtered`, offsets of 750 and documented `documentFilters`. The normal AD type is `ADFRAWD`; emergency ADs use a separate type. Daily jobs request only a timestamp window after the checkpoint; weekly jobs fully reconcile each scoped catalog, including undated records. Explicit per-family record ceilings prevent an accidental broad query from turning into an FAA-wide import.
 
 | Source | Filter | Records | Model matches | Positive incremental results |
 | --- | --- | ---: | ---: | ---: |
@@ -14,7 +14,7 @@ FAA DRS uses authenticated `POST /api/drs/data-pull/<type>/filtered`, offsets of
 
 The totals include current and historical source records. A record matching both models contributes two model matches. STC associations use `drs:stcTCNumbersMakeModel` tuples, preserving the certificate/model relationship rather than combining independently matched arrays. Forty-nine STC records have no modification timestamp. They remain in full reconciliation and are explicitly excluded from timestamp-based incremental results; no modification date is fabricated.
 
-Every raw canonical metadata JSON file is archived privately by SHA-256. One service-only transaction commits the complete index, retains previous observations, changes active matches and advances the checkpoint only on success. Repeated imports retain first retrieval dates and reviewed enrichment. The frontend retrieves the complete model index in bounded pages and loads large AD text separately.
+Every raw canonical metadata JSON file is archived privately by SHA-256. One service-only transaction commits the complete index, retains previous observations, changes active matches and advances the checkpoint only on success. Repeated imports retain first retrieval dates and reviewed enrichment. The frontend requests 24 filtered rows at a time from a database RPC and loads large AD text only after selection; it never downloads the complete model index to open the tab.
 
 ## Reviewed originals
 

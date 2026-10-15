@@ -407,6 +407,11 @@ try {
   const repeatB737Run=(await query("insert into public.ingestion_runs(source,status) values('FAA:ADFRAWD:B737','running') returning id")).rows[0].id;
   await query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[repeatB737Run,'B737','AD',JSON.stringify([b737Row])]);
   assert.equal((await query("select count(*)::integer n from public.related_document_matches where source='FAA:ADFRAWD:B737'")).rows[0].n,3,'Repeat family import does not duplicate matches');
+  const relatedPage=(await asRole('anon',null,()=>query("select document_number,total_count from public.search_related_documents('737-8','AD',false,'Boeing',0,24)"))).rows;
+  assert.deepEqual(relatedPage,[{document_number:'2026-13-02',total_count:1}],'Public related browsing is filtered and paginated in the database');
+  await assert.rejects(asRole('anon',null,()=>query("select public.record_source_check('FAA:ADFRAWD:B737',null)")),/permission denied/);
+  const heartbeat=(await query("select public.record_source_check('FAA:ADFRAWD:B737','2026-09-01T00:00:00Z') id")).rows[0].id;
+  assert.equal((await query('select records_processed from public.ingestion_runs where id=$1',[heartbeat])).rows[0].records_processed,0,'No-change checks do not rewrite source records');
   console.log('Family related-source checks passed: canonical model aliases, guarded service writes, public indexes, monitoring, rollback and repeat imports.');
 
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');

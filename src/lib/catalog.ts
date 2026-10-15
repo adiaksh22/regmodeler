@@ -3,7 +3,7 @@ import { createCatalogRepository, type CatalogGateway } from './catalogRepositor
 import { readPublicConfig } from './publicConfig';
 import type { Database, TCDSCatalogRow } from './database.types';
 import type { CatalogDocument } from '../domain/catalog';
-import type { ExplorerDetails } from '../domain/explorer';
+import type { ApplicabilityRule, ExplorerDetails, OfficialRevision, RegulationSource } from '../domain/explorer';
 
 const config = readPublicConfig(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 const toDocument = (row: TCDSCatalogRow): CatalogDocument => ({
@@ -40,17 +40,36 @@ export async function loadExplorerDetails(number: string): Promise<ExplorerDetai
     global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) },
   });
   try {
-    const [versions, relationships, checked, variants] = await Promise.all([
-      client.from('tcds_versions').select('*').eq('tcds_number',number.toUpperCase()).order('revision_date',{ascending:false}).order('retrieved_at',{ascending:false}),
+    const [relationships, checked, variants] = await Promise.all([
       client.from('model_graph').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
       client.rpc('catalog_last_checked',{p_number:number.toUpperCase()}),
       client.from('aircraft_variant_catalog').select('*').eq('tcds_number',number.toUpperCase()).order('display_name'),
     ]);
-    if (versions.error || relationships.error || checked.error || variants.error) throw new Error('Unavailable');
-    const relationshipIds=[...new Set((relationships.data??[]).map(row=>row.id))];
-    const rules=relationshipIds.length ? await client.from('relationship_applicability_rules').select('*').in('relationship_id',relationshipIds).order('group_order').order('predicate_order') : {data:[],error:null};
-    if(rules.error) throw new Error('Unavailable');
-    const materials=await client.from('regulation_sources').select('*');
-    return { revisions: versions.data ?? [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true,sourceMaterials:materials.error?[]:materials.data??[],variants:variants.data??[],applicabilityRules:rules.data??[] };
+    if (relationships.error || checked.error || variants.error) throw new Error('Unavailable');
+    return { revisions: [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true, variants: variants.data??[] };
   } catch { return { ...empty, notice: 'Imported history and relationships are temporarily unavailable. Reload to try again.' }; }
+}
+
+function publicClient() {
+  return config ? createClient<Database>(config.url, config.publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) },
+  }) : null;
+}
+
+export async function loadRevisionHistory(number:string):Promise<OfficialRevision[]> {
+  const client=publicClient();if(!client)return [];
+  const result=await client.from('tcds_versions').select('*').eq('tcds_number',number.toUpperCase()).order('revision_date',{ascending:false}).order('retrieved_at',{ascending:false});
+  if(result.error)throw new Error('Revision history unavailable');
+  return result.data??[];
+}
+
+export async function loadRelationshipEvidence(relationshipId:string,basisKey?:string):Promise<{rules:ApplicabilityRule[];materials:RegulationSource[]}> {
+  const client=publicClient();if(!client)return {rules:[],materials:[]};
+  const [rules,materials]=await Promise.all([
+    client.from('relationship_applicability_rules').select('*').eq('relationship_id',relationshipId).order('group_order').order('predicate_order'),
+    basisKey?client.from('regulation_sources').select('*').eq('basis_key',basisKey):Promise.resolve({data:[] as RegulationSource[],error:null}),
+  ]);
+  if(rules.error||materials.error)throw new Error('Evidence details unavailable');
+  return {rules:rules.data??[],materials:materials.data??[]};
 }

@@ -3,6 +3,7 @@ import { ImportError, sha256 } from './drs.mjs';
 export const relatedScopes = {
   PA28: {
     certificate: '2A13', archiveSlug: 'PA28', types: ['AD','STC','CAR'],
+    recordLimits:{AD:1000,STC:3000,CAR:100},
     models: [
       { canonical: 'PA-28-140', source: 'PA-28-140' },
       { canonical: 'PA-28-181', source: 'PA-28-181' },
@@ -10,6 +11,7 @@ export const relatedScopes = {
   },
   B737: {
     certificate: 'A16WE', archiveSlug: 'B737', types: ['AD','STC'],
+    recordLimits:{AD:1000,STC:4000},
     models: [
       { canonical: '737-700', source: '737-700 Series' },
       { canonical: '737-800', source: '737-800 Series' },
@@ -71,6 +73,7 @@ export async function collectRelated(source,type,since,scopeKey='PA28') {
     const s=result.summary;
     if(!s||!Array.isArray(result.documents)||s.count!==result.documents.length||typeof s.hasMoreItems!=='boolean'||!Number.isInteger(s.totalItems)||s.totalItems<0||s.offset!==offset||result.documents.length>750)throw new ImportError('INVALID_PAGE');
     if(total!==undefined&&total!==s.totalItems)throw new ImportError('CATALOG_CHANGED_DURING_PAGING');total=s.totalItems;
+    if(total>scopeDefinition(scopeKey).recordLimits[type])throw new ImportError('CATALOG_SCOPE_LIMIT_EXCEEDED');
     for(const row of result.documents){
       const url=new URL(row.documentURL);
       if(url.origin!=='https://drs.faa.gov'||url.username||url.password||url.search||url.hash||!/^\/browse\/excelExternalWindow\/[A-Za-z0-9._-]+$/.test(url.pathname)||!row.documentGuid||!url.pathname.endsWith(row.documentGuid+'.0001')||!['Current','Historical','Pending'].includes(row['drs:status'])||!clean(row['drs:documentNumber'])||(row.docLastModifiedDate!==null&&!Number.isFinite(Date.parse(row.docLastModifiedDate))))throw new ImportError('INVALID_RELATED_RECORD');
@@ -82,6 +85,31 @@ export async function collectRelated(source,type,since,scopeKey='PA28') {
     if(!s.hasMoreItems){if(rows.length!==total)throw new ImportError('INCOMPLETE_CATALOG');return rows;}
     if(result.documents.length!==750)throw new ImportError('INCOMPLETE_PAGE');
   }throw new ImportError('PAGE_LIMIT_EXCEEDED');
+}
+export function relatedDeltaNeeded(records,observations,type,scopeKey='PA28') {
+  const known=new Map(observations.map(row=>[row.identity,row]));
+  return records.some(record=>{const snapshot=relatedSnapshot(type,record,'1970-01-01T00:00:00.000Z',scopeKey).row;const old=known.get(snapshot.metadata.source_identity);return !old||!old.active||old.status!==snapshot.status||old.metadata_hash!==snapshot.metadata.metadata_sha256;});
+}
+
+async function readObservations(client,source,identities) {
+  const rows=[];
+  for(let index=0;index<identities.length;index+=100){const result=await client.from('source_observations').select('identity,metadata_hash,status,active').eq('source',source).in('identity',identities.slice(index,index+100));if(result.error)throw new ImportError('CHECKPOINT_READ_FAILED');rows.push(...(result.data??[]));}
+  return rows;
+}
+
+export async function checkRelated(client,source,type,{now=()=>new Date().toISOString(),scope='PA28'}={}) {
+  const sourceKey=relatedSourceKey(type,scope);
+  const checkpoint=await client.from('ingestion_checkpoints').select('source_modified_at').eq('source',sourceKey).maybeSingle();
+  if(checkpoint.error)throw new ImportError('CHECKPOINT_READ_FAILED');
+  if(!checkpoint.data?.source_modified_at)return importRelated(client,source,type,{now,scope});
+  const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
+  const records=await collectRelated(source,type,since,scope);
+  const identities=records.map(record=>new URL(record.documentURL).pathname.split('/').at(-1));
+  const observations=await readObservations(client,sourceKey,identities);
+  if(relatedDeltaNeeded(records,observations,type,scope))return {...await importRelated(client,source,type,{now,scope}),mode:'reconciled'};
+  const heartbeat=await client.rpc('record_source_check',{p_source:sourceKey,p_observed_modified_at:records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at)});
+  if(heartbeat.error)throw new ImportError('CHECKPOINT_WRITE_FAILED');
+  return {mode:'checked',scope,type,deltaRecords:records.length,reconciled:false};
 }
 export function relatedSnapshot(type,record,retrievedAt,scopeKey='PA28') {
   const definition=scopeDefinition(scopeKey);sourceContract(type,scopeKey);

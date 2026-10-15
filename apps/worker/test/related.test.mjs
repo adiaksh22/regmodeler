@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchingModels,relatedSnapshot,collectRelated,importRelated,relatedSourceKey } from '../src/related.mjs';
+import { matchingModels,relatedSnapshot,collectRelated,importRelated,relatedSourceKey,relatedDeltaNeeded } from '../src/related.mjs';
 import { extractReference } from '../src/reference-text.mjs';
+import {tcdsDeltaNeeded} from '../src/import-tcds-family.mjs';
 
 const record=(id='TEST',more={})=>({'drs:documentNumber':'SA_TEST','drs:status':'Current','drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-181'],documentGuid:id,documentURL:`https://drs.faa.gov/browse/excelExternalWindow/${id}.0001`,docLastModifiedDate:'2025-12-01T00:00:00Z',...more});
 const page=(documents,offset=0,more=false,total=documents.length)=>({documents,summary:{count:documents.length,offset,hasMoreItems:more,totalItems:total}});
@@ -36,6 +37,7 @@ test('related discovery paginates and rejects incomplete or changed catalogs',as
   assert.equal((await collectRelated(source,'STC')).length,751);assert.deepEqual(calls,[0,750]);
   await assert.rejects(collectRelated({metadata:async()=>page([record()],0,true,2)},'STC'),/INCOMPLETE_PAGE/);
   await assert.rejects(collectRelated({metadata:async()=>page([record()],0,false,2)},'STC'),/INCOMPLETE_CATALOG/);
+  await assert.rejects(collectRelated({metadata:async()=>page([record()],0,true,3001)},'STC'),/CATALOG_SCOPE_LIMIT_EXCEEDED/);
 });
 test('verify mode checks a positive incremental response without a database',async()=>{
   const source={metadata:async()=>page([record()])};
@@ -48,6 +50,20 @@ test('full discovery retains undated legacy records but incremental filtering ca
   await assert.rejects(collectRelated({metadata:async()=>page([legacy])},'STC','2025-01-01T00:00:00Z'),/INCREMENTAL_FILTER_MISMATCH/);
   const source={metadata:async(_t,_f,_o,since)=>page(since?[record()]:[legacy,record()])};
   assert.equal((await importRelated(null,source,'STC',{verifyOnly:true})).undatedRecords,1);
+});
+test('daily delta comparison ignores overlap records and detects source changes',()=>{
+  const sourceRecord=record('DELTA');
+  const snapshot=relatedSnapshot('STC',sourceRecord,'2026-10-15T00:00:00Z').row;
+  const observation={identity:snapshot.metadata.source_identity,metadata_hash:snapshot.metadata.metadata_sha256,status:'current',active:true};
+  assert.equal(relatedDeltaNeeded([sourceRecord],[observation],'STC'),false);
+  assert.equal(relatedDeltaNeeded([{...sourceRecord,'drs:title':'Changed'}],[observation],'STC'),true);
+  assert.equal(relatedDeltaNeeded([sourceRecord],[{...observation,active:false}],'STC'),true);
+});
+test('TCDS delta comparison uses revision identity and FAA modified time',()=>{
+  const tcds={'drs:status':'Current',documentURL:'https://drs.faa.gov/browse/excelExternalWindow/REV.0001',docLastModifiedDate:'2026-10-01T00:00:00Z'};
+  const version={source_version_id:'REV.0001',status:'current',metadata:{certificate:'A16WE',source_modified_at:tcds.docLastModifiedDate}};
+  assert.equal(tcdsDeltaNeeded([tcds],[version],'A16WE'),false);
+  assert.equal(tcdsDeltaNeeded([{...tcds,docLastModifiedDate:'2026-10-02T00:00:00Z'}],[version],'A16WE'),true);
 });
 test('XML reference rejects DTDs and wrong editions instead of pretending they match the cited amendment',()=>{
   assert.throws(()=>extractReference('<!DOCTYPE root [<!ENTITY x SYSTEM "file:///secret">]><root/>','2026-01-01'),/UNSAFE_REFERENCE_XML/);

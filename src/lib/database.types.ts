@@ -35,6 +35,7 @@ export interface Database {
       search_tcds: { Args: { search_query?: string; result_limit?: number }; Returns: TCDSCatalogRow[] };
       catalog_last_checked: { Args: { p_number: string }; Returns: string | null };
       related_last_checked: { Args: { p_model: string }; Returns: {document_type:string;last_checked:string}[] };
+      search_related_documents:{Args:{p_model:string;p_type:string;p_include_history?:boolean;p_query?:string;p_offset?:number;p_limit?:number};Returns:(RelatedDocument&{total_count:number})[]};
       source_monitoring:{Args:Record<never,never>;Returns:SourceMonitoring[]};
     };
     Enums: Record<string, never>;

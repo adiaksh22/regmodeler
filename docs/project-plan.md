@@ -123,7 +123,7 @@ Build a shared source-change feed for supported models before automated email de
 
 ### 1. Establish scheduled imports
 
-Daily scoped TCDS/AD/STC checks are enabled after protected secret configuration and successful hosted imports. Retain full STC reconciliation because 49 PA-28 and 84 Boeing 737 registry records have no modification timestamp. Consider more frequent AD checks after measuring source behavior and budget. Scheduled run timing may be delayed; monitor actual successful source checkpoints.
+Daily scoped TCDS/AD/STC delta checks are enabled after protected secret configuration and successful hosted imports. They use the saved modification checkpoint with a one-day overlap and write only a heartbeat when returned rows are unchanged. Weekly full reconciliation covers the 49 PA-28 and 84 Boeing 737 registry records with no modification timestamp and detects removals. Per-family record ceilings stop accidental scope expansion. Scheduled run timing may be delayed; monitor actual successful source checkpoints.
 
 Keep retries, byte limits, pagination validation and overlap windows. Advance checkpoints only after a complete successful transaction. Failure preserves the previous valid catalog and marks freshness as stale, rather than claiming no changes. Add operator visibility for failures/interrupted runs.
 

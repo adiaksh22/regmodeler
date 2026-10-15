@@ -53,6 +53,29 @@ export async function importTcdsFamily(client, source, certificate, { verifyOnly
   }
 }
 
+export function tcdsDeltaNeeded(records,versions,certificate) {
+  const known=new Map(versions.filter(row=>row.metadata?.certificate===certificate).map(row=>[row.source_version_id,row]));
+  return records.some(record=>{const identity=new URL(record.documentURL).pathname.split('/').at(-1);const old=known.get(identity);return !old||old.status!==record['drs:status'].toLowerCase()||old.metadata?.source_modified_at!==record.docLastModifiedDate;});
+}
+
+export async function checkTcdsFamily(client,source,certificate,{now=()=>new Date().toISOString()}={}) {
+  if(!/^[A-Z0-9-]{1,20}$/.test(certificate))throw new ImportError('INVALID_CERTIFICATE');
+  const sourceName=`FAA:TCDSMODEL:${certificate}`;
+  const checkpoint=await client.from('ingestion_checkpoints').select('source_modified_at').eq('source',sourceName).maybeSingle();
+  if(checkpoint.error)throw new ImportError('CHECKPOINT_READ_FAILED');
+  if(!checkpoint.data?.source_modified_at)return importTcdsFamily(client,source,certificate,{now});
+  const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
+  const records=await collectTcds(source,since,certificate);
+  const identities=records.map(record=>new URL(record.documentURL).pathname.split('/').at(-1));
+  let versions=[];
+  if(identities.length){const result=await client.from('document_versions').select('source_version_id,status,metadata').in('source_version_id',identities);if(result.error)throw new ImportError('CHECKPOINT_READ_FAILED');versions=result.data??[];}
+  if(tcdsDeltaNeeded(records,versions,certificate))return {...await importTcdsFamily(client,source,certificate,{now}),mode:'reconciled'};
+  const newest=records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at);
+  const heartbeat=await client.rpc('record_source_check',{p_source:sourceName,p_observed_modified_at:newest});
+  if(heartbeat.error)throw new ImportError('CHECKPOINT_WRITE_FAILED');
+  return {mode:'checked',certificate,deltaRecords:records.length,reconciled:false};
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const certificate = (process.argv.find((argument) => argument.startsWith('--certificate='))?.split('=')[1] ?? '').toUpperCase()

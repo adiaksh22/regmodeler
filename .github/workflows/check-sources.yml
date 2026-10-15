@@ -25,19 +25,20 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Reconcile TCDS originals and metadata
-        run: npm run import:tcds
-      - name: Reconcile Boeing 737 TCDS originals and metadata
-        run: npm run import:tcds:family -- --certificate=A16WE
-      - name: Reconcile AD metadata
+      - name: Check PA-28 TCDS metadata delta
+        run: npm run check:tcds -- --certificate=2A13
+      - name: Check Boeing 737 TCDS metadata delta
         if: ${{ !cancelled() }}
-        run: npm run import:related -- --type=AD
-      - name: Reconcile STC metadata including undated records
+        run: npm run check:tcds -- --certificate=A16WE
+      - name: Check PA-28 AD metadata delta
         if: ${{ !cancelled() }}
-        run: npm run import:related -- --type=STC
-      - name: Reconcile Boeing 737 AD metadata
+        run: npm run check:related -- --type=AD
+      - name: Check PA-28 STC metadata delta
         if: ${{ !cancelled() }}
-        run: npm run import:related -- --scope=B737 --type=AD
-      - name: Reconcile Boeing 737 STC metadata including undated records
+        run: npm run check:related -- --type=STC
+      - name: Check Boeing 737 AD metadata delta
         if: ${{ !cancelled() }}
-        run: npm run import:related -- --scope=B737 --type=STC
+        run: npm run check:related -- --scope=B737 --type=AD
+      - name: Check Boeing 737 STC metadata delta
+        if: ${{ !cancelled() }}
+        run: npm run check:related -- --scope=B737 --type=STC
