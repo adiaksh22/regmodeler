@@ -37,4 +37,3 @@ begin
 end $$;
 revoke all on function public.review_pa28_batch4_graph() from public,anon,authenticated;
 grant execute on function public.review_pa28_batch4_graph() to service_role;
-
