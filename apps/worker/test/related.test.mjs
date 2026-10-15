@@ -63,6 +63,7 @@ test('TCDS delta comparison uses revision identity and FAA modified time',()=>{
   const tcds={'drs:status':'Current',documentURL:'https://drs.faa.gov/browse/excelExternalWindow/REV.0001',docLastModifiedDate:'2026-10-01T00:00:00Z'};
   const version={source_url:tcds.documentURL,status:'current',metadata:{certificate:'A16WE',source_modified_at:'2026-10-01T00:00:00.000Z'}};
   assert.equal(tcdsDeltaNeeded([tcds],[version],'A16WE'),false);
+  assert.equal(tcdsDeltaNeeded([tcds],[{...version,metadata:{...version.metadata,source_modified_at:'2026-09-01T00:00:00Z'}},version],'A16WE'),false);
   assert.equal(tcdsDeltaNeeded([{...tcds,docLastModifiedDate:'2026-10-02T00:00:00Z'}],[version],'A16WE'),true);
 });
 test('XML reference rejects DTDs and wrong editions instead of pretending they match the cited amendment',()=>{
