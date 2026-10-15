@@ -1,6 +1,6 @@
 # RegModeler autonomous run memory
 
-Last updated: 2026-10-14 (implementation and local QA complete)
+Last updated: 2026-10-14 (phase committed, pushed, and CI verified)
 
 ## Five-Hour Phase Plan
 
@@ -58,4 +58,6 @@ Last updated: 2026-10-14 (implementation and local QA complete)
   - desktop and 390 px mobile screenshots were visually reviewed; the variant controls were adjusted to wrap on small screens.
 - Final local QA completed after mobile polish: `npm run check` passed 75 frontend tests, 25 worker tests, all PGlite migration/integrity checks, lint, typecheck, and production build; the hosted browser smoke passed again.
 - Secret boundary review completed: local environment files and downloaded FAA artifacts remain ignored, and no token-shaped values were found in the commit candidates.
-- Resume point: commit and push all reviewed work, verify GitHub Actions, and record the resulting commit/CI state here.
+- Main implementation commit `1a61b09` (`Add FAA-backed Boeing family architecture`) was pushed to `origin/main`.
+- GitHub Actions quality run `38690556727` completed successfully for the exact implementation commit.
+- Workspace resume point: the production site remains deliberately unpublished. The next evidence phase is to review a small, high-value set of current Boeing 737 ADs/STCs and encode serial/configuration applicability against the new predicate architecture before preparing the portfolio beta.
