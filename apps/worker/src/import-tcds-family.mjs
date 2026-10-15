@@ -53,8 +53,10 @@ export async function importTcdsFamily(client, source, certificate, { verifyOnly
   }
 }
 
-export function tcdsDeltaNeeded(records,versions,certificate) {
-  return records.some(record=>!versions.some(row=>row.metadata?.certificate===certificate&&row.source_url===record.documentURL&&row.status===record['drs:status'].toLowerCase()&&Date.parse(row.metadata?.source_modified_at)===Date.parse(record.docLastModifiedDate)));
+export function tcdsDeltaNeeded(records,checkpointModifiedAt) {
+  const checkpoint=Date.parse(checkpointModifiedAt);
+  if(!Number.isFinite(checkpoint))throw new ImportError('INVALID_CHECKPOINT');
+  return records.some(record=>Date.parse(record.docLastModifiedDate)>checkpoint);
 }
 
 export async function checkTcdsFamily(client,source,certificate,{now=()=>new Date().toISOString()}={}) {
@@ -65,10 +67,7 @@ export async function checkTcdsFamily(client,source,certificate,{now=()=>new Dat
   if(!checkpoint.data?.source_modified_at)return importTcdsFamily(client,source,certificate,{now});
   const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
   const records=await collectTcds(source,since,certificate);
-  const sourceUrls=records.map(record=>record.documentURL);
-  let versions=[];
-  if(sourceUrls.length){const result=await client.from('document_versions').select('source_url,status,metadata').in('source_url',sourceUrls);if(result.error)throw new ImportError('CHECKPOINT_READ_FAILED');versions=result.data??[];}
-  if(tcdsDeltaNeeded(records,versions,certificate))return {...await importTcdsFamily(client,source,certificate,{now}),mode:'reconciled'};
+  if(tcdsDeltaNeeded(records,checkpoint.data.source_modified_at))return {...await importTcdsFamily(client,source,certificate,{now}),mode:'reconciled'};
   const newest=records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at);
   const heartbeat=await client.rpc('record_source_check',{p_source:sourceName,p_observed_modified_at:newest});
   if(heartbeat.error)throw new ImportError('CHECKPOINT_WRITE_FAILED');

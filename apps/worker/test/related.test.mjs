@@ -59,12 +59,11 @@ test('daily delta comparison ignores overlap records and detects source changes'
   assert.equal(relatedDeltaNeeded([{...sourceRecord,'drs:title':'Changed'}],[observation],'STC'),true);
   assert.equal(relatedDeltaNeeded([sourceRecord],[{...observation,active:false}],'STC'),true);
 });
-test('TCDS delta comparison uses revision identity and FAA modified time',()=>{
+test('TCDS delta comparison uses the committed FAA modification high-water mark',()=>{
   const tcds={'drs:status':'Current',documentURL:'https://drs.faa.gov/browse/excelExternalWindow/REV.0001',docLastModifiedDate:'2026-10-01T00:00:00Z'};
-  const version={source_url:tcds.documentURL,status:'current',metadata:{certificate:'A16WE',source_modified_at:'2026-10-01T00:00:00.000Z'}};
-  assert.equal(tcdsDeltaNeeded([tcds],[version],'A16WE'),false);
-  assert.equal(tcdsDeltaNeeded([tcds],[{...version,metadata:{...version.metadata,source_modified_at:'2026-09-01T00:00:00Z'}},version],'A16WE'),false);
-  assert.equal(tcdsDeltaNeeded([{...tcds,docLastModifiedDate:'2026-10-02T00:00:00Z'}],[version],'A16WE'),true);
+  assert.equal(tcdsDeltaNeeded([tcds],'2026-10-01T00:00:00.000Z'),false);
+  assert.equal(tcdsDeltaNeeded([{...tcds,docLastModifiedDate:'2026-10-02T00:00:00Z'}],'2026-10-01T00:00:00Z'),true);
+  assert.throws(()=>tcdsDeltaNeeded([tcds],'unknown'),/INVALID_CHECKPOINT/);
 });
 test('XML reference rejects DTDs and wrong editions instead of pretending they match the cited amendment',()=>{
   assert.throws(()=>extractReference('<!DOCTYPE root [<!ENTITY x SYSTEM "file:///secret">]><root/>','2026-01-01'),/UNSAFE_REFERENCE_XML/);
