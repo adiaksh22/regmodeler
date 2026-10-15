@@ -54,8 +54,9 @@ export async function importTcdsFamily(client, source, certificate, { verifyOnly
 }
 
 export function tcdsDeltaNeeded(records,versions,certificate) {
-  const known=new Map(versions.filter(row=>row.metadata?.certificate===certificate).map(row=>[row.source_version_id,row]));
-  return records.some(record=>{const identity=new URL(record.documentURL).pathname.split('/').at(-1);const old=known.get(identity);return !old||old.status!==record['drs:status'].toLowerCase()||old.metadata?.source_modified_at!==record.docLastModifiedDate;});
+  const known=new Map();
+  for(const row of versions)if(row.metadata?.certificate===certificate&&!known.has(row.source_url))known.set(row.source_url,row);
+  return records.some(record=>{const old=known.get(record.documentURL);return !old||old.status!==record['drs:status'].toLowerCase()||Date.parse(old.metadata?.source_modified_at)!==Date.parse(record.docLastModifiedDate);});
 }
 
 export async function checkTcdsFamily(client,source,certificate,{now=()=>new Date().toISOString()}={}) {
@@ -66,9 +67,9 @@ export async function checkTcdsFamily(client,source,certificate,{now=()=>new Dat
   if(!checkpoint.data?.source_modified_at)return importTcdsFamily(client,source,certificate,{now});
   const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
   const records=await collectTcds(source,since,certificate);
-  const identities=records.map(record=>new URL(record.documentURL).pathname.split('/').at(-1));
+  const sourceUrls=records.map(record=>record.documentURL);
   let versions=[];
-  if(identities.length){const result=await client.from('document_versions').select('source_version_id,status,metadata').in('source_version_id',identities);if(result.error)throw new ImportError('CHECKPOINT_READ_FAILED');versions=result.data??[];}
+  if(sourceUrls.length){const result=await client.from('document_versions').select('source_url,status,metadata,retrieved_at').in('source_url',sourceUrls).order('retrieved_at',{ascending:false});if(result.error)throw new ImportError('CHECKPOINT_READ_FAILED');versions=result.data??[];}
   if(tcdsDeltaNeeded(records,versions,certificate))return {...await importTcdsFamily(client,source,certificate,{now}),mode:'reconciled'};
   const newest=records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at);
   const heartbeat=await client.rpc('record_source_check',{p_source:sourceName,p_observed_modified_at:newest});

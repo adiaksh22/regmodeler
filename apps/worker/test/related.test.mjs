@@ -61,7 +61,7 @@ test('daily delta comparison ignores overlap records and detects source changes'
 });
 test('TCDS delta comparison uses revision identity and FAA modified time',()=>{
   const tcds={'drs:status':'Current',documentURL:'https://drs.faa.gov/browse/excelExternalWindow/REV.0001',docLastModifiedDate:'2026-10-01T00:00:00Z'};
-  const version={source_version_id:'REV.0001',status:'current',metadata:{certificate:'A16WE',source_modified_at:tcds.docLastModifiedDate}};
+  const version={source_url:tcds.documentURL,status:'current',metadata:{certificate:'A16WE',source_modified_at:'2026-10-01T00:00:00.000Z'}};
   assert.equal(tcdsDeltaNeeded([tcds],[version],'A16WE'),false);
   assert.equal(tcdsDeltaNeeded([{...tcds,docLastModifiedDate:'2026-10-02T00:00:00Z'}],[version],'A16WE'),true);
 });
