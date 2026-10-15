@@ -35,3 +35,18 @@ select:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 3px;
 }
+
+.reg-node-map .react-flow__edge-text {
+  paint-order: stroke;
+}
+
+.reg-node-map .react-flow__controls {
+  border-radius: .65rem;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgb(15 23 42 / .12);
+}
+
+.reg-node-map .react-flow__node:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}

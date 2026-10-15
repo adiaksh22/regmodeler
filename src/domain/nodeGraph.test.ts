@@ -16,4 +16,5 @@ describe('node graph identity and direction',()=>{
   expect(graph.nodes.filter(n=>n.label==='23.207')).toHaveLength(2);
  });
  it('labels installed-component dependencies for owners',()=>expect(relationshipLabel('affects_component')).toBe('Affects installed component'));
+ it('labels family and engine relationships for the node-link diagram',()=>{expect(relationshipLabel('member_of')).toBe('Family member');expect(relationshipLabel('powered_by')).toBe('Approved engine family');});
 });

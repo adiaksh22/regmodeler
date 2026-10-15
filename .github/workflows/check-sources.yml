@@ -1,4 +1,4 @@
-name: Daily PA-28 source check
+name: Daily FAA source check
 on:
   schedule:
     - cron: '17 13 * * *'
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: pa28-all-source-checks
+  group: faa-reviewed-source-checks
   cancel-in-progress: false
 jobs:
   import:
@@ -27,6 +27,8 @@ jobs:
       - run: npm ci
       - name: Reconcile TCDS originals and metadata
         run: npm run import:tcds
+      - name: Reconcile Boeing 737 TCDS originals and metadata
+        run: npm run import:tcds:family -- --certificate=A16WE
       - name: Reconcile AD metadata
         if: ${{ !cancelled() }}
         run: npm run import:related -- --type=AD

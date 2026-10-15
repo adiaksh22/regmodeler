@@ -1,4 +1,4 @@
-name: PA-28 TCDS import
+name: FAA TCDS import
 on:
   workflow_dispatch:
     inputs:
@@ -6,10 +6,15 @@ on:
         description: Verify FAA metadata only, without writing to Supabase
         type: boolean
         default: true
+      certificate:
+        description: Type certificate data sheet number
+        type: choice
+        options: [2A13, A16WE]
+        default: A16WE
 permissions:
   contents: read
 concurrency:
-  group: pa28-tcds-import
+  group: faa-tcds-import-${{ inputs.certificate }}
   cancel-in-progress: false
 jobs:
   import:
@@ -19,6 +24,7 @@ jobs:
       FAA_DRS_API_KEY: ${{ secrets.FAA_DRS_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      CERTIFICATE: ${{ inputs.certificate }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,8 +33,14 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Verify source contract
-        if: inputs.verify_only
+        if: inputs.verify_only && inputs.certificate == '2A13'
         run: npm run import:verify
+      - name: Verify family source contract
+        if: inputs.verify_only && inputs.certificate != '2A13'
+        run: npm run import:tcds:family -- --certificate="$CERTIFICATE" --verify-only
       - name: Archive and import revisions
-        if: ${{ !inputs.verify_only }}
+        if: ${{ !inputs.verify_only && inputs.certificate == '2A13' }}
         run: npm run import:tcds
+      - name: Archive and import family revisions
+        if: ${{ !inputs.verify_only && inputs.certificate != '2A13' }}
+        run: npm run import:tcds:family -- --certificate="$CERTIFICATE"

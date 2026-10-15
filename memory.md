@@ -1,6 +1,6 @@
 # RegModeler autonomous run memory
 
-Last updated: 2026-10-14 (five-hour development run start)
+Last updated: 2026-10-14 (implementation and local QA complete)
 
 ## Five-Hour Phase Plan
 
@@ -41,3 +41,21 @@ Last updated: 2026-10-14 (five-hour development run start)
   - isolated Chrome smoke passed all 26 scoped rows, three profile choices, canonical shared nodes, STC traversal, exact PDF pages, mobile layout, and the browser-profile no-upload assertion;
   - repeated the hosted service-role procedure successfully: 16 physical paths, 26 scoped rows, and 26 unique model-scoped paths;
   - full `npm run check` passed: 72 frontend tests, 24 worker tests, all PGlite migration/integrity checks, lint, typecheck, and production build.
+- Hours 2–3 architecture and Boeing data phase completed:
+  - generalized FAA TCDS collection/import by exact certificate while preserving the established 2A13 path;
+  - added foreign-keyed family profiles, page-cited variant facts, rule sets, alternative groups, and typed predicates with RLS and service-only writes;
+  - imported and privately archived all 57 real FAA A16WE revisions; current Revision 81 is dated August 3, 2026 and hashes to `4a88ab57064783a155640b3eae4cbb812bb43596cce403f757c3d77be3f84e48`;
+  - visually reviewed cited pages 1, 21, 23, 24, 32, 59, 60, 66, and 67 and corrected the 737NG VMO/MMO citation to page 23;
+  - published six approved 737 variants, 42 facts, 18 graph rows, two shared engine identities, and a clearly unapproved 737 MAX 10 project boundary;
+  - encoded AD 2022-03-15 as two OR branches containing four AND predicates each (16 public predicate rows across the two PA-28 model relationships);
+  - hosted repeat check passed: 57 revisions, 7 displayed variant/project records, 18 unique graph rows, 16 structured predicates, and 19 idempotent reviewed relationships;
+  - scheduled source workflow now reconciles A16WE alongside 2A13.
+- Hours 4–5 UI and browser-validation phase completed:
+  - redesigned navigation and aircraft-first home search, added the FAA family status/limits panel, and connected structured OR/AND applicability logic to evidence inspection;
+  - made the node-link diagram the default desktop relationship view with semantic colors, focus, a legend, labeled links, keyboard-visible controls, and a compact mobile evidence list;
+  - added a responsive variant selector, explicit MAX 10 certification boundary, source-page links, a project favicon, and clearer prototype/source-status language;
+  - hosted browser smoke passed 57 revisions, seven variant/project records, technical facts, the MAX 10 boundary, node traversal, variant switching, archived citations, applicability logic, mobile layout, and zero browser/resource errors;
+  - desktop and 390 px mobile screenshots were visually reviewed; the variant controls were adjusted to wrap on small screens.
+- Final local QA completed after mobile polish: `npm run check` passed 75 frontend tests, 25 worker tests, all PGlite migration/integrity checks, lint, typecheck, and production build; the hosted browser smoke passed again.
+- Secret boundary review completed: local environment files and downloaded FAA artifacts remain ignored, and no token-shaped values were found in the commit candidates.
+- Resume point: commit and push all reviewed work, verify GitHub Actions, and record the resulting commit/CI state here.

@@ -64,7 +64,7 @@ export default function TCDSDetail() {
   if (!tcdsNumber) return null;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">TCDS: {tcdsNumber?.toUpperCase()}</h1>
         <button
@@ -81,7 +81,7 @@ export default function TCDSDetail() {
       {!loading && !doc && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <p className="text-yellow-800 font-semibold">TCDS not included in this catalog</p>
-          <p className="text-yellow-700 mt-2">The saved demo catalog includes 2A13, E7CE, and P19NE.</p>
+          <p className="text-yellow-700 mt-2">Search the FAA DRS source catalog or return to aircraft search.</p>
           <a href="https://drs.faa.gov/" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">Search FAA DRS</a>
         </div>
       )}

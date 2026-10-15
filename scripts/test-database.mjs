@@ -355,6 +355,33 @@ try {
   assert.equal((await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[publicationIds]))).rows.length,18,'Changed publication hides its two model paths and all scoped references');
   console.log('Garmin publication checks passed: modern and legacy provenance, exact manifest parity, alternative configuration paths, repeat review and inactive-source boundaries.');
 
+  const a16weHash='4a88ab57064783a155640b3eae4cbb812bb43596cce403f757c3d77be3f84e48';
+  const a16weModels=['737-500 Series','737-900 Series','737-100 Series','737-200C Series','737-700C Series','737-800 Series','737-900ER Series','737-300 Series','737-200 Series','737-700 Series','737-400 Series','737-600 Series','737-8','737-9','737-8200','737-7'];
+  const a16weRecord={source_version_id:'DRSDOCID187689605120260803182325.0001',revision_label:'81',revision_date:'2026-08-03',status:'current',
+    source_url:'https://drs.faa.gov/browse/excelExternalWindow/DRSDOCID187689605120260803182325.0001',retrieved_at:'2026-10-14T00:00:00Z',
+    content_sha256:a16weHash,storage_path:`FAA/TCDS/A16WE/${a16weHash}.pdf`,metadata:{certificate:'A16WE',model:a16weModels.slice().sort().join(' | '),model_list:a16weModels.slice().sort(),holder:'The Boeing Company',product_type:'Aircraft',source_modified_at:'2026-08-03T18:23:25Z',source_guid:'DRSDOCID187689605120260803182325',source_identity:'DRSDOCID187689605120260803182325.0001',snapshot_sha256:'a'.repeat(64),metadata_storage_path:`FAA/TCDS/A16WE/${'b'.repeat(64)}.json`}};
+  const a16weRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:TCDSMODEL:A16WE','running') returning id")).rows[0].id;
+  await assert.rejects(asRole('anon',null,()=>query('select public.commit_tcds_catalog($1,$2,$3::jsonb)',[a16weRun,'A16WE',JSON.stringify([a16weRecord])])),/permission denied/);
+  assert.equal((await query('select public.commit_tcds_catalog($1,$2,$3::jsonb) n',[a16weRun,'A16WE',JSON.stringify([a16weRecord])])).rows[0].n,1);
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_boeing_737_family()')),/permission denied/);
+  assert.equal((await query('select public.review_boeing_737_family() n')).rows[0].n,19);
+  const variants=(await asRole('anon',null,()=>query("select * from public.aircraft_variant_catalog where tcds_number='A16WE' order by display_name"))).rows;
+  assert.equal(variants.length,7);assert.equal(variants.filter(v=>v.faa_status==='faa_approved').length,6);
+  assert.equal(variants.find(v=>v.display_name==='737 MAX 10').faa_status,'not_listed_in_current_tcds');
+  assert.equal(variants.find(v=>v.display_name==='737 MAX 7').facts.maximum_takeoff_weight.numeric_value,177000);
+  assert.equal(variants.find(v=>v.display_name==='737-800').facts.vmo.evidence_page,23,'737NG VMO citation remains on the reviewed airspeed page');
+  const boeingGraph=(await asRole('anon',null,()=>query("select * from public.model_graph where tcds_number='A16WE'"))).rows;
+  assert.equal(boeingGraph.length,18);assert.equal(boeingGraph.filter(r=>r.relationship_type==='powered_by').length,6);
+  assert.equal(new Set(boeingGraph.filter(r=>r.relationship_type==='powered_by').map(r=>r.target_entity_id)).size,2,'Six variants reuse two canonical engine-family nodes');
+  const ruleRows=(await asRole('anon',null,()=>query('select * from public.relationship_applicability_rules order by relationship_id,group_order,predicate_order'))).rows;
+  assert.equal(ruleRows.length,16);assert.equal(new Set(ruleRows.map(r=>r.relationship_id)).size,2);assert.deepEqual([...new Set(ruleRows.map(r=>r.group_label))].sort(),['G3X Touch path','GI 275 path']);
+  const relationshipCount=(await query('select count(*)::integer n from public.relationships')).rows[0].n;
+  await query('select public.review_boeing_737_family()');
+  assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,relationshipCount,'Repeat family review does not duplicate graph edges');
+  assert.equal((await query('select count(*)::integer n from public.relationship_applicability_rules')).rows[0].n,16,'Repeat review replaces rule groups atomically');
+  await assert.rejects(query("update public.aircraft_variant_profiles set faa_status='faa_approved' where display_name='737 MAX 10'"),/check constraint/);
+  console.log('Boeing family checks passed: guarded A16WE import, six approved variants, explicit MAX 10 boundary, canonical engines, structured facts, compound applicability, RLS and idempotence.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

@@ -37,6 +37,14 @@ export function drsClient(key, { request = fetch, sleep = delay } = {}) {
     }
   }
   return {
+    async tcdsPage(certificate, offset = 0, since) {
+      if (typeof certificate !== 'string' || !/^[A-Z0-9-]{1,20}$/.test(certificate)) throw new ImportError('INVALID_CERTIFICATE');
+      const bytes = await read('/api/drs/data-pull/TCDSMODEL/filtered', {
+        offset, sortOrder: 'ASC', ...(since ? { docLastModifiedDate: since } : {}),
+        documentFilters: { 'drs:documentNumber': [certificate] },
+      });
+      try { return JSON.parse(bytes.toString('utf8')); } catch { throw new ImportError('INVALID_METADATA_JSON'); }
+    },
     async attachment(url) {
       const target=new URL(url);
       if(target.origin!==origin||!/^\/api\/drs\/data-pull\/download\/[a-f0-9-]+$/i.test(target.pathname)||target.search||target.hash)throw new ImportError('UNTRUSTED_SOURCE_URL');
@@ -56,11 +64,7 @@ export function drsClient(key, { request = fetch, sleep = delay } = {}) {
       try { return JSON.parse(bytes.toString('utf8')); } catch { throw new ImportError('INVALID_METADATA_JSON'); }
     },
     async page(offset = 0, since) {
-      const bytes = await read('/api/drs/data-pull/TCDSMODEL/filtered', {
-        offset, sortOrder: 'ASC', ...(since ? { docLastModifiedDate: since } : {}),
-        documentFilters: { 'drs:documentNumber': ['2A13'] },
-      });
-      try { return JSON.parse(bytes.toString('utf8')); } catch { throw new ImportError('INVALID_METADATA_JSON'); }
+      return this.tcdsPage('2A13', offset, since);
     },
     async pdf(url) {
       const bytes = await read(url, undefined, 25_000_000);
@@ -69,11 +73,11 @@ export function drsClient(key, { request = fetch, sleep = delay } = {}) {
     },
   };
 }
-export async function collectTcds(client, since) {
+export async function collectTcds(client, since, certificate = '2A13') {
   const rows = []; const seen = new Set(); let total;
   for (let page = 0; page < 50; page++) {
     const offset = page * 750;
-    const result = await client.page(offset, since);
+    const result = client.tcdsPage ? await client.tcdsPage(certificate, offset, since) : await client.page(offset, since);
     const summary = result.summary;
     if (!Array.isArray(result.documents) || !summary || typeof summary.hasMoreItems !== 'boolean' ||
         summary.count !== result.documents.length || result.documents.length > 750 ||
@@ -82,7 +86,7 @@ export async function collectTcds(client, since) {
     if (total !== undefined && total !== summary.totalItems) throw new ImportError('CATALOG_CHANGED_DURING_PAGING');
     total = summary.totalItems;
     for (const record of result.documents) {
-      validateTcds(record);
+      validateTcds(record, certificate);
       if (seen.has(record.documentURL)) throw new ImportError('DUPLICATE_PAGE_RECORD');
       if (since && Date.parse(record.docLastModifiedDate) <= Date.parse(since)) throw new ImportError('INCREMENTAL_FILTER_MISMATCH');
       seen.add(record.documentURL); rows.push(record);
@@ -95,9 +99,9 @@ export async function collectTcds(client, since) {
   }
   throw new ImportError('PAGE_LIMIT_EXCEEDED');
 }
-export function validateTcds(record) {
+export function validateTcds(record, certificate = '2A13') {
   const url = new URL(record.documentURL);
-  if (record['drs:documentNumber'] !== '2A13' || url.origin !== origin || url.username || url.password ||
+  if (!/^[A-Z0-9-]{1,20}$/.test(certificate) || record['drs:documentNumber'] !== certificate || url.origin !== origin || url.username || url.password ||
       !/^\/browse\/excelExternalWindow\/[A-Za-z0-9.]+$/.test(url.pathname) || url.search || url.hash ||
       typeof record.documentGuid !== 'string' || !url.pathname.split('/').at(-1).startsWith(record.documentGuid + '.') ||
       !['Current','Historical','Pending'].includes(record['drs:status']) ||
@@ -105,8 +109,9 @@ export function validateTcds(record) {
       !/^\d{4}-\d{2}-\d{2}$/.test(record['drs:tcdsmodelRevisionDate']) ||
       !Number.isFinite(Date.parse(record['drs:tcdsmodelRevisionDate'])) ||
       !Number.isFinite(Date.parse(record.docLastModifiedDate)) ||
-      !Array.isArray(record['drs:tcdsmodelModel']) || !record['drs:tcdsmodelModel'].some(m=>/^PA-28/.test(m)) ||
-      record['drs:tcdsmodelModel'].some(m=>typeof m!=='string') || !record.mainDocumentDownloadURL) {
+      !Array.isArray(record['drs:tcdsmodelModel']) || !record['drs:tcdsmodelModel'].length ||
+      record['drs:tcdsmodelModel'].some(m=>typeof m!=='string'||!m.trim()) ||
+      (certificate === '2A13' && !record['drs:tcdsmodelModel'].some(m=>/^PA-28/.test(m))) || !record.mainDocumentDownloadURL) {
     throw new ImportError('INVALID_TCDS_RECORD');
   }
 }
@@ -117,8 +122,8 @@ function canonical(value) {
   if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
   return value;
 }
-export function snapshot(record, bytes, retrievedAt) {
-  validateTcds(record);
+export function snapshot(record, bytes, retrievedAt, certificate = '2A13') {
+  validateTcds(record, certificate);
   const hash = sha256(bytes);
   const metadataBytes = Buffer.from(JSON.stringify(canonical(record)));
   const metadataHash = sha256(metadataBytes);
@@ -127,13 +132,14 @@ export function snapshot(record, bytes, retrievedAt) {
     source_version_id: new URL(record.documentURL).pathname.split('/').at(-1),
     revision_label: record['drs:tcdsmodelRevisionNumber'], revision_date: record['drs:tcdsmodelRevisionDate'],
     status: record['drs:status'].toLowerCase(), source_url: record.documentURL, retrieved_at: retrievedAt,
-    content_sha256: hash, storage_path: `FAA/TCDS/2A13/${hash}.pdf`,
+    content_sha256: hash, storage_path: `FAA/TCDS/${certificate}/${hash}.pdf`,
     metadata: {
       model: [...new Set(record['drs:tcdsmodelModel'])].sort().join(' | '),
+      model_list: [...new Set(record['drs:tcdsmodelModel'])].sort(), certificate,
       holder: record['drs:tcdsmodelTCHolder'], product_type: record['drs:tcdsmodelProductType'],
       source_modified_at: record.docLastModifiedDate, source_guid: record.documentGuid,
       source_identity: new URL(record.documentURL).pathname.split('/').at(-1),
-      snapshot_sha256: fingerprint, metadata_storage_path: `FAA/TCDS/2A13/${metadataHash}.json`,
+      snapshot_sha256: fingerprint, metadata_storage_path: `FAA/TCDS/${certificate}/${metadataHash}.json`,
       additional_attachments_pending: record.hasMoreAttachments === true,
     },
     metadataBytes,

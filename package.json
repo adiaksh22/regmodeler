@@ -24,6 +24,7 @@
     "worker:test": "node --test apps/worker/test/*.test.mjs",
     "import:verify": "node --env-file-if-exists=.env.local apps/worker/src/import-tcds.mjs --verify-only",
     "import:tcds": "node --env-file-if-exists=.env.local apps/worker/src/import-tcds.mjs",
+    "import:tcds:family": "node --env-file-if-exists=.env.local apps/worker/src/import-tcds-family.mjs",
     "import:related:verify": "node --env-file-if-exists=.env.local apps/worker/src/import-related.mjs --verify-only",
     "import:related": "node --env-file-if-exists=.env.local apps/worker/src/import-related.mjs",
     "import:reference": "node --env-file-if-exists=.env.local apps/worker/src/import-reference.mjs",

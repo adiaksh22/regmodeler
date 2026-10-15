@@ -4,7 +4,7 @@ Updated October 14, 2026. This is the main project plan. It separates completed 
 
 ## Purpose and scope
 
-Help aircraft owners and maintenance professionals find regulatory sources, understand their connections and identify changes worth reviewing for a specific aircraft. Start with FAA general aviation: Piper PA-28-140 and PA-28-181 under TCDS 2A13. Later expand to other GA families, commercial aircraft, engines, propellers, appliances and additional authorities.
+Help aircraft owners and maintenance professionals find regulatory sources, understand their connections and identify changes worth reviewing for a specific aircraft. The deep applicability workflow starts with FAA general aviation: Piper PA-28-140 and PA-28-181 under TCDS 2A13. A first commercial-family slice now validates scaling with Boeing 737 models under A16WE; AD/STC depth, fleet workflows and additional authorities remain later phases.
 
 Users can browse model information without a profile. Profiles add user-reported aircraft details to explain selected relevance conditions. Source review, installation verification and compliance assessment remain separate activities.
 
@@ -45,10 +45,10 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | --- | --- | --- |
 | Foundation | Active/archive separation; repeatable lint, tests, types and build | Ongoing maintenance |
 | Infrastructure | GitHub; local/hosted Supabase; migrations; private archives; controlled public API and PDF viewer | Release operations, recovery and monitoring |
-| TCDS | 23 imported 2A13 revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
+| TCDS | 23 imported 2A13 revisions plus all 57 A16WE revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
 | Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | 136 reviewed model-scoped graph rows and 36 reviewed AD/STC model connections; directed graph/list/node views; shared-model/component navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
+| Relationships | 136 PA-28 model-scoped rows plus 18 reviewed 737 family/certificate/engine paths; 36 reviewed PA-28 AD/STC model connections; default node-link map and evidence views | Reviewed 737 AD/STC paths and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial and equipment labels; reported installation | Backup import, compound rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
@@ -83,7 +83,7 @@ FAA source versions and originals
               |
        reviewed evidence edges
               v
-TCDS/certificate -> aircraft models -> installed component families
+TCDS/certificate -> aircraft family -> approved models -> installed component/engine families
        |                    |                    |
  certification basis      AD/STC scope      service documents
               \             |             /
@@ -196,6 +196,8 @@ Measure tasks, not counts alone: users find the correct model, distinguish evide
 - [Source-change tracking](source-change-tracking.md)
 - [Installed-equipment review](pa28-installed-equipment-review.md)
 - [Garmin publication review](pa28-garmin-publication-review.md)
+- [Boeing 737 family review](boeing-737-family-review.md)
+- [Relationship and applicability architecture](relationship-architecture.md)
 - [Feasibility report](../data-feasibility/REPORT.txt)
 
 ## Node graph and review coverage update

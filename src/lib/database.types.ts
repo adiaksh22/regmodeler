@@ -1,4 +1,4 @@
-import type { OfficialRevision, EvidenceRelationship, RelatedDocument, RegulationSource } from '../domain/explorer';
+import type { OfficialRevision, EvidenceRelationship, RelatedDocument, RegulationSource, AircraftVariantSummary, ApplicabilityRule } from '../domain/explorer';
 import type {SourceChange,SourceMonitoring} from '../domain/sourceChanges';
 import type {ReviewQueueRow} from './relatedCatalog';
 // Public read contract. Keep view columns and RPC signatures in sync with migrations.
@@ -24,6 +24,8 @@ export interface Database {
       tcds_versions: { Row: OfficialRevision; Relationships: [] };
       tcds_relationships: { Row: EvidenceRelationship; Relationships: [] };
       model_graph: { Row: EvidenceRelationship; Relationships: [] };
+      aircraft_variant_catalog: {Row:AircraftVariantSummary;Relationships:[]};
+      relationship_applicability_rules:{Row:ApplicabilityRule;Relationships:[]};
       source_review_queue: {Row:ReviewQueueRow;Relationships:[]};
       related_documents: { Row: RelatedDocument & {regulatory_text: string | null}; Relationships: [] };
       regulation_sources: { Row: RegulationSource; Relationships: [] };

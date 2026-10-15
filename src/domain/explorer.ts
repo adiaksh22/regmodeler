@@ -13,6 +13,22 @@ export type EvidenceRelationship = {
   evidence_attachment_id?: string | null; evidence_file_name?: string | null;
   original_source_url?: string | null;
 };
+export type VariantFact = {
+  numeric_value: number | string | null; text_value: string | null; unit: string | null;
+  conditions: Record<string,string>; evidence_page: number; evidence_excerpt: string;
+};
+export type AircraftVariantSummary = {
+  entity_id: string; family_entity_id: string; tcds_document_id: string; tcds_number: string; model_key: string;
+  display_name: string; market_name: string; faa_status: 'faa_approved'|'not_listed_in_current_tcds';
+  approved_on: string | null; evidence_version_id: string; evidence_page: number; evidence_excerpt: string;
+  facts: Record<string,VariantFact>;
+};
+export type ApplicabilityRule = {
+  relationship_id: string; rule_set_label: string; outcome: string; group_id: string; group_order: number;
+  match_operator: 'all'|'any'; group_label: string; predicate_id: string; predicate_order: number;
+  subject_kind: string; subject_key: string; comparison: string; expected: unknown;
+  evidence_page: number; evidence_excerpt: string;
+};
 export type RegulationSource = {
   id: string; basis_key: string; section: string | null; title: string; edition_date: string;
   source_kind: string; body_text: string | null; text_quality: string | null; source_url: string;
@@ -29,4 +45,6 @@ export type ExplorerDetails = {
   revisions: OfficialRevision[]; relationships: EvidenceRelationship[]; lastChecked: string | null;
   available: boolean; notice?: string;
   sourceMaterials?: RegulationSource[];
+  variants?: AircraftVariantSummary[];
+  applicabilityRules?: ApplicabilityRule[];
 };

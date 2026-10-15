@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectTcds, drsClient, snapshot } from '../src/drs.mjs';
 import { importPa28 } from '../src/import-tcds.mjs';
+import { importTcdsFamily } from '../src/import-tcds-family.mjs';
 test('attachment discovery refuses foreign URLs and bounded download methods retain the FAA key',async()=>{
  const source=drsClient('private-test-key',{request:async(url,options)=>{assert.equal(options.headers['x-api-key'],'private-test-key');return new Response(url.pathname.includes('get-other')?'{"otherAttachmentDownloadDetails":[]}':'attachment');}});
  assert.deepEqual(await source.attachments('https://drs.faa.gov/api/drs/data-pull/get-other-attachment-details/abcd-1234'),{otherAttachmentDownloadDetails:[]});
@@ -48,6 +49,22 @@ test('uses documented filtered POST and retries transient failures without leaki
   let denied=0;
   await assert.rejects(drsClient('test-key',{request:async()=>{denied++;return new Response('',{status:403});}}).page(),/FAA_HTTP_403/);
   assert.equal(denied,1);
+});
+test('scopes generic TCDS requests, snapshots and verification to an exact certificate',async()=>{
+  const requests=[];
+  const boeing=record('BOEING',{
+    'drs:documentNumber':'A16WE','drs:tcdsmodelRevisionNumber':'81','drs:tcdsmodelRevisionDate':'2026-08-03',
+    'drs:tcdsmodelModel':['737-700 Series','737-8','737-7'],
+  });
+  const source=drsClient('test-key',{request:async(url,init)=>{requests.push({url:String(url),init});return Response.json(page([boeing]));}});
+  await source.tcdsPage('A16WE');
+  assert.deepEqual(JSON.parse(requests[0].init.body).documentFilters,{'drs:documentNumber':['A16WE']});
+  await assert.rejects(source.tcdsPage('../A16WE'),/INVALID_CERTIFICATE/);
+  const item=snapshot(boeing,Buffer.from('%PDF-1.7\nfixture'),'2026-10-14T00:00:00Z','A16WE');
+  assert.match(item.storage_path,/^FAA\/TCDS\/A16WE\//);assert.match(item.metadata.metadata_storage_path,/^FAA\/TCDS\/A16WE\//);
+  assert.deepEqual(item.metadata.model_list,['737-7','737-700 Series','737-8']);
+  const verified=await importTcdsFamily(null,{tcdsPage:async()=>page([boeing])},'A16WE',{verifyOnly:true});
+  assert.equal(verified.certificate,'A16WE');assert.equal(verified.revisions,1);
 });
 test('refuses credential forwarding, HTML masquerading as PDF and oversized content',async()=>{
   let calls=0;

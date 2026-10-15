@@ -40,13 +40,17 @@ export async function loadExplorerDetails(number: string): Promise<ExplorerDetai
     global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) },
   });
   try {
-    const [versions, relationships, checked] = await Promise.all([
+    const [versions, relationships, checked, variants] = await Promise.all([
       client.from('tcds_versions').select('*').eq('tcds_number',number.toUpperCase()).order('revision_date',{ascending:false}).order('retrieved_at',{ascending:false}),
       client.from('model_graph').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
       client.rpc('catalog_last_checked',{p_number:number.toUpperCase()}),
+      client.from('aircraft_variant_catalog').select('*').eq('tcds_number',number.toUpperCase()).order('display_name'),
     ]);
-    if (versions.error || relationships.error || checked.error) throw new Error('Unavailable');
+    if (versions.error || relationships.error || checked.error || variants.error) throw new Error('Unavailable');
+    const relationshipIds=[...new Set((relationships.data??[]).map(row=>row.id))];
+    const rules=relationshipIds.length ? await client.from('relationship_applicability_rules').select('*').in('relationship_id',relationshipIds).order('group_order').order('predicate_order') : {data:[],error:null};
+    if(rules.error) throw new Error('Unavailable');
     const materials=await client.from('regulation_sources').select('*');
-    return { revisions: versions.data ?? [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true,sourceMaterials:materials.error?[]:materials.data??[] };
+    return { revisions: versions.data ?? [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true,sourceMaterials:materials.error?[]:materials.data??[],variants:variants.data??[],applicabilityRules:rules.data??[] };
   } catch { return { ...empty, notice: 'Imported history and relationships are temporarily unavailable. Reload to try again.' }; }
 }

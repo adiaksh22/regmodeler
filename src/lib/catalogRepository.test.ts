@@ -25,7 +25,7 @@ describe('catalog availability boundaries', () => {
     const result = await repository.list();
     expect(result.source).toBe('fallback');
     expect(result.notice).toMatch(/unavailable/);
-    expect(result.data).toHaveLength(3);
+    expect(result.data).toHaveLength(4);
     expect((await repository.get('unknown')).data).toBeNull();
   });
 });

@@ -31,5 +31,16 @@
     "holder": "MT-Propeller Entwicklung GmbH",
     "product_type": "Propeller",
     "retrieved_at": "2026-10-13T01:25:34.427Z"
+  },
+  {
+    "tcds_number": "A16WE",
+    "revision": "81",
+    "revision_date": "08/03/2026",
+    "url": "https://drs.faa.gov/browse/excelExternalWindow/DRSDOCID187689605120260803182325.0001",
+    "model": "737-100 Series | 737-200 Series | 737-200C Series | 737-300 Series | 737-400 Series | 737-500 Series | 737-600 Series | 737-700 Series | 737-700C Series | 737-800 Series | 737-900 Series | 737-900ER Series | 737-7 | 737-8 | 737-9 | 737-8200",
+    "status": "current",
+    "holder": "The Boeing Company",
+    "product_type": "Aircraft",
+    "retrieved_at": "2026-10-14T00:00:00.000Z"
   }
 ]
