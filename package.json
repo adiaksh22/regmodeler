@@ -32,7 +32,8 @@
     "review:expanded": "node --env-file-if-exists=.env.local apps/worker/src/review-expanded.mjs",
     "review:decision": "node --env-file-if-exists=.env.local scripts/review-decision.mjs",
     "review:batch2": "node --env-file-if-exists=.env.local apps/worker/src/review-batch2.mjs",
-    "review:batch3": "node --env-file-if-exists=.env.local apps/worker/src/review-batch3.mjs"
+    "review:batch3": "node --env-file-if-exists=.env.local apps/worker/src/review-batch3.mjs",
+    "review:batch4": "node --env-file-if-exists=.env.local apps/worker/src/review-batch4.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",

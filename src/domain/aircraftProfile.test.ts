@@ -1,9 +1,19 @@
+import batch4 from '../../apps/worker/src/review-batch4.json';
 import {describe,it,expect} from 'vitest';
 import {profileRelevance,validateProfile,type AircraftProfile} from './aircraftProfile';
 import type {EvidenceRelationship} from './explorer';
 const profile:AircraftProfile={id:'profile-test',model:'PA-28-140',name:'Test aircraft',serial:'28-20001',modifications:[],updatedAt:'2026-10-14T00:00:00Z'};
 const edge:EvidenceRelationship={id:'edge',tcds_number:'2A13',model:'PA-28-140',target:'AD 2020-24-05',target_type:'certificate',relationship_type:'applies_to',evidence_page:5,evidence_excerpt:'Reviewed fixture',applicability_conditions:{serial_ranges:'28-20001 through 28-26946; 28-7125001 through 28-7725290.'},evidence_revision:'2020-11-13',source_url:'https://drs.faa.gov/',source_document_type:'AD',source_document_number:'2020-24-05'};
 describe('reviewed profile relevance',()=>{
+  it('keeps reviewed component serial gaps and equipment-only scope distinct',()=>{
+    const p={...profile,model:'PA-28-181'};
+    const reviewed=(number:string)=>({...edge,model:p.model,applicability_conditions:Object.fromEntries(Object.entries(batch4.find(e=>e.number===number)!.conditions).filter(([,value])=>typeof value==='string'))});
+    for(const serial of ['2843021','2843768','2843769','2843775','2843779','2843791'])expect(profileRelevance({...p,serial},reviewed('2016-07-21'))?.category).toBe('match');
+    for(const serial of ['2843020','2843776','2843777','2843778','2843792'])expect(profileRelevance({...p,serial},reviewed('2016-07-21'))?.category).toBe('outside');
+    for(const serial of ['2843112','2843565','2843566','2843588'])expect(profileRelevance({...p,serial},reviewed('2004-14-12'))?.category).toBe('match');
+    for(const serial of ['2843111','2843589'])expect(profileRelevance({...p,serial},reviewed('2004-14-12'))?.category).toBe('outside');
+    for(const number of ['2017-14-04','2024-10-04'])expect(profileRelevance({...p,serial:'2843566'},reviewed(number))?.category).toBe('unknown');
+  });
   it('includes both endpoints of each reviewed serial range and excludes adjacent serials',()=>{
     for(const serial of ['28-20001','28-26946','28-7125001','28-7725290'])expect(profileRelevance({...profile,serial},edge)?.category).toBe('match');
     for(const serial of ['28-20000','28-26947','28-7125000','28-7725291'])expect(profileRelevance({...profile,serial},edge)?.category).toBe('outside');

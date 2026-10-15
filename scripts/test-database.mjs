@@ -276,6 +276,39 @@ try {
   await query('update public.related_document_matches set is_active=false where version_id=$1',[fuelIds[0]]);assert.equal((await fuelGraph()).rows.length,16,'Changed source observations hide supersession and all reference paths until renewed review');
   console.log('Fuel/airframe checks passed: serial-specific evidence, shared AD/STC identities, alternative engine approvals, dated publisher links and supersession boundaries.');
 
+  const batch4=JSON.parse(readFileSync(new URL('../apps/worker/src/review-batch4.json',import.meta.url)));const componentIds=[];
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_pa28_batch4_graph()')),/permission denied/);
+  await assert.rejects(query('select public.review_pa28_batch4_graph()'),/original or publication provenance missing/);
+  await query('update public.related_document_matches set is_active=true where version_id=$1',[batchIds[0]]);
+  const priorIds=(await query('select id from public.relationships where evidence_version_id=$1 order by id',[batchIds[0]])).rows;
+  for(const entry of batch4.filter(e=>!e.published_url)){
+   const document=(await query("insert into public.documents(authority,document_type,document_number,title,is_published) values('FAA',$1,$2,$2,true) returning id",[entry.type,entry.number])).rows[0].id;
+   const version=(await query("insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,content_sha256,storage_path,is_published) values($1,$2,'reviewed','current','https://drs.faa.gov',now(),$3,$4,true) returning id",[document,entry.number,entry.hash,'FAA/'+entry.type+'/reviewed/'+entry.hash+'.pdf'])).rows[0].id;componentIds.push(version);
+   for(const model of entry.models)await query("insert into public.related_document_matches(source,version_id,model) values('test-batch4',$1,$2)",[version,model]);
+  }
+  await query("update public.document_versions set metadata=metadata-'original_source_kind' where id=$1",[batchIds[0]]);
+  await assert.rejects(query('select public.review_pa28_batch4_graph()'),/provenance missing/);
+  assert.equal((await query('select count(*)::integer n from public.relationships where evidence_version_id=any($1::uuid[])',[componentIds])).rows[0].n,0,'Missing publication provenance rolls back the whole batch');
+  await query('update public.document_versions set metadata=metadata||$2::jsonb where id=$1',[batchIds[0],JSON.stringify({original_source_kind:'final_federal_register'})]);
+  assert.equal((await query('select public.review_pa28_batch4_graph() as n')).rows[0].n,13);
+  assert.deepEqual((await query('select id from public.relationships where evidence_version_id=$1 order by id',[batchIds[0]])).rows,priorIds,'Publisher enrichment preserves existing evidence edge identities');
+  const componentRows=(await asRole('anon',null,()=>query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[componentIds]))).rows;
+  for(const entry of batch4){
+   const reviewedRows=(await query('select * from public.model_graph where source_document_number=$1',[entry.number])).rows;
+   for(const row of reviewedRows.filter(r=>!r.path_via)){assert.equal(row.evidence_excerpt,entry.excerpt);assert.deepEqual(row.applicability_conditions,entry.conditions);}
+   for(const reference of entry.references){const row=reviewedRows.find(r=>r.path_via&&r.basis_key===reference.key);assert.ok(row);assert.equal(row.evidence_excerpt,reference.excerpt);assert.deepEqual(row.applicability_conditions,reference.conditions);}
+  }
+  assert.equal(componentRows.length,13);assert.equal(componentRows.filter(r=>!r.path_via).length,4);
+  assert.equal(componentRows.filter(r=>r.relationship_type==='supersedes').length,3);
+  assert.ok(componentRows.filter(r=>r.source_document_number==='2017-14-04'&&!r.path_via).every(r=>!r.applicability_conditions.serial_ranges));
+  const rib=componentRows.find(r=>r.source_document_number==='2016-07-21'&&!r.path_via);assert.equal(rib.model,'PA-28-181');assert.ok(rib.applicability_conditions.groups.includes('2843776-2843778'));
+  const wheel=componentRows.find(r=>r.source_document_number==='2004-14-12'&&!r.path_via);assert.ok(wheel.applicability_conditions.groups.includes('Part II'));assert.ok(wheel.applicability_conditions.publication.includes('correction'));
+  const enriched=(await query('select * from public.model_graph where evidence_version_id=$1',[batchIds[0]])).rows;assert.equal(enriched.length,2);assert.ok(!enriched.find(r=>!r.path_via).applicability_conditions.serial_ranges);
+  assert.equal(enriched.find(r=>r.path_via).applicability_conditions.publisher_catalog_date,'2024-04-18');
+  const countComponent=(await query('select count(*)::integer n from public.relationships')).rows[0].n;await query('select public.review_pa28_batch4_graph()');assert.equal((await query('select count(*)::integer n from public.relationships')).rows[0].n,countComponent);
+  await query('update public.related_document_matches set is_active=false where version_id=$1',[componentIds[0]]);assert.equal((await query('select * from public.model_graph where evidence_version_id=any($1::uuid[])',[componentIds])).rows.length,7);
+  console.log('Component checks passed: atomic provenance, stable enrichment IDs, equipment unknowns, action groups, publisher dates, supersession, repeat review and inactive-source boundaries.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

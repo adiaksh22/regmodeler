@@ -47,7 +47,7 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | TCDS | 23 imported 2A13 revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
 | Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | 71 reviewed connections; directed graph/list/node views; shared-model navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
+| Relationships | 84 reviewed connections; directed graph/list/node views; shared-model navigation; source/AML traversal; review queue | More reviewed paths and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial labels; reported installation | Backup import, additional rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
@@ -160,8 +160,12 @@ Measure tasks, not counts alone: users find the correct model, distinguish evide
 
 ## Node graph and review coverage update
 
-The additional node view and read-only source review queue are implemented. Four more reviewed primary sources and three attachments are archived in the hosted catalog, including an evidence-linked AML. There are 71 model-scoped graph rows and 20 reviewed AD/STC model connections. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled; attachment retrieval remains manual. Next work is additional evidence-backed configuration rules, more reviewed sources, attachment freshness and actual content comparisons, followed by beta accessibility/content review and a release decision.
+The additional node view and read-only source review queue are implemented. Four more reviewed primary sources and three attachments are archived in the hosted catalog, including an evidence-linked AML. There are 84 model-scoped graph rows and 24 reviewed AD/STC model connections. Node dragging changes display positions only. See [node navigation and evidence review](node-graph-and-review.md). Daily metadata checks remain enabled; attachment retrieval remains manual. Next work is additional evidence-backed configuration rules, more reviewed sources, attachment freshness and actual content comparisons, followed by beta accessibility/content review and a release decision.
 
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
 
 See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-specific scope, supersession, publisher links and graph search.
+
+### Latest source review: component ADs
+
+Three more AD originals now connect oil-cooler hose, right-wing rib and control-wheel requirements with exact evidence. Three verified Piper links include the existing SB 1413 reference. Reviewed serial gaps, action groups and equipment unknowns are preserved. See [component source review](pa28-component-review.md). The website remains unpublished; further source review and external serial-table evidence precede release work.
