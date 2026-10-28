@@ -1,0 +1,24 @@
+[
+  {
+    "number":"ST04009NY","source_url":"https://drs.faa.gov/browse/excelExternalWindow/DRSDOCID198838941920250501135110.0001",
+    "hash":"bb7d2494050a277dd6ca56ac9e07653384cc95231c44f55c6a2b050a2d9bdab1","models":["737-700","737-800"],"page":1,
+    "excerpt":"ST04009NY, reissued January 8, 2025, lists A16WE and 737-300/-400/-500/-600/-700/-800 Series for an ADS-B Out installation. Only supported 737-700/-800 model scope is mapped.",
+    "conditions":{"configuration":"Page 1 describes dual ACSS XS-950 transponders, dual CMA-3024 WAAS/GNSS receivers, specified antenna alternatives and failure annunciators. Individual installation is not verified.","existing_system":"The existing transponder system must comply with Mode S, Mode S ELS and Mode S EHS; its control panel must provide ATC/XPDR failure indication.","compatibility_permission":"Page 3 requires installer compatibility assessment and written holder permission for use by another person.","source_identity":"This is the separate FAA ST04009NY record. It is not a correction or automatic replacement of SA04009NY.","source_completeness":"All three certificate pages were obtained; supporting design, flight-manual and maintenance documents remain unobtained."},
+    "references":[
+      {"authority":"AERSALE","key":"MDL:B737-MDL-0019:A:2019-06-11","label":"AerSale B737-MDL-0019 Revision A","models":["737-700","737-800"],"page":1,"excerpt":"Installation is in accordance with Master Data List B737-MDL-0019 Revision A, June 11, 2019, or later FAA-approved revisions."},
+      {"authority":"AERSALE","key":"AFMS:B737-AFM-0017:IR:2019-09-04","label":"AerSale B737-AFM-0017 Revision IR","models":["737-700","737-800"],"page":1,"excerpt":"B737-AFM-0017 Revision IR, September 4, 2019, or later FAA-approved revisions is a required part of this STC."},
+      {"authority":"AERSALE","key":"ICA:B737-ICA-0019:B:2019-06-11","label":"AerSale B737-ICA-0019 Revision B","models":["737-700","737-800"],"page":1,"excerpt":"For maintenance and inspections, apply B737-ICA-0019 Revision B, June 11, 2019, or later FAA-accepted revisions."}
+    ]
+  },
+  {
+    "number":"ST01635LA","source_url":"https://drs.faa.gov/browse/excelExternalWindow/70809A3F184E1A538625802F00674984.0001",
+    "hash":"60fdc54d5b816ea8d85d186cdef7b37702e6303cc3f771eeedf2c9963d92403c","models":["737-700","737-800"],"page":1,
+    "excerpt":"ST01635LA, amended August 18, 2016, lists A16WE and 737-700/-700C/-800/-900 Series for a Cabin Interior Noise Reduction Kit. Only supported 737-700/-800 models are mapped.",
+    "conditions":{"installation":"Installer compatibility assessment is required. Individual-aircraft installation and compliance are not established.","records_permission":"A copy of the STC must be included in permanent aircraft records. Written holder permission is required for another person to use the certificate.","maintenance_scope":"Page 1 assigns different maintenance supplements to 737-700/-700C and 737-800. Follow the model-specific path.","certification_basis":"Page 3 limits its stated Part 26 basis to index list AC25-BBJ-7370 Revision J, July 30, 2012, or later FAA-approved revisions; the revision condition is preserved.","source_identity":"This separate ST01635LA record does not establish a renumbering or supersession of SA01635LA.","source_completeness":"All three certificate pages were obtained. Referenced index and maintenance documents remain unobtained."},
+    "references":[
+      {"authority":"AEROCON","key":"MASTER-INDEX:AC25-BBJ-7370:NC:2006-08-22","label":"Aerocon Master Index AC25-BBJ-7370 Revision NC","models":["737-700","737-800"],"page":1,"excerpt":"The design change references Index List AC25-BBJ-7370 Revision NC, August 22, 2006, or later FAA-approved revision."},
+      {"authority":"AEROCON","key":"MMS:AC25-1346:NC:2006-02-18","label":"Aerocon AC25-1346 Revision NC - 737-700","models":["737-700"],"page":1,"excerpt":"For 737-700 and -700C Series, maintenance supplement AC25-1346 Revision NC, February 18, 2006, or later FAA-approved revision must be available to the operator at installation."},
+      {"authority":"AEROCON","key":"MMS:AC25-1340:NC:2006-05-10","label":"Aerocon AC25-1340 Revision NC - 737-800","models":["737-800"],"page":1,"excerpt":"For 737-800 Series, maintenance supplement AC25-1340 Revision NC, May 10, 2006, or later FAA-approved revision must be available to the operator at installation."}
+    ]
+  }
+]

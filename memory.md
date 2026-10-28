@@ -97,3 +97,10 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - candidate SA04009NY is deferred for both NG models because its original identifies ST04009NY; no graph evidence was published from it;
   - hosted migrations 20261027000200–20261027000400 and bounded source review are applied; repeated hosted review preserved eight paths. NG browser checks and existing MAX graph regression passed;
   - next source task: resolve the missing STC page and SA/ST identity discrepancy through authoritative records before expanding those claims. Site remains unpublished.
+- STC source-quality follow-up completed October 27, 2026:
+  - targeted FAA queries found complete separate current ST04009NY (2025 reissue) and ST01635LA (2016 amendment) three-page certificates; exact current-source URLs/hashes and reviewed page limits are in `docs/boeing-stc-source-quality.md`;
+  - preserved SA04009NY as deferred and SA01635LA as incomplete; no renumbering/equivalence/supersession was inferred. Curated public findings now link each original SA entry to a separate reviewed ST record;
+  - added ten physical relationships / fourteen model-scoped paths for 737-700/-800, including AerSale design/AFMS/ICA and Aerocon model-specific maintenance references. Referenced supporting documents remain unobtained;
+  - added FK-backed relationship model scopes so AC25-1346 appears only for 737-700 and AC25-1340 only for 737-800; public findings are bounded, publication/model checked and loaded on evidence selection;
+  - migrations 20261027000500/20261027000600 are applied hosted; repeated hosted review preserved fourteen paths. Full local checks passed (80 frontend, 36 worker tests plus database, lint, types and build); browser smoke passed both complete STCs, both original findings, alternate links and mobile layout;
+  - next engineering step: searchable server-paginated review coverage, then portfolio beta coverage/freshness audit. Original SA findings need authoritative clarification/missing material for any further claims. Site remains unpublished.

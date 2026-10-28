@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { relatedSnapshot } from '../apps/worker/src/related.mjs';
+import {stcResolution,issueSources} from '../apps/worker/src/review-stc-resolution.mjs';
 
 // Real embedded PostgreSQL exercises the application schema without Docker.
 // These stubs represent Supabase-owned infrastructure, not application tables.
@@ -464,6 +465,35 @@ try {
   await assert.rejects(query('select public.review_boeing_ng_graph()'),/Reviewed NG model or active match missing/);
   assert.equal((await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number='SA01635LA' and model='737-800'"))).rows.length,0);
   console.log('NG review checks passed: model-ID aliases, exact originals, AD/STC scope, source references, reviewed queue, repeat review and inactive observation boundaries.');
+
+  const resolutionRows=[...stcResolution,...issueSources].map(entry=>relatedSnapshot('STC',{...b737Source,'drs:documentNumber':entry.number,'drs:adfrawdModel':['737-700 Series','737-800 Series'],'drs:stcTCNumbersMakeModel':['A16WE -- Boeing -- 737-700 Series','A16WE -- Boeing -- 737-800 Series'],documentGuid:new URL(entry.source_url).pathname.split('/').at(-1).split('.')[0],documentURL:entry.source_url},'2026-10-27T02:00:00Z','B737').row);
+  const resolutionRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:STC:B737','running') returning id")).rows[0].id;
+  await query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[resolutionRun,'B737','STC',JSON.stringify(resolutionRows)]);
+  await assert.rejects(query('select public.review_boeing_stc_resolution()'),/Verified complete STC original missing/);
+  const resolutionVersions={};
+  for(const entry of [...stcResolution,...issueSources]){
+    const row=resolutionRows.find(row=>row.document_number===entry.number);
+    const version=(await query('select id from public.document_versions where source_version_id=$1',[row.source_version_id])).rows[0].id;resolutionVersions[entry.number]=version;
+    await query('select public.attach_source_original($1,$2,$3)',[version,entry.hash,'FAA/STC/reviewed/'+entry.hash+'.pdf']);
+  }
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_boeing_stc_resolution()')),/permission denied/);
+  assert.equal((await query('select public.review_boeing_stc_resolution() n')).rows[0].n,10);
+  const resolutionGraph=(await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number in('ST04009NY','ST01635LA')"))).rows;
+  assert.equal(resolutionGraph.length,14,'Shared references plus model-specific maintenance supplements');
+  assert.deepEqual(resolutionGraph.filter(row=>row.basis_key==='MMS:AC25-1346:NC:2006-02-18').map(row=>row.model),['737-700']);
+  assert.deepEqual(resolutionGraph.filter(row=>row.basis_key==='MMS:AC25-1340:NC:2006-05-10').map(row=>row.model),['737-800']);
+  await query('select public.review_boeing_stc_resolution()');
+  assert.equal((await query('select count(*)::integer n from public.source_quality_findings')).rows[0].n,2,'Repeat review does not duplicate findings');
+  await assert.rejects(asRole('anon',null,()=>query('select * from public.source_quality_findings')),/permission denied/);
+  const quality=()=>asRole('anon',null,()=>query('select * from public.source_quality_details($1,$2)',[resolutionVersions.SA04009NY,'737-800']));
+  assert.equal((await quality()).rows[0].reviewed_record_number,'ST04009NY');
+  assert.equal((await asRole('anon',null,()=>query('select * from public.source_quality_details($1,$2)',[resolutionVersions.SA04009NY,'737-9']))).rows.length,0,'Quality findings stay model scoped');
+  await query('update public.document_versions set is_published=false where id=$1',[resolutionVersions.ST04009NY]);
+  assert.equal((await quality()).rows[0].reviewed_record_url,null,'Unpublished alternatives never produce public links');
+  await query('update public.document_versions set is_published=true where id=$1',[resolutionVersions.ST04009NY]);
+  await query('update public.document_versions set is_published=false where id=$1',[resolutionVersions.SA04009NY]);
+  assert.equal((await quality()).rows.length,0,'Unpublished source findings remain private');
+  console.log('STC resolution checks passed: separate identities, complete originals, model-specific references, idempotence, finding privacy and alternative publication boundaries.');
 
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');

@@ -27,4 +27,4 @@ FAA names such as `737-800 Series` remain unchanged in source metadata and entit
 
 Hosted migrations 20261027000200–20261027000400 and source archival are applied. Repeated hosted review retained eight paths. Tests cover model aliases, tuple integrity, exact manifest parity, publication/hash guards, inactive matches, private core functions and repeat review. Browser smoke covers both NG models, canonical and legacy URLs, correct selected family facts, AD/STC evidence, archived STC page 1, missing-page wording, mobile width and existing MAX graph regression.
 
-Next source work should resolve the missing certificate page and the SA/ST identity mismatch before expanding those claims. Additional NG model scope can then be reviewed using the same bounded evidence process.
+Follow-up review found complete, separate ST04009NY and ST01635LA FAA records and added curated public links from the unresolved SA entries. The SA records remain distinct and their original findings remain visible. See [STC source-quality follow-up](boeing-stc-source-quality.md) for exact originals, model-specific maintenance scope and remaining limits.

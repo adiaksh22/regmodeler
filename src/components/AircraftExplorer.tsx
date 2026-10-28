@@ -12,6 +12,7 @@ import ProfileRelevance from './ProfileRelevance';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import AircraftFamilySummary from './AircraftFamilySummary';
 import ApplicabilityLogic from './ApplicabilityLogic';
+import SourceQualityPanel from './SourceQualityPanel';
 import {aircraftModelIdentity} from '../domain/aircraftModelIdentity';
 import {loadRelationshipEvidence,loadRevisionHistory} from '../lib/catalog';
 import type {ApplicabilityRule,OfficialRevision,RegulationSource} from '../domain/explorer';
@@ -106,6 +107,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
+          {!!evidenceId&&evidence.evidence_version_id&&<SourceQualityPanel key={evidence.id} versionId={evidence.evidence_version_id} model={evidence.model}/>}
           {!evidenceId&&<button className="text-blue-700 underline text-sm mt-3" onClick={()=>setEvidenceId(evidence.id)}>Load detailed applicability</button>}
           {evidenceLoading&&<p className="text-xs text-slate-600 mt-2" role="status">Loading detailed evidence...</p>}
           <ApplicabilityLogic rules={evidenceRules}/>

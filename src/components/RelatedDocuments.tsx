@@ -4,6 +4,7 @@ import type {RelatedDocument,EvidenceRelationship} from '../domain/explorer';
 import SourcePdf from './SourcePdf';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import ProfileRelevance from './ProfileRelevance';
+import SourceQualityPanel from './SourceQualityPanel';
 export default function RelatedDocuments({model,relationships,profile=null}:{model:string;relationships:EvidenceRelationship[];profile?:AircraftProfile|null}) {
   const configuredModels=['PA-28-140','PA-28-181','737-700','737-800','737-900ER','737-7','737-8','737-9'];
   const [documents,setDocuments]=useState<RelatedDocument[]>([]);const [notice,setNotice]=useState('');const [busy,setBusy]=useState(true);
@@ -39,6 +40,7 @@ export default function RelatedDocuments({model,relationships,profile=null}:{mod
         {profile&&<span className="block text-xs text-blue-800 mt-1">{relevance(d)?.label??'Profile relevance needs review'}</span>}
       </button>)}{documents.length<total&&<button className="text-blue-700 font-semibold" disabled={busy} onClick={()=>{setBusy(true);void loadRelatedPage(model,kind,history,debouncedQuery,documents.length).then(r=>{setDocuments(current=>[...current,...r.documents]);setTotal(r.total);setNotice(r.notice??'');setBusy(false);});}}>Load 24 more</button>}</div>
       {selected&&<aside className="border rounded-lg p-4 bg-slate-50 lg:sticky lg:top-6" aria-label="Related record details">
+        <SourceQualityPanel key={selected.id} versionId={selected.id} model={model}/>
         <h3 className="font-bold">{selected.document_type} {selected.document_number}</h3><p className="text-sm mt-2">{selected.title}</p>
         {selected.effective_date&&<p className="text-sm mt-2">Effective date: {selected.effective_date}</p>}{selected.holder&&<p className="text-sm mt-2">Holder: {selected.holder}</p>}
         {selected.summary&&<p className="text-sm mt-3">{selected.summary}</p>}
