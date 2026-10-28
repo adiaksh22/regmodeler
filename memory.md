@@ -82,3 +82,10 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - TCDS detail now renders its verified bundled certificate summary immediately and hydrates the live catalog/graph concurrently;
   - detailed applicability rules and regulation text no longer issue requests for the default graph selection; they load after an explicit evidence selection;
   - headless Chrome verified A16WE and 2A13 without fallback notices or failed requests. Warm live completion measured about 2.0 seconds for A16WE and 0.55 seconds for 2A13, while certificate document information appears before live hydration.
+- First Boeing AD evidence phase completed October 27, 2026:
+  - reviewed Current AD 2021-09-08 with one exact FAA document-number request; downloaded and visually reviewed official GovInfo PDF page 3 (printed 22862), SHA-256 `b6fbc4a4d33cadab1c2deb6836fc8b467ce4a2c120c68b33d93c874db25089dc`;
+  - added a manifest, bounded verification/review worker, service-only atomic SQL review and explicit production-line/original-certificate-date predicate kinds;
+  - published four physical relationships / six public paths for Models 737-8 and 737-9: model-specific conditional AD links and shared P6/SPCU and main instrument panel assemblies; each model has three AND predicates and no inferred Boeing profile/compliance result;
+  - migration `20261027000100_boeing_first_ad_review.sql` and original archival are applied to hosted Supabase; no full FAA/family import was needed. Attachments remain pending;
+  - full quality gate passed and the hosted production-preview browser smoke passed both models, applicability details, official links, shared panel traversal and mobile width;
+  - next evidence batch: selected 737NG AD plus selected STC/AML, with canonical model aliases, page review and scope guards. Production remains unpublished.

@@ -168,6 +168,8 @@ Accounts can move earlier if cross-device access becomes the main need. Notifica
 
 ## Decisions still to make
 
+The first Boeing AD review is complete for 737-8 and 737-9: AD 2021-09-08 adds combined model/line/certificate-date conditions and shared flight-deck panel paths. See [first Boeing AD review](boeing-first-ad-review.md). Next review a selected 737NG AD and a selected STC/AML before broadening the catalog.
+
 Already decided: owners/maintenance professionals; FAA GA first; PA-28 first; model-first search; current-first AD/STC browsing with history; browser profiles before accounts; free portfolio target; no public prototype release yet.
 
 Ask at the relevant implementation point:

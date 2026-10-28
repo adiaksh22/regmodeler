@@ -1,0 +1,11 @@
+{
+  "number":"2021-09-08",
+  "source_url":"https://drs.faa.gov/browse/excelExternalWindow/41C8FF5365C3CA82862586C700472297.0001",
+  "publication_date":"2021-04-30",
+  "published_url":"https://www.govinfo.gov/content/pkg/FR-2021-04-30/pdf/2021-09221.pdf",
+  "hash":"b6fbc4a4d33cadab1c2deb6836fc8b467ce4a2c120c68b33d93c874db25089dc",
+  "models":["737-8","737-9"],
+  "page":3,
+  "line_range":{"minimum":7399,"maximum":8082},
+  "original_certificate_on_or_before":"2021-04-09"
+}

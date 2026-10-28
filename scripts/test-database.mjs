@@ -414,6 +414,29 @@ try {
   assert.equal((await query('select records_processed from public.ingestion_runs where id=$1',[heartbeat])).rows[0].records_processed,0,'No-change checks do not rewrite source records');
   console.log('Family related-source checks passed: canonical model aliases, guarded service writes, public indexes, monitoring, rollback and repeat imports.');
 
+  const boeingReview=JSON.parse(readFileSync(new URL('../apps/worker/src/boeing-ad-review.json',import.meta.url)));
+  const boeingReviewRecord={...b737Source,'drs:documentNumber':boeingReview.number,'drs:adfrawdModel':['737-8','737-9'],documentGuid:'41C8FF5365C3CA82862586C700472297',documentURL:boeingReview.source_url};
+  const boeingReviewRow=relatedSnapshot('AD',boeingReviewRecord,'2026-10-27T00:00:00Z','B737').row;
+  const boeingReviewRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:ADFRAWD:B737','running') returning id")).rows[0].id;
+  await query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[boeingReviewRun,'B737','AD',JSON.stringify([boeingReviewRow])]);
+  await assert.rejects(query('select public.review_boeing_ad_graph()'),/Verified current Boeing original missing/);
+  const boeingVersion=(await query('select id from public.document_versions where source_version_id=$1',[boeingReviewRow.source_version_id])).rows[0].id;
+  await query('select public.attach_source_original($1,$2,$3,$4::jsonb)',[boeingVersion,boeingReview.hash,'FAA/AD/reviewed/'+boeingReview.hash+'.pdf',JSON.stringify({original_source_url:boeingReview.published_url,original_source_kind:'final_federal_register',original_publication_date:boeingReview.publication_date})]);
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_boeing_ad_graph()')),/permission denied/);
+  assert.equal((await query('select public.review_boeing_ad_graph() n')).rows[0].n,4);
+  const boeingReviewedGraph=(await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number='2021-09-08'"))).rows;
+  assert.equal(boeingReviewedGraph.length,6,'Two model applicability links and two component paths per model');
+  assert.deepEqual([...new Set(boeingReviewedGraph.map(row=>row.model))].sort(),['737-8','737-9']);
+  const boeingRules=(await asRole('anon',null,()=>query('select * from public.relationship_applicability_rules where relationship_id=any($1::uuid[])',[boeingReviewedGraph.map(row=>row.id)]))).rows;
+  assert.equal(boeingRules.length,6,'Each model preserves three combined applicability predicates');
+  assert.equal(boeingRules.filter(row=>row.subject_kind==='aircraft_line_number').length,2,'Line numbers remain separate from manufacturer serial numbers');
+  await query('select public.review_boeing_ad_graph()');
+  assert.equal((await query("select count(*)::integer n from public.model_graph where source_document_number='2021-09-08'")).rows[0].n,6,'Repeat review does not duplicate paths');
+  await query("update public.related_document_matches set is_active=false where version_id=$1 and model='737-9'",[boeingVersion]);
+  await assert.rejects(query('select public.review_boeing_ad_graph()'),/Reviewed model or active index missing/);
+  assert.equal((await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number='2021-09-08' and model='737-9'"))).rows.length,0,'Inactive model observation hides its reviewed paths');
+  console.log('Boeing AD review checks passed: exact publication/hash guards, active model scope, combined line/date predicates, component paths, repeat review and publication isolation.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');

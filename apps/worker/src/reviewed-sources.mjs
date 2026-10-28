@@ -1,8 +1,8 @@
 import { ImportError,sha256 } from './drs.mjs';
 import { relatedSnapshot } from './related.mjs';
-export async function archiveReviewedSource(client,type,record,bytes,expectedHash,material={}) {
+export async function archiveReviewedSource(client,type,record,bytes,expectedHash,material={},scope='PA28') {
   if(sha256(bytes)!==expectedHash||bytes.subarray(0,5).toString()!=='%PDF-')throw new ImportError('REVIEWED_SOURCE_MISMATCH');
-  const row=relatedSnapshot(type,record,new Date().toISOString()).row;
+  const row=relatedSnapshot(type,record,new Date().toISOString(),scope).row;
   const version=await client.from('document_versions').select('id').eq('source_version_id',row.source_version_id).maybeSingle();
   if(version.error||!version.data)throw new ImportError('REVIEWED_METADATA_MISMATCH');
   const path=`FAA/${type}/reviewed/${expectedHash}.pdf`;
