@@ -13,6 +13,7 @@ import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import AircraftFamilySummary from './AircraftFamilySummary';
 import ApplicabilityLogic from './ApplicabilityLogic';
 import SourceQualityPanel from './SourceQualityPanel';
+import SourceStatus from './SourceStatus';
 import {aircraftModelIdentity} from '../domain/aircraftModelIdentity';
 import {loadRelationshipEvidence,loadRevisionHistory} from '../lib/catalog';
 import type {ApplicabilityRule,OfficialRevision,RegulationSource} from '../domain/explorer';
@@ -104,6 +105,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
         }
         {evidence && <aside aria-label="Relationship source evidence" className="rounded-lg border border-blue-200 bg-blue-50 p-4 lg:sticky lg:top-6">
           <h3 className="font-bold mb-2">{evidence.target}</h3><p className="text-xs mb-2">Model context: {evidence.model}</p>
+          <SourceStatus status="reviewed" explain/>
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>

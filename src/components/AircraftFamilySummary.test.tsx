@@ -14,7 +14,12 @@ describe('aircraft family evidence summary',()=>{
  });
  it('separates approved models from a certification project boundary',()=>{
   const html=renderToStaticMarkup(<AircraftFamilySummary variants={[variant(),variant({entity_id:'73710',model_key:'BOEING:737-10',display_name:'737 MAX 10',faa_status:'not_listed_in_current_tcds',approved_on:null,evidence_excerpt:'Not listed in Revision 81.',facts:{}})]} selected="737-8" onSelect={()=>{}}/>);
-  expect(html).toContain('182,200 lb');expect(html).toContain('737 MAX 10: not listed in current FAA TCDS');expect(html).toContain('cannot be selected as an approved aircraft model');
+  expect(html).toContain('182,200 lb');expect(html).toContain('737 MAX 10: not listed in reviewed FAA TCDS');expect(html).toContain('cannot be selected as an approved aircraft model');
+ });
+ it('labels older reviewed evidence without calling it the current revision',()=>{
+  const html=renderToStaticMarkup(<AircraftFamilySummary variants={[variant({evidence_revision:'81',evidence_is_current:false})]} selected="737-8" onSelect={()=>{}}/>);
+  expect(html).toContain('Earlier revision; renewed review needed');expect(html).toContain('Listed in reviewed');
+  expect(html).not.toContain('current FAA TCDS Revision 81');expect(html).not.toContain('Matches the imported current revision');
  });
  it('renders alternative applicability groups as explicit OR paths',()=>{
   const rule=(group:string,label:string):ApplicabilityRule=>({relationship_id:'edge',rule_set_label:'Alternative display path',outcome:'requires_review',group_id:group,group_order:group==='a'?1:2,match_operator:'all',group_label:label,predicate_id:group, predicate_order:1,subject_kind:'stc',subject_key:group==='a'?'SA01899WI':'SA02658SE',comparison:'present',expected:true,evidence_page:3,evidence_excerpt:'Reviewed'});

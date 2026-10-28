@@ -22,6 +22,7 @@ export type AircraftVariantSummary = {
   display_name: string; market_name: string; faa_status: 'faa_approved'|'not_listed_in_current_tcds';
   approved_on: string | null; evidence_version_id: string; evidence_page: number; evidence_excerpt: string;
   facts: Record<string,VariantFact>;
+  evidence_revision?:string;evidence_is_current?:boolean;
 };
 export type ApplicabilityRule = {
   relationship_id: string; rule_set_label: string; outcome: string; group_id: string; group_order: number;
@@ -40,6 +41,7 @@ export type RelatedDocument = {
   effective_date: string | null; holder: string | null; summary: string | null; regulatory_text?: string | null;
   candidate_reason: string; supersedes: string[] | null; superseded_by: string[] | null;
   original_archived: boolean; attachments_pending: boolean;
+  review_status?:string;quality_flags?:string[];
 };
 export type ExplorerDetails = {
   revisions: OfficialRevision[]; relationships: EvidenceRelationship[]; lastChecked: string | null;

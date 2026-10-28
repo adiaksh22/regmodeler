@@ -7,7 +7,7 @@ const client=()=>config?createClient<Database>(config.url,config.publishableKey,
 export async function loadRelatedPage(model:string,type:string,includeHistory=false,query='',offset=0,limit=24) {
   const c=client();if(!c)return {documents:[],total:0,notice:'Connect the shared catalog to browse related FAA records.'};
   try {
-    const result=await c.rpc('search_related_documents',{p_model:model,p_type:type,p_include_history:includeHistory,p_query:query.trim().slice(0,120),p_offset:offset,p_limit:limit});
+    const result=await c.rpc('search_related_documents_with_review',{p_model:model,p_type:type,p_include_history:includeHistory,p_query:query.trim().slice(0,120),p_offset:offset,p_limit:limit});
     if(result.error)throw new Error('Unavailable');
     const rows=result.data??[];
     return {documents:rows.map(row=>{const {total_count,...document}=row;void total_count;return document as RelatedDocument;}),total:Number(rows[0]?.total_count??(offset===0?0:offset))};
@@ -21,7 +21,7 @@ export async function loadRelatedText(id:string,model:string) {
   const c=client();if(!c)return null;
   try {const r=await c.from('related_documents').select('regulatory_text').eq('id',id).eq('model',model).maybeSingle();return r.error?null:r.data?.regulatory_text??null;}catch{return null;}
 }
-export type ReviewQueueRow={version_id:string;model:string;document_type:string;document_number:string;title:string;source_url:string;retrieved_at:string;original_archived:boolean;attachments_pending:boolean;review_status:string;review_reason:string;priority:number};
+export type ReviewQueueRow={version_id:string;model:string;document_type:string;document_number:string;title:string;source_url:string;retrieved_at:string;original_archived:boolean;attachments_pending:boolean;review_status:string;review_reason:string;priority:number;quality_flags?:string[]};
 export type ReviewQueuePage={rows:ReviewQueueRow[];total:number;reviewed_count:number;notice?:string};
 export async function loadReviewQueue(model:string,status='pending',type='all',query='',offset=0):Promise<ReviewQueuePage> {
   const empty={rows:[],total:0,reviewed_count:0};

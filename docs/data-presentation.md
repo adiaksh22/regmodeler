@@ -33,6 +33,23 @@ The A16WE expansion adds `member_of` and `powered_by` paths for six reviewed Boe
 
 A new current TCDS snapshot hides the previous snapshot's graph connections until the evidence is reviewed again. A changed or inactive AD/STC index observation likewise hides the old reviewed current paths. Historical relationships remain stored. CAR baseline and amendment 3-7 originals are available, but do not form the complete cited basis. Seven 2016 CFR sections are labeled as later reference text, distinct from the TCDS's amendment wording and today's regulations.
 
+## Evidence review labels
+
+Review coverage, related records and graph evidence share consistent source labels:
+
+| Label | Meaning |
+| --- | --- |
+| Metadata candidate | FAA model-index match; original conditions have not established a reviewed connection |
+| Reviewed connection | Cited evidence supports a model connection within its stated limits; no individual-aircraft compliance determination |
+| Review deferred | Source question or missing evidence prevents a reviewed graph connection |
+| Excluded from reviewed graph | Observation excluded during review; this does not establish individual-aircraft inapplicability |
+| Incomplete original | Missing source material; existing reviewed paths remain limited to available cited pages |
+| Record identity mismatch | FAA index identity and delivered document differ; no equivalence inferred |
+
+Review state and source limitations are independent: SA01635LA has reviewed page-supported connections and an incomplete original; SA04009NY remains deferred with a record identity mismatch. FAA current status, a saved primary PDF and retrieval of additional files are shown separately. The expandable label guide explains these distinctions. Compact curated flags accompany each bounded page; detailed notes and separate reviewed-source links load only when selected. Public flags require published parent/source versions and an exact model match, and never include private operator notes.
+
+Variant summaries expose their actual evidence revision and whether it matches the imported current document pointer. They do not hard-code a reviewed revision as current. Earlier reviewed facts require renewed review before representing current limits; the MAX 10 boundary is explicitly scoped to its reviewed source.
+
 ## Dates and changes
 
 Keep issuance date, historical basis effective date, snapshot first retrieval, and last successful source check distinct. Regulatory dates render in UTC to avoid displaying the preceding date in US time zones. Public freshness exposes only a successful check timestamp; importer errors and internal run records stay private.

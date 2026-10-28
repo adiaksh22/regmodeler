@@ -29,7 +29,7 @@ const out=path.join(__dirname,'../.artifacts/boeing-family');fs.mkdirSync(out,{r
   await page.click('a[href*="A16WE"]');await page.waitForFunction(()=>document.body.innerText.includes('737 MAX 8')&&document.body.innerText.includes('182,200 lb'));
 
   phase='family facts and certification boundary';const body=await page.$eval('body',node=>node.innerText);
-  assert.match(body,/57 revisions|Revision history \(57\)/);assert.match(body,/737 MAX 10: not listed in current FAA TCDS/);assert.match(body,/189 seats/);assert.match(body,/41,000 ft/);
+  assert.match(body,/57 revisions|Revision history \(57\)/);assert.match(body,/737 MAX 10: not listed in reviewed FAA TCDS/);assert.match(body,/189 seats/);assert.match(body,/41,000 ft/);
   await page.waitForSelector('[aria-label="Interactive relationship node-link diagram"]',{timeout:30000});
   assert.equal(await page.$$eval('.react-flow__node',nodes=>nodes.length),4);
   await page.type('[aria-label="Find a relationship node"]','LEAP-1B');await page.click('[aria-label="Node search results"] button');

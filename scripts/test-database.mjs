@@ -531,6 +531,35 @@ try {
   }finally{await query('rollback');}
   console.log('Review search checks passed: public RLS, model/status/type/search scope, literal queries, stable pages, page ceiling and counts on empty pages.');
 
+  const flags=async(version,model)=>(await asRole('anon',null,()=>query('select public.source_quality_flags($1,$2) flags',[version,model]))).rows[0].flags;
+  assert.deepEqual(await flags(resolutionVersions.SA01635LA,'737-700'),['incomplete_original']);
+  assert.deepEqual(await flags(resolutionVersions.SA01635LA,'737-9'),[],'No findings for a model without a source match');
+  assert.deepEqual(await flags(resolutionVersions.SA04009NY,'737-700'),[],'Unpublished source flags stay private');
+  await query('update public.document_versions set is_published=true where id=$1',[resolutionVersions.SA04009NY]);
+  await query("select public.set_source_review_decision($1,'737-700','deferred','Private source investigation note')",[resolutionVersions.SA04009NY]);
+  const reviewedSources=(await asRole('anon',null,()=>query("select * from public.search_related_documents_with_review('737-700','STC',false,'',0,24)"))).rows;
+  const incomplete=reviewedSources.find(row=>row.document_number==='SA01635LA');
+  assert.equal(incomplete.review_status,'reviewed');assert.deepEqual(incomplete.quality_flags,['incomplete_original'],'Review and completeness are independent');
+  const mismatch=reviewedSources.find(row=>row.document_number==='SA04009NY');
+  assert.equal(mismatch.review_status,'deferred');assert.deepEqual(mismatch.quality_flags,['identity_mismatch']);
+  assert.ok(!JSON.stringify(reviewedSources).includes('Private source investigation note'));
+  const flaggedQueue=await reviewPage('737-700','deferred');
+  assert.deepEqual(flaggedQueue.rows.find(row=>row.document_number==='SA04009NY').quality_flags,['identity_mismatch']);
+  assert.ok(!JSON.stringify(flaggedQueue).includes('Private source investigation note'));
+  assert.deepEqual(reviewedSources.find(row=>row.document_number==='ST01635LA').quality_flags,[]);
+  await query('update public.documents set is_published=false where id=(select document_id from public.document_versions where id=$1)',[resolutionVersions.SA04009NY]);
+  assert.deepEqual(await flags(resolutionVersions.SA04009NY,'737-700'),[],'Parent publication also gates public flags');
+  assert.ok(!(await asRole('anon',null,()=>query("select * from public.search_related_documents_with_review('737-700','STC')"))).rows.some(row=>row.id===resolutionVersions.SA04009NY));
+  console.log('Source status checks passed: independent reviewed/incomplete states, deferred identity mismatches, bounded page enrichment, model/publication scope and private-note exclusion.');
+  const variantState=(await asRole('anon',null,()=>query("select evidence_revision,evidence_is_current from public.aircraft_variant_catalog where model_key='737-8'"))).rows[0];
+  assert.ok(variantState.evidence_revision);assert.equal(variantState.evidence_is_current,true);
+  await query('begin');
+  try{
+    await query("update public.documents set current_version_id=null where document_number='A16WE'");
+    await query('set local role anon');
+    assert.equal((await query("select evidence_is_current from public.aircraft_variant_catalog where model_key='737-8'")).rows[0].evidence_is_current,false,'Older reviewed facts cannot claim a current-source match');
+  }finally{await query('rollback');}
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');
