@@ -22,18 +22,15 @@ export async function loadRelatedText(id:string,model:string) {
   try {const r=await c.from('related_documents').select('regulatory_text').eq('id',id).eq('model',model).maybeSingle();return r.error?null:r.data?.regulatory_text??null;}catch{return null;}
 }
 export type ReviewQueueRow={version_id:string;model:string;document_type:string;document_number:string;title:string;source_url:string;retrieved_at:string;original_archived:boolean;attachments_pending:boolean;review_status:string;review_reason:string;priority:number};
-export async function loadReviewQueue(model:string) {
-  const c=client();if(!c)return {rows:[] as ReviewQueueRow[],notice:'Connect the shared catalog to browse review coverage.'};
+export type ReviewQueuePage={rows:ReviewQueueRow[];total:number;reviewed_count:number;notice?:string};
+export async function loadReviewQueue(model:string,status='pending',type='all',query='',offset=0):Promise<ReviewQueuePage> {
+  const empty={rows:[],total:0,reviewed_count:0};
+  const c=client();if(!c)return {...empty,notice:'Connect the shared catalog to browse review coverage.'};
   try {
-    const rows:ReviewQueueRow[]=[];let expected:number|null=null;const seen=new Set<string>();
-    for(let offset=0;offset<10000;offset+=200){
-      const r=await c.from('source_review_queue').select('*',{count:'exact'}).eq('model',model).order('priority').order('document_type').order('document_number').order('version_id').range(offset,offset+199);
-      if(r.error||r.count===null||(expected!==null&&expected!==r.count))throw new Error('Changed queue');expected=r.count;
-      for(const row of r.data??[]){if(seen.has(row.version_id))throw new Error('Changed queue');seen.add(row.version_id);rows.push(row);}
-      if(rows.length===expected)return {rows};if(!r.data?.length)break;
-    }
-    throw new Error('Incomplete queue');
-  }catch{return {rows:[] as ReviewQueueRow[],notice:'Review coverage is temporarily unavailable. Reload to try again.'};}
+    const r=await c.rpc('search_review_queue',{p_model:model,p_status:status,p_type:type,p_query:query.trim().slice(0,120),p_offset:offset,p_limit:20});
+    if(r.error||!r.data)throw new Error('Unavailable queue');
+    return r.data;
+  }catch{return {...empty,notice:'Review coverage is temporarily unavailable. Try again.'};}
 }
 export async function getOriginalLink(versionId:string,attachmentId?:string) {
   if(!config)throw new Error('Source viewer unavailable');

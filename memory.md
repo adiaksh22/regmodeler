@@ -104,3 +104,11 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - added FK-backed relationship model scopes so AC25-1346 appears only for 737-700 and AC25-1340 only for 737-800; public findings are bounded, publication/model checked and loaded on evidence selection;
   - migrations 20261027000500/20261027000600 are applied hosted; repeated hosted review preserved fourteen paths. Full local checks passed (80 frontend, 36 worker tests plus database, lint, types and build); browser smoke passed both complete STCs, both original findings, alternate links and mobile layout;
   - next engineering step: searchable server-paginated review coverage, then portfolio beta coverage/freshness audit. Original SA findings need authoritative clarification/missing material for any further claims. Site remains unpublished.
+- Review coverage search/pagination completed:
+  - replaced full-model browser downloads with one `search_review_queue` RPC returning 20 rows, exact filtered total and model-wide reviewed count; server cap is 50, with deterministic ordering and literal case-insensitive number/title search;
+  - added status/type filters, 250 ms debounce, Previous/Next controls, loading/empty/retry states and late-response guards. Changing model or filters cannot display stale results;
+  - migration `20261027000700_review_queue_search.sql` is applied hosted. Invoker rights preserve publication RLS; changed-source priority now resolves historical FAA Series aliases by model entity ID;
+  - full local quality gate passed: 83 frontend tests, 36 worker tests, database, lint, types and production build. Additional database regression for changed-source alias priority passed;
+  - `scripts/review-queue-smoke.cjs` passed against hosted public data: 737-800 pages returned 20 of 1,067 pending candidates in 10.8/11.0 KB; reviewed/type/search/empty results, mobile width, zero browser errors and a separate enforced 50-row API ceiling passed;
+  - this change issues no FAA calls or imports. Exact counts still scan the scoped queue on the server; network payload/browser memory are bounded;
+  - next: clarify reviewed/metadata/incomplete/deferred source states, then audit monitoring/freshness and end-to-end beta journeys. Site remains unpublished pending the user's release decision.

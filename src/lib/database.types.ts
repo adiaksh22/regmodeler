@@ -1,6 +1,6 @@
 import type { OfficialRevision, EvidenceRelationship, RelatedDocument, RegulationSource, AircraftVariantSummary, ApplicabilityRule } from '../domain/explorer';
 import type {SourceChange,SourceMonitoring} from '../domain/sourceChanges';
-import type {ReviewQueueRow} from './relatedCatalog';
+import type {ReviewQueueRow,ReviewQueuePage} from './relatedCatalog';
 import type {SourceQualityFinding} from './sourceQuality';
 // Public read contract. Keep view columns and RPC signatures in sync with migrations.
 export type TCDSCatalogRow = {
@@ -33,6 +33,7 @@ export interface Database {
       source_change_feed:{Row:SourceChange;Relationships:[]};
     };
     Functions: {
+      search_review_queue:{Args:{p_model:string;p_status?:string;p_type?:string;p_query?:string;p_offset?:number;p_limit?:number};Returns:ReviewQueuePage};
       search_tcds: { Args: { search_query?: string; result_limit?: number }; Returns: TCDSCatalogRow[] };
       catalog_last_checked: { Args: { p_number: string }; Returns: string | null };
       related_last_checked: { Args: { p_model: string }; Returns: {document_type:string;last_checked:string}[] };

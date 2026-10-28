@@ -495,6 +495,42 @@ try {
   assert.equal((await quality()).rows.length,0,'Unpublished source findings remain private');
   console.log('STC resolution checks passed: separate identities, complete originals, model-specific references, idempotence, finding privacy and alternative publication boundaries.');
 
+  const reviewPage=async(model,status='all',type='all',search='',offset=0,limit=20)=>
+    (await asRole('anon',null,()=>query('select public.search_review_queue($1,$2,$3,$4,$5,$6) page',[model,status,type,search,offset,limit]))).rows[0].page;
+  const queueRows=(await asRole('anon',null,()=>query("select * from public.source_review_queue where model='737-700' order by priority,document_type,document_number,version_id"))).rows;
+  const queueFirst=await reviewPage('737-700','all','all','',0,1);
+  const queueSecond=await reviewPage('737-700','all','all','',1,1);
+  assert.equal(queueFirst.total,queueRows.length);
+  assert.equal(queueFirst.reviewed_count,queueRows.filter(row=>row.review_status==='reviewed').length);
+  assert.equal(queueFirst.rows[0].version_id,queueRows[0].version_id);
+  assert.equal(queueSecond.rows[0].version_id,queueRows[1].version_id,'Stable disjoint pages');
+  const searched=await reviewPage('737-700','reviewed','STC',' st01635la ');
+  assert.equal(searched.total,1);assert.equal(searched.rows[0].document_number,'ST01635LA');
+  assert.equal(searched.reviewed_count,queueFirst.reviewed_count,'Reviewed summary ignores active filters');
+  for(const literal of ['%','_','unlikely-no-match'])assert.equal((await reviewPage('737-700','all','all',literal)).total,0,'Search uses literal substrings');
+  const emptyPage=await reviewPage('737-700','all','all','',9999);
+  assert.equal(emptyPage.rows.length,0);assert.equal(emptyPage.total,queueRows.length,'Empty page retains true counts');
+  assert.equal((await reviewPage('737-10')).total,0,'Unapproved or unknown model has no queue');
+  assert.equal((await reviewPage('737-700','invalid')).total,0);
+  assert.equal((await reviewPage('737-700','all','all','',-1,0)).rows.length,1,'Clamp caller pagination');
+  assert.ok((await reviewPage('737-700','all','all','',0,10000)).rows.length<=50);
+  assert.ok(!(await reviewPage('737-700')).rows.some(row=>row.version_id===resolutionVersions.SA04009NY),'Unpublished source excluded by invoker RLS');
+  await query('begin');
+  try{
+    await query("update public.document_versions set status='historical' where id=$1",[resolutionVersions.ST01635LA]);
+    const changed=(await query(`insert into public.document_versions(document_id,source_version_id,revision_label,status,source_url,retrieved_at,metadata,is_published)
+      select document_id,source_version_id||':queue-change-test',revision_label,'current',source_url,now(),metadata,true
+      from public.document_versions where id=$1 returning id`,[resolutionVersions.ST01635LA])).rows[0].id;
+    await query(`insert into public.related_document_matches(source,version_id,model,is_active)
+      select source,$1,model,true from public.related_document_matches where version_id=$2`,[changed,resolutionVersions.ST01635LA]);
+    // Query as anon inside this transaction, without the asRole helper's own rollback.
+    await query('set local role anon');
+    const renewed=(await query("select review_status,review_reason,priority from public.source_review_queue where version_id=$1 and model='737-700'",[changed])).rows[0];
+    assert.equal(renewed.review_status,'pending');assert.equal(renewed.priority,0);
+    assert.match(renewed.review_reason,/previous relationships need renewed review/,'FAA Series aliases preserve changed-source priority');
+  }finally{await query('rollback');}
+  console.log('Review search checks passed: public RLS, model/status/type/search scope, literal queries, stable pages, page ceiling and counts on empty pages.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');
