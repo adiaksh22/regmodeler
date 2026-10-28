@@ -49,4 +49,5 @@ export type ExplorerDetails = {
   sourceMaterials?: RegulationSource[];
   variants?: AircraftVariantSummary[];
   applicabilityRules?: ApplicabilityRule[];
+  monitoring?:import('./sourceChanges').SourceMonitoring[];
 };

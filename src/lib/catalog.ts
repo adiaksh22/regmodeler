@@ -42,11 +42,11 @@ export async function loadExplorerDetails(number: string): Promise<ExplorerDetai
   try {
     const [relationships, checked, variants] = await Promise.all([
       client.from('model_graph').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
-      client.rpc('catalog_last_checked',{p_number:number.toUpperCase()}),
+      client.rpc('source_monitoring'),
       client.from('aircraft_variant_catalog').select('*').eq('tcds_number',number.toUpperCase()).order('display_name'),
     ]);
     if (relationships.error || checked.error || variants.error) throw new Error('Unavailable');
-    return { revisions: [], relationships: relationships.data ?? [], lastChecked: checked.data, available: true, variants: variants.data??[] };
+    return { revisions: [], relationships: relationships.data ?? [], lastChecked: checked.data?.find(row=>row.source==='FAA:TCDSMODEL:'+number.toUpperCase())?.last_success??null, available: true, variants: variants.data??[],monitoring:checked.data??[] };
   } catch { return { ...empty, notice: 'Imported history and relationships are temporarily unavailable. Reload to try again.' }; }
 }
 

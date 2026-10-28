@@ -371,6 +371,8 @@ try {
   const a16weRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:TCDSMODEL:A16WE','running') returning id")).rows[0].id;
   await assert.rejects(asRole('anon',null,()=>query('select public.commit_tcds_catalog($1,$2,$3::jsonb)',[a16weRun,'A16WE',JSON.stringify([a16weRecord])])),/permission denied/);
   assert.equal((await query('select public.commit_tcds_catalog($1,$2,$3::jsonb) n',[a16weRun,'A16WE',JSON.stringify([a16weRecord])])).rows[0].n,1);
+  assert.equal((await query("select baseline_ready from public.source_monitoring() where source='FAA:TCDSMODEL:A16WE'")).rows[0].baseline_ready,true,'Generic TCDS imports establish a change baseline');
+  assert.equal((await query("select count(*)::integer n from public.source_change_events where source='FAA:TCDSMODEL:A16WE'")).rows[0].n,0,'Baseline does not invent prior changes');
   await assert.rejects(asRole('anon',null,()=>query('select public.review_boeing_737_family()')),/permission denied/);
   assert.equal((await query('select public.review_boeing_737_family() n')).rows[0].n,19);
   const variants=(await asRole('anon',null,()=>query("select * from public.aircraft_variant_catalog where tcds_number='A16WE' order by display_name"))).rows;
@@ -529,6 +531,21 @@ try {
     assert.equal(renewed.review_status,'pending');assert.equal(renewed.priority,0);
     assert.match(renewed.review_reason,/previous relationships need renewed review/,'FAA Series aliases preserve changed-source priority');
   }finally{await query('rollback');}
+
+  await query('begin');
+  try{
+    const nextRun=(await query("insert into public.ingestion_runs(source,status) values('FAA:TCDSMODEL:A16WE','running') returning id")).rows[0].id;
+    const nextSource='AUDITNEXTREV.0001';
+    const nextRevision={...a16weRecord,source_version_id:nextSource,source_url:'https://drs.faa.gov/browse/excelExternalWindow/'+nextSource,
+      revision_label:'82',retrieved_at:'2026-10-28T00:00:00Z',metadata:{...a16weRecord.metadata,source_identity:nextSource,source_guid:'AUDITNEXTREV',snapshot_sha256:'c'.repeat(64),source_modified_at:'2026-10-20T00:00:00Z'}};
+    await query('select public.commit_tcds_catalog($1,$2,$3::jsonb)',[nextRun,'A16WE',JSON.stringify([{...a16weRecord,status:'historical'},nextRevision])]);
+    await query('set local role anon');
+    const changeRows=(await query("select models from public.source_change_feed where document_number='A16WE'")).rows;
+    assert.ok(changeRows.length>0,'Generic TCDS imports now record changes after baseline');
+    assert.ok(changeRows.some(row=>row.models.includes('737-800')),'Event models use reviewed canonical aliases');
+    assert.equal((await query("select * from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows.length,0,'Old TCDS graph paths remain suspended after a revision change');
+    assert.equal((await query("select evidence_is_current from public.aircraft_variant_catalog where model_key='737-8'")).rows[0].evidence_is_current,false,'Reviewed variant facts do not become current automatically');
+  }finally{await query('rollback');}
   console.log('Review search checks passed: public RLS, model/status/type/search scope, literal queries, stable pages, page ceiling and counts on empty pages.');
 
   const flags=async(version,model)=>(await asRole('anon',null,()=>query('select public.source_quality_flags($1,$2) flags',[version,model]))).rows[0].flags;
@@ -565,4 +582,18 @@ try {
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');
   console.log('Importer transaction checks passed: private RPC, stable evidence IDs, deduplication, correction history, rollback, checkpoint integrity, stale-run rejection.');
   console.log('Database checks passed: migrations, idempotent seed, search, publication/review RLS, importer isolation, current-version integrity, private watchlists, private source bucket.');
+  await query('begin');
+  try{
+    await query("delete from public.source_observations where source='FAA:TCDSMODEL:A16WE'");
+    const backfill=readFileSync(new URL('../supabase/migrations/20261028000100_monitoring_audit.sql',import.meta.url),'utf8').match(/do \$\$[\s\S]*?end \$\$;/)[0];
+    await query(backfill);
+    const repaired=(await query("select * from public.source_monitoring() where source='FAA:TCDSMODEL:A16WE'")).rows[0];
+    assert.equal(repaired.baseline_ready,true,'Existing imported TCDS data can establish a missing baseline');
+    assert.equal((await query("select count(*)::integer n from public.source_change_events where source='FAA:TCDSMODEL:A16WE'")).rows[0].n,0,'Repair creates no historical events');
+    await query("insert into public.ingestion_runs(source,status,started_at,completed_at,error_code) values('FAA:TCDSMODEL:A16WE','failed',now()+interval '1 minute',now()+interval '2 minutes','FAA_NETWORK_ERROR')");
+    await query("update public.ingestion_checkpoints set updated_at=now()+interval '2 days' where source='FAA:TCDSMODEL:A16WE'");
+    await query('set local role anon');
+    const failed=(await query("select * from public.source_monitoring() where source='FAA:TCDSMODEL:A16WE'")).rows[0];
+    assert.equal(failed.status,'failed');assert.equal(failed.last_success.getTime(),repaired.last_success.getTime(),'Failed attempts and checkpoint maintenance cannot fabricate a new success time');
+  }finally{await query('rollback');}
 } finally { await db.close(); }

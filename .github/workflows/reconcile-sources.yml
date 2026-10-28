@@ -26,7 +26,12 @@ jobs:
       - run: npm ci
       - run: npm run import:tcds
       - run: npm run import:tcds:family -- --certificate=A16WE
+        if: ${{ !cancelled() }}
       - run: npm run import:related -- --type=AD
+        if: ${{ !cancelled() }}
       - run: npm run import:related -- --type=STC
+        if: ${{ !cancelled() }}
       - run: npm run import:related -- --scope=B737 --type=AD
+        if: ${{ !cancelled() }}
       - run: npm run import:related -- --scope=B737 --type=STC
+        if: ${{ !cancelled() }}

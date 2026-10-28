@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { pathToFileURL } from 'node:url'
 import { readWorkerConfig } from './check.mjs'
 import { collectTcds, drsClient, ImportError, metadataFingerprint, snapshot } from './drs.mjs'
+import {metadataCheck} from './check-attempt.mjs';
 
 export async function importTcdsFamily(client, source, certificate, { verifyOnly = false, now = () => new Date().toISOString() } = {}) {
   if (!/^[A-Z0-9-]{1,20}$/.test(certificate)) throw new ImportError('INVALID_CERTIFICATE')
@@ -62,16 +63,19 @@ export function tcdsDeltaNeeded(records,checkpointModifiedAt) {
 export async function checkTcdsFamily(client,source,certificate,{now=()=>new Date().toISOString()}={}) {
   if(!/^[A-Z0-9-]{1,20}$/.test(certificate))throw new ImportError('INVALID_CERTIFICATE');
   const sourceName=`FAA:TCDSMODEL:${certificate}`;
+  const result=await metadataCheck(client,sourceName,async()=>{
   const checkpoint=await client.from('ingestion_checkpoints').select('source_modified_at').eq('source',sourceName).maybeSingle();
   if(checkpoint.error)throw new ImportError('CHECKPOINT_READ_FAILED');
-  if(!checkpoint.data?.source_modified_at)return importTcdsFamily(client,source,certificate,{now});
+  if(!checkpoint.data?.source_modified_at)return null;
   const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
   const records=await collectTcds(source,since,certificate);
-  if(tcdsDeltaNeeded(records,checkpoint.data.source_modified_at))return {...await importTcdsFamily(client,source,certificate,{now}),mode:'reconciled'};
+  if(tcdsDeltaNeeded(records,checkpoint.data.source_modified_at))return null;
   const newest=records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at);
   const heartbeat=await client.rpc('record_source_check',{p_source:sourceName,p_observed_modified_at:newest});
   if(heartbeat.error)throw new ImportError('CHECKPOINT_WRITE_FAILED');
   return {mode:'checked',certificate,deltaRecords:records.length,reconciled:false};
+  },{now});
+  return result??{...await importTcdsFamily(client,source,certificate,{now}),mode:'reconciled'};
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

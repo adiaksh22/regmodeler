@@ -1,4 +1,5 @@
 import { ImportError, sha256 } from './drs.mjs';
+import {metadataCheck} from './check-attempt.mjs';
 
 export const relatedScopes = {
   PA28: {
@@ -99,17 +100,20 @@ async function readObservations(client,source,identities) {
 
 export async function checkRelated(client,source,type,{now=()=>new Date().toISOString(),scope='PA28'}={}) {
   const sourceKey=relatedSourceKey(type,scope);
+  const result=await metadataCheck(client,sourceKey,async()=>{
   const checkpoint=await client.from('ingestion_checkpoints').select('source_modified_at').eq('source',sourceKey).maybeSingle();
   if(checkpoint.error)throw new ImportError('CHECKPOINT_READ_FAILED');
-  if(!checkpoint.data?.source_modified_at)return importRelated(client,source,type,{now,scope});
+  if(!checkpoint.data?.source_modified_at)return null;
   const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
   const records=await collectRelated(source,type,since,scope);
   const identities=records.map(record=>new URL(record.documentURL).pathname.split('/').at(-1));
   const observations=await readObservations(client,sourceKey,identities);
-  if(relatedDeltaNeeded(records,observations,type,scope))return {...await importRelated(client,source,type,{now,scope}),mode:'reconciled'};
+  if(relatedDeltaNeeded(records,observations,type,scope))return null;
   const heartbeat=await client.rpc('record_source_check',{p_source:sourceKey,p_observed_modified_at:records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at)});
   if(heartbeat.error)throw new ImportError('CHECKPOINT_WRITE_FAILED');
   return {mode:'checked',scope,type,deltaRecords:records.length,reconciled:false};
+  },{now});
+  return result??{...await importRelated(client,source,type,{now,scope}),mode:'reconciled'};
 }
 export function relatedSnapshot(type,record,retrievedAt,scopeKey='PA28') {
   const definition=scopeDefinition(scopeKey);sourceContract(type,scopeKey);
