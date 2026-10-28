@@ -9,6 +9,7 @@ import { getRevisionsByTCDS } from '../utils/revisionManager';
 import { getGroupByMember, createGroup, addToGroup } from '../utils/crossReferenceManager';
 import type { CrossRefGroup } from '../types/crossReference';
 import RevisionHistory from '../components/RevisionHistory';
+import { getTcdsSample } from '../data/tcdsSamples';
 
 export default function TCDSDetail() {
   const { tcdsNumber } = useParams<{ tcdsNumber: string }>();
@@ -24,14 +25,16 @@ export default function TCDSDetail() {
   useEffect(() => {
     let cancelled = false;
     if (tcdsNumber) {
-      setDoc(null);
+      const sample=getTcdsSample(tcdsNumber);
+      const immediateDoc:CatalogDocument|null=sample?{...sample,authority:'FAA'}:null;
+      setDoc(immediateDoc);
       setNotice('');
-      setLoading(true);
+      setLoading(!immediateDoc);
       setDetails({revisions:[],relationships:[],lastChecked:null,available:false,notice:'Loading imported aircraft data...'});
       void loadExplorerDetails(tcdsNumber).then(result=>{if(!cancelled) setDetails(result);});
       void catalog.get(tcdsNumber).then(result => {
         if (cancelled) return;
-        setDoc(result.data);
+        setDoc(result.data??immediateDoc);
         setNotice(result.notice ?? '');
         setLoading(false);
       });

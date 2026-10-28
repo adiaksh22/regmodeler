@@ -55,7 +55,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const activeTargetType=evidence?.target_type;
   const sortedRevisions = [...revisions].sort((a,b)=>Number(b.is_current)-Number(a.is_current) || (b.revision_date ?? '').localeCompare(a.revision_date ?? ''));
   useEffect(()=>{if(tab!=='history'||historyState!=='idle')return;let stopped=false;setHistoryState('loading');void loadRevisionHistory(doc.tcds_number).then(rows=>{if(!stopped){setRevisions(rows);setHistoryState('ready');}}).catch(()=>{if(!stopped)setHistoryState('error');});return()=>{stopped=true;};},[tab,historyState,doc.tcds_number]);
-  useEffect(()=>{if(!activeEvidenceId)return;let stopped=false;setEvidenceLoading(true);setEvidenceRules([]);setSourceMaterials([]);void loadRelationshipEvidence(activeEvidenceId,activeTargetType==='regulatory_provision'?activeBasisKey:undefined).then(result=>{if(!stopped){setEvidenceRules(result.rules);setSourceMaterials(result.materials);setEvidenceLoading(false);}}).catch(()=>{if(!stopped)setEvidenceLoading(false);});return()=>{stopped=true;};},[activeEvidenceId,activeBasisKey,activeTargetType]);
+  useEffect(()=>{if(!evidenceId||!activeEvidenceId)return;let stopped=false;setEvidenceLoading(true);setEvidenceRules([]);setSourceMaterials([]);void loadRelationshipEvidence(activeEvidenceId,activeTargetType==='regulatory_provision'?activeBasisKey:undefined).then(result=>{if(!stopped){setEvidenceRules(result.rules);setSourceMaterials(result.materials);setEvidenceLoading(false);}}).catch(()=>{if(!stopped)setEvidenceLoading(false);});return()=>{stopped=true;};},[evidenceId,activeEvidenceId,activeBasisKey,activeTargetType]);
   const chooseModel=(model:string)=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model},{replace:true});setEvidenceId('');setExpanded('');};
   return <section className="bg-white rounded-xl border border-slate-200 p-5 mb-6" aria-label="Aircraft data explorer">
     <AircraftFamilySummary variants={details.variants??[]} selected={selected} onSelect={chooseModel}/>
@@ -104,6 +104,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
           <p className="text-sm leading-relaxed border-l-2 border-blue-400 pl-3">{evidence.evidence_excerpt}</p>
           <ProfileRelevance result={profileRelevance(activeProfile,evidence)}/>
+          {!evidenceId&&<button className="text-blue-700 underline text-sm mt-3" onClick={()=>setEvidenceId(evidence.id)}>Load detailed applicability</button>}
           {evidenceLoading&&<p className="text-xs text-slate-600 mt-2" role="status">Loading detailed evidence...</p>}
           <ApplicabilityLogic rules={evidenceRules}/>
           {Object.entries(evidence.applicability_conditions).filter(([key])=>!key.startsWith('publisher_')&&key!=='equipment_key').map(([key,value])=><p key={key} className="text-sm mt-2"><strong>{key.replaceAll('_',' ')}: </strong>{value}</p>)}
@@ -115,7 +116,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           {evidence.evidence_file_name&&<p className="text-xs mt-2">Cited attachment: {evidence.evidence_file_name}</p>}
           {evidence.target_type==='regulatory_provision'&&<div className="mt-4 space-y-3">
             {sourceMaterials.filter(s=>s.basis_key===evidence.basis_key).map(s=><details key={s.id} className="border-t border-blue-200 pt-3"><summary className="cursor-pointer text-sm font-semibold">{s.title}</summary><p className="text-xs my-2">{s.source_kind==='later_reference'?'Later reference edition dated '+s.edition_date+'. This is not the historical amendment wording cited by the TCDS.':'Historical original dated '+s.edition_date+'. The baseline and selected amendments do not form a complete consolidated certification basis.'}</p>{s.body_text?<pre className="text-xs whitespace-pre-wrap max-h-80 overflow-auto">{s.body_text}</pre>:<SourcePdf versionId={s.id} label="View historical original"/>}<a className="text-xs text-blue-700 underline block mt-2" href={s.source_url} target="_blank" rel="noopener noreferrer">Open official regulation source</a></details>)}
-            {!evidenceLoading&&!sourceMaterials.some(s=>s.basis_key===evidence.basis_key)&&<p className="text-xs text-slate-600">The cited historical wording has not been imported yet.</p>}
+            {!!evidenceId&&!evidenceLoading&&!sourceMaterials.some(s=>s.basis_key===evidence.basis_key)&&<p className="text-xs text-slate-600">The cited historical wording has not been imported yet.</p>}
           </div>}
         </aside>}
       </div>}

@@ -77,3 +77,8 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - daily workers now query a one-day-overlap delta window and record a zero-write heartbeat when unchanged; a detected change triggers full scoped reconciliation;
   - a separate weekly full reconciliation catches undated records and removals, while hard per-family/type record ceilings prevent accidental FAA-wide ingestion;
   - migration `20261015000300_lean_catalog_reads.sql` is applied to hosted Supabase; local frontend, worker and database tests pass. Hosted run `38771138918` succeeded for commit `f50f7cf`: all six sources reported `mode: checked` and `reconciled: false`, proving unchanged daily runs perform only bounded overlap reads and zero-record freshness heartbeats. Weekly reconciliation covers undated records, removals and silent anomalies.
+- Local TCDS availability/load repair completed October 27, 2026:
+  - the development frontend had been pointed at stopped local Supabase (`127.0.0.1:54321`), causing both eight-second timeouts and the demo/error notices; only the ignored browser-safe `VITE_*` values were switched to the hosted public URL/key, while local backend/FAA variables remain unchanged;
+  - TCDS detail now renders its verified bundled certificate summary immediately and hydrates the live catalog/graph concurrently;
+  - detailed applicability rules and regulation text no longer issue requests for the default graph selection; they load after an explicit evidence selection;
+  - headless Chrome verified A16WE and 2A13 without fallback notices or failed requests. Warm live completion measured about 2.0 seconds for A16WE and 0.55 seconds for 2A13, while certificate document information appears before live hydration.
