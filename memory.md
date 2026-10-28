@@ -89,3 +89,11 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - migration `20261027000100_boeing_first_ad_review.sql` and original archival are applied to hosted Supabase; no full FAA/family import was needed. Attachments remain pending;
   - full quality gate passed and the hosted production-preview browser smoke passed both models, applicability details, official links, shared panel traversal and mobile width;
   - next evidence batch: selected 737NG AD plus selected STC/AML, with canonical model aliases, page review and scope guards. Production remains unpublished.
+- First NG AD/STC batch completed October 27, 2026:
+  - reviewed AD 2001-14-05, official GovInfo document 01-17121 PDF page 2, and STC SA01635LA PDF page 1; exact identities, hashes and source limits are in `docs/boeing-ng-source-review.md` and the worker manifest;
+  - published six physical relationships / eight public model paths for 737-700/-800, including Boeing elevator-tab repair-message and Aerocon master-index references; those referenced documents remain unobtained;
+  - fixed FAA Series/canonical model mismatches in the graph through model entity IDs and in the model dropdown/family summary; source identities remain intact;
+  - STC SA01635LA download contains one scanned page labeled Page 1 of 2; every path now explicitly states the second page is missing and complete certificate terms remain unverified;
+  - candidate SA04009NY is deferred for both NG models because its original identifies ST04009NY; no graph evidence was published from it;
+  - hosted migrations 20261027000200–20261027000400 and bounded source review are applied; repeated hosted review preserved eight paths. NG browser checks and existing MAX graph regression passed;
+  - next source task: resolve the missing STC page and SA/ST identity discrepancy through authoritative records before expanding those claims. Site remains unpublished.

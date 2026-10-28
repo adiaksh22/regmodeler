@@ -7,6 +7,11 @@ import type {AircraftVariantSummary,ApplicabilityRule} from '../domain/explorer'
 const variant=(changes:Partial<AircraftVariantSummary>={}):AircraftVariantSummary=>({entity_id:'7378',family_entity_id:'737',tcds_document_id:'a16we',tcds_number:'A16WE',model_key:'737-8',display_name:'737 MAX 8',market_name:'737 MAX',faa_status:'faa_approved',approved_on:'2017-03-08',evidence_version_id:'rev81',evidence_page:66,evidence_excerpt:'FAA approved model.',facts:{maximum_takeoff_weight:{numeric_value:182200,text_value:null,unit:'lb',conditions:{},evidence_page:67,evidence_excerpt:'Reviewed weight.'}},...changes});
 
 describe('aircraft family evidence summary',()=>{
+ it('selects NG facts by canonical model even when FAA uses a Series alias',()=>{
+  const ng=variant({entity_id:'737800',model_key:'737-800 Series',display_name:'737-800',facts:{maximum_takeoff_weight:{numeric_value:174200,text_value:null,unit:'lb',conditions:{},evidence_page:24,evidence_excerpt:'Reviewed NG weight.'}}});
+  const html=renderToStaticMarkup(<AircraftFamilySummary variants={[variant(),ng]} selected="737-800" onSelect={()=>{}}/>);
+  expect(html).toContain('174,200 lb');expect(html).not.toContain('182,200 lb');
+ });
  it('separates approved models from a certification project boundary',()=>{
   const html=renderToStaticMarkup(<AircraftFamilySummary variants={[variant(),variant({entity_id:'73710',model_key:'BOEING:737-10',display_name:'737 MAX 10',faa_status:'not_listed_in_current_tcds',approved_on:null,evidence_excerpt:'Not listed in Revision 81.',facts:{}})]} selected="737-8" onSelect={()=>{}}/>);
   expect(html).toContain('182,200 lb');expect(html).toContain('737 MAX 10: not listed in current FAA TCDS');expect(html).toContain('cannot be selected as an approved aircraft model');

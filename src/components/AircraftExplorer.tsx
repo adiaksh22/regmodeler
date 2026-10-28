@@ -12,6 +12,7 @@ import ProfileRelevance from './ProfileRelevance';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import AircraftFamilySummary from './AircraftFamilySummary';
 import ApplicabilityLogic from './ApplicabilityLogic';
+import {aircraftModelIdentity} from '../domain/aircraftModelIdentity';
 import {loadRelationshipEvidence,loadRevisionHistory} from '../lib/catalog';
 import type {ApplicabilityRule,OfficialRevision,RegulationSource} from '../domain/explorer';
 
@@ -25,8 +26,9 @@ export function sourceDate(value: string | null) {
 
 export default function AircraftExplorer({ doc, details }: { doc: CatalogDocument; details: ExplorerDetails }) {
   const [params, setParams] = useSearchParams();
-  const models = doc.model.split('|').map(m=>m.trim()).filter(Boolean);
-  const selected = models.includes(params.get('model') ?? '') ? params.get('model')! : models.includes('PA-28-181') ? 'PA-28-181' : models[0];
+  const models = doc.model.split('|').map(m=>aircraftModelIdentity(doc.tcds_number,m.trim())).filter(Boolean);
+  const requestedModel=aircraftModelIdentity(doc.tcds_number,params.get('model')??'');
+  const selected = models.includes(requestedModel) ? requestedModel : models.includes('PA-28-181') ? 'PA-28-181' : models[0];
   const [tab, setTab] = useState<'relationships'|'history'|'related'|'review'>('relationships');
   const [expanded, setExpanded] = useState('');
   const [view, setView] = useState<'graph'|'list'|'nodes'>(()=>typeof window!=='undefined' && window.matchMedia?.('(max-width: 639px)').matches?'list':'nodes');

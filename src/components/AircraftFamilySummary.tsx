@@ -1,10 +1,11 @@
 import type {AircraftVariantSummary,VariantFact} from '../domain/explorer';
+import {aircraftModelIdentity} from '../domain/aircraftModelIdentity';
 
 const value=(fact:VariantFact|undefined)=>fact ? `${Number(fact.numeric_value).toLocaleString()}${fact.unit==='lb'?' lb':fact.unit==='ft'?' ft':fact.unit==='seats'?' seats':fact.unit==='people'?'':fact.unit?` ${fact.unit}`:''}` : 'Not reviewed';
 
 export default function AircraftFamilySummary({variants,selected,onSelect}:{variants:AircraftVariantSummary[];selected:string;onSelect:(model:string)=>void}){
  if(!variants.length)return null;
- const approved=variants.filter(v=>v.faa_status==='faa_approved');
+ const approved=variants.filter(v=>v.faa_status==='faa_approved').map(v=>({...v,model_key:aircraftModelIdentity(v.tcds_number,v.model_key)}));
  const pending=variants.filter(v=>v.faa_status!=='faa_approved');
  const active=approved.find(v=>v.model_key===selected)??approved[0];
  const facts=active?.facts??{};

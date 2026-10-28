@@ -437,6 +437,34 @@ try {
   assert.equal((await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number='2021-09-08' and model='737-9'"))).rows.length,0,'Inactive model observation hides its reviewed paths');
   console.log('Boeing AD review checks passed: exact publication/hash guards, active model scope, combined line/date predicates, component paths, repeat review and publication isolation.');
 
+  const ngManifest=JSON.parse(readFileSync(new URL('../apps/worker/src/boeing-ng-review.json',import.meta.url)));
+  await assert.rejects(query('select public.review_boeing_ng_graph()'),/Verified current NG original missing/);
+  for(const entry of ngManifest){
+    const record={...b737Source,'drs:documentNumber':entry.number,'drs:adfrawdModel':['737-700 Series','737-800 Series'],'drs:stcTCNumbersMakeModel':['A16WE -- Boeing -- 737-700 Series','A16WE -- Boeing -- 737-800 Series'],documentGuid:new URL(entry.source_url).pathname.split('/').at(-1).split('.')[0],documentURL:entry.source_url};
+    const row=relatedSnapshot(entry.type,record,'2026-10-27T01:00:00Z','B737').row;
+    const run=(await query('insert into public.ingestion_runs(source,status) values($1,\'running\') returning id',['FAA:'+(entry.type==='AD'?'ADFRAWD':'STC')+':B737'])).rows[0].id;
+    await query('select public.commit_related_catalog($1,$2,$3,$4::jsonb)',[run,'B737',entry.type,JSON.stringify([row])]);
+    const version=(await query('select id from public.document_versions where source_version_id=$1',[row.source_version_id])).rows[0].id;
+    const material=entry.published_url?{original_source_url:entry.published_url,original_source_kind:'final_federal_register',original_publication_date:entry.publication_date}:{};
+    await query('select public.attach_source_original($1,$2,$3,$4::jsonb)',[version,entry.hash,'FAA/'+entry.type+'/reviewed/'+entry.hash+'.pdf',JSON.stringify(material)]);
+  }
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_boeing_ng_graph()')),/permission denied/);
+  assert.equal((await query('select public.review_boeing_ng_graph() n')).rows[0].n,6);
+  const ngGraph=(await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number in('2001-14-05','SA01635LA')"))).rows;
+  assert.equal(ngGraph.length,8,'Four direct model connections and four referenced-document paths');
+  assert.ok(ngGraph.filter(row=>row.source_document_number==='SA01635LA').every(row=>row.applicability_conditions.source_completeness.includes('second page has not been obtained')),'Incomplete certificate delivery is explicit on every STC path');
+  await assert.rejects(asRole('service_role',null,()=>query('select public.review_boeing_ng_graph_core()')),/permission denied/);
+  assert.deepEqual([...new Set(ngGraph.map(row=>row.model))].sort(),['737-700','737-800'],'FAA Series labels resolve to canonical reviewed model identities');
+  const ngQueue=(await asRole('anon',null,()=>query("select review_status from public.source_review_queue where document_number in('2001-14-05','SA01635LA')"))).rows;
+  assert.ok(ngQueue.length===4&&ngQueue.every(row=>row.review_status==='reviewed'));
+  await query('select public.review_boeing_ng_graph()');
+  assert.equal((await query("select count(*)::integer n from public.model_graph where source_document_number in('2001-14-05','SA01635LA')")).rows[0].n,8,'NG repeat review does not duplicate model-scoped paths');
+  assert.equal((await query("select model from public.aircraft_model_names where entity_id=(select id from public.catalog_entities where natural_key='737-800 Series' and authority='FAA' and entity_type='aircraft_model')")).rows[0].model,'737-800');
+  await query("update public.related_document_matches set is_active=false where model='737-800' and source='FAA:STC:B737'");
+  await assert.rejects(query('select public.review_boeing_ng_graph()'),/Reviewed NG model or active match missing/);
+  assert.equal((await asRole('anon',null,()=>query("select * from public.model_graph where source_document_number='SA01635LA' and model='737-800'"))).rows.length,0);
+  console.log('NG review checks passed: model-ID aliases, exact originals, AD/STC scope, source references, reviewed queue, repeat review and inactive observation boundaries.');
+
   console.log('Source-change checks passed: baseline semantics, traceable corrections, idempotence, rollback, index absence, evidence publication and core-RPC isolation.');
   console.log('Dependency checks passed: immutable originals, private review, idempotent edges, directed traversal, publication RLS, and inactive-source boundaries.');
   console.log('Related-source checks passed: publication RLS, candidate semantics, complete-index replacement, repeat imports, rollback, private writes, and edition boundaries.');
