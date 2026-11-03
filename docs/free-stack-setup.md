@@ -86,11 +86,13 @@ In Cloudflare, open **Workers & Pages**, select **Create application**, choose *
 | Setting | Value |
 | --- | --- |
 | Root directory | Repository root |
-| Build command | `npm run build` |
+| Build command | `npm run build:release` |
 | Build output directory | `dist` |
 | Node version | `24` |
 | `VITE_SUPABASE_URL` | Hosted Supabase project URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase **publishable** key (or legacy **anon** key) |
+
+See [release review](release-review.md) for the proposed settings, approval boundary and rollback sequence. The guarded release build rejects demo/local configuration.
 
 The two public Supabase values are already saved in your ignored `.env.production.local`; copy them directly into the Cloudflare build environment when ready. The file is not uploaded to GitHub, so Cloudflare needs those values configured separately.
 
