@@ -113,6 +113,7 @@ select:focus-visible {
 .reg-network-studio .react-flow__attribution a { color:#a9bdd5; }
 @media (min-width:1024px) {
   .reg-graph-workspace { grid-template-columns:340px minmax(0,1fr); }
+  .reg-graph-workspace.reg-details-hidden { grid-template-columns:minmax(0,1fr); }
   .reg-map-column { order:2; }
   .reg-evidence-inspector { order:1; top:0; max-height:1100px; overflow:auto; border-right:1px solid #263b58; }
 }

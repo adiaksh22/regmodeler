@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');
 const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
+let phase='load';
 (async()=>{
  const browser=await puppeteer.launch({headless:'new',executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
  try{
@@ -23,15 +24,33 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
   assert.ok(Math.max(...layout.controls)-Math.min(...layout.controls)<2,'Desktop toolbar must occupy one row');
   await page.$eval('.reg-graph-workspace',node=>node.scrollIntoView({block:'start'}));
   await page.screenshot({path:'.artifacts/network-studio-desktop.png'});
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='Hide source details').click());
+  assert.equal(await page.$eval('[aria-label="Relationship source evidence"]',node=>node.hidden),true);
+  const hiddenWidth=await page.$eval('.reg-network-canvas',node=>node.getBoundingClientRect().width);
+  assert.ok(hiddenWidth>layout.mapWidth+250,'Hiding details must give the canvas more space');
+  const keyboardTarget=await page.$eval('.react-flow__node:not(.selected)',node=>node.getAttribute('data-id'));
+  await page.focus(`.react-flow__node[data-id="${keyboardTarget}"]`);await page.keyboard.press('Enter');
+  phase='keyboard activation';
+  await page.waitForFunction(id=>document.querySelector('.react-flow__node.selected')?.getAttribute('data-id')===id,{},keyboardTarget);
+  phase='keyboard focus';
+  await page.waitForFunction(id=>document.activeElement?.getAttribute('data-id')===id,{},keyboardTarget);
+  assert.equal(await page.$eval('[aria-label="Relationship source evidence"]',node=>node.hidden),true,'Node preview should respect the hidden panel');
+  await page.keyboard.press('Space');
+  assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('data-id')),keyboardTarget);
+  assert.equal(detailRequests.length,0,'Keyboard browsing must not load detailed applicability');
+  await page.click('[aria-label="Node connections"] button[aria-pressed]');
+  await page.waitForFunction(()=>document.querySelector('[aria-label="Relationship source evidence"]')?.hidden===false);
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='Back one node').click());
   await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='Compact workspace').click());
   await page.waitForFunction(()=>!document.querySelector('.reg-wide-explorer'));
   await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='Expand workspace').click());
+  phase='mobile';
   await page.setViewport({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.waitForFunction(()=>{const node=document.querySelector('.react-flow__node.selected')?.getBoundingClientRect();const map=document.querySelector('.reg-network-canvas')?.getBoundingClientRect();return node&&map&&node.left<map.right&&node.right>map.left&&node.top<map.bottom&&node.bottom>map.top;});
   await page.$eval('.reg-network-canvas',node=>node.scrollIntoView({block:'start'}));
   await page.screenshot({path:'.artifacts/network-studio-mobile.png'});
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',checks:['hexagonal nodes','radial focused connections','left evidence panel','wide canvas','single-row desktop toolbar','compact/expand controls','mobile width','focused node visible','zero browser errors']}));
+  console.log(JSON.stringify({status:'passed',checks:['hexagonal nodes','radial focused connections','left evidence panel','wide canvas','single-row desktop toolbar','compact/expand controls','collapsible source details','keyboard node activation and focus restoration','details reopen on evidence selection','no detail calls while keyboard browsing','mobile width','focused node visible','zero browser errors']}));
  }finally{await browser.close();}
-})().catch(error=>{console.error(JSON.stringify({status:'failed',message:error.message}));process.exitCode=1;});
+})().catch(error=>{console.error(JSON.stringify({status:'failed',phase,message:error.message}));process.exitCode=1;});

@@ -12,6 +12,7 @@ Updated November 3, 2026. The website remains unpublished. This report covers au
 | Profiles | Draft/save separation, serial boundaries, user-reported STCs, persistence, separate models, concurrent-edit protection, corrupt-storage preservation and no profile upload |
 | Profile relevance | Node-map cards show reviewed relevance labels; profile-filtered related counts distinguish visible records from loaded matches; unknown candidates remain visible |
 | Change feed | Named source health, model filtering, correct certificate links, completed revision history |
+| Graph interaction | Source details collapse/reopen, Enter/Space explore canvas nodes, and keyboard focus survives neighborhood changes without extra detail requests |
 | Graph rendering | Focused directed edges, neighbor/back navigation, overview restoration and mobile evidence round trip; measurement-only events no longer trigger controlled-node update churn |
 | Small screens | Home and change-feed layouts fit 320/390px; profile and graph workflows have separate mobile checks |
 | Recovery | Unknown routes offer aircraft search; simulated database outage shows labeled snapshots; retry restores hosted relationships and removes outage notices |

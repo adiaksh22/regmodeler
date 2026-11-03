@@ -70,3 +70,11 @@ The workspace opens wide on desktop and offers Compact/Expand controls. Search, 
 Node navigation previews a relevant cited connection in the inspector. This does not fetch detailed applicability or mark evidence reviewed. Read source evidence remains the explicit action that loads additional reviewed logic/source-quality material. The inspector names the actual cited source rather than presenting a referenced target as the source document.
 
 `node scripts/network-design-smoke.cjs` checks radial hexagons, left-panel placement, toolbar alignment, wide/compact controls, mobile width and zero detailed-applicability requests while browsing. Existing navigation, source-PDF and beta journey checks remain relevant. The graph chunk decreased from about 238 KB to 191 KB before compression after removing the Dagre layout import.
+
+### Design-pass completion
+
+The reference was clarified as the Boeing **Aerospace Safety Timeline** at https://www.boeing.com/safety/safetyexperience. Its embedded interface was inspected directly in an isolated browser, including the introduction and navigation. This remains an interaction/design reference for the regulatory graph; it does not add a requirement to reproduce Boeing's historical content or build a new regulatory timeline in this phase.
+
+Source details can now be hidden to give the canvas the full workspace width. Node browsing respects that preference; explicitly choosing source evidence reopens the inspector. Enter and Space on a focused canvas node explore its direct neighborhood. Keyboard focus is restored after the new canvas initializes so navigation can continue without returning to the page top. The browser regression checks these behaviors, including no detailed-applicability fetches while keyboard browsing.
+
+This design pass is ready for user visual feedback. Publishing remains deferred; no additional source expansion is needed to review the interaction.

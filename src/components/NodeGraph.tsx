@@ -34,6 +34,12 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const [positions,setPositions]=useState<Record<string,{x:number;y:number}>>({});
   const [canvas,setCanvas]=useState<ReactFlowInstance|null>(null);
   const container=useRef<HTMLDivElement>(null);
+  const pendingKeyboardFocus=useRef<string|null>(null);
+  const initializeCanvas=(instance:ReactFlowInstance)=>{
+    setCanvas(instance);
+    const id=pendingKeyboardFocus.current;
+    if(id)requestAnimationFrame(()=>{const node=container.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`);if(node){node.focus();pendingKeyboardFocus.current=null;}});
+  };
   const graph=useMemo(()=>buildNodeGraph(rows.filter(r=>filter==='all'||r.relationship_type===filter)),[rows,filter]);
   const lastNode=trail[trail.length-1];
   const nodeId=graph.nodes.some(node=>node.id===lastNode)?lastNode:'';
@@ -60,7 +66,7 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const selected=graph.nodes.find(node=>node.id===nodeId);
   return <div className="min-w-0 w-full reg-node-map reg-network-studio">
     <div className="reg-studio-heading"><div><p>REGULATORY CONNECTIONS</p><h3>Explore the evidence network</h3></div><span>Reviewed sources only</span></div>
-    <div className="reg-studio-meta"><p className="sr-only">Select a node to explore its direct connections, then select a labeled link for page-cited evidence. Drag nodes to arrange the map; use zoom and fit controls to navigate.</p><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{visibleGraph.nodes.length} of {graph.nodes.length} nodes · {visibleGraph.edges.length} of {graph.edges.length} links</span></div>
+    <div className="reg-studio-meta"><p className="sr-only">Select a node to explore its direct connections, then select a labeled link for page-cited evidence. Drag nodes to arrange the map; use zoom and fit controls to navigate. Press Enter or Space on a focused node to explore its connections.</p><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{visibleGraph.nodes.length} of {graph.nodes.length} nodes · {visibleGraph.edges.length} of {graph.edges.length} links</span></div>
     <div className="reg-studio-tools">
       <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Connection type <select className="border rounded p-2 block max-w-full" value={filter} onChange={e=>{setFilter(e.target.value);setTrail(['']);setPositions({});}}><option value="all">All reviewed types</option>{[...new Set(rows.map(r=>r.relationship_type))].map(t=><option key={t} value={t}>{relationshipLabel(t)}</option>)}</select></label>
       <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Browse node <select className="border rounded p-2 block max-w-full" value={nodeId} onChange={e=>browse(e.target.value)}><option value="">All nodes</option>{graph.nodes.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>
@@ -74,8 +80,14 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     </nav>
     {query.trim()&&<div className="mb-3" aria-label="Node search results"><p className="text-xs text-slate-600 mb-2">Matches within the current model and connection-type filters.</p><ul className="max-h-48 overflow-auto space-y-1">{graph.nodes.filter(n=>n.label.toLowerCase().includes(query.trim().toLowerCase())).map(n=><li key={n.id}><button className="border rounded p-2 w-full text-sm text-left hover:bg-blue-50" onClick={()=>browse(n.id)}>{n.label}</button></li>)}</ul>{!graph.nodes.some(n=>n.label.toLowerCase().includes(query.trim().toLowerCase()))&&<p role="status" className="text-sm">No matching nodes. Try another search or connection type.</p>}</div>}
     {selected&&<section aria-label="Focused graph node" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Exploring · {selected.kind}</p><h3 className="mt-1 font-bold break-words">{selected.label}</h3><p className="mt-1 text-sm text-slate-600">{incident.length} direct reviewed {incident.length===1?'connection':'connections'}. Follow a neighboring node or select a link to read its source.</p></section>}
-    <div ref={container} className="h-[620px] lg:h-[720px] reg-network-canvas overflow-hidden" aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status">
-      <ReactFlow key={`${filter}:${nodeId}`} onInit={setCanvas} nodeTypes={nodeTypes} nodes={positionedNodes} edges={edges} fitView fitViewOptions={{padding:0.2}} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} onNodesChange={changes=>setPositions(previous=>{const moved=changes.filter(change=>change.type==='position'&&change.position&&(previous[change.id]?.x!==change.position.x||previous[change.id]?.y!==change.position.y));if(!moved.length)return previous;const next={...previous};for(const change of moved)if(change.type==='position'&&change.position)next[change.id]=change.position;return next;})} onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#315681" gap={36} size={1}/><Controls showInteractive={false}/></ReactFlow>
+    <div ref={container} className="h-[620px] lg:h-[720px] reg-network-canvas overflow-hidden" aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status" onKeyDownCapture={event=>{
+      if(event.key!=='Enter'&&event.key!==' ')return;
+      const node=(event.target as HTMLElement).closest<HTMLElement>('.react-flow__node');
+      if(!node?.dataset.id)return;
+      event.preventDefault();event.stopPropagation();const id=node.dataset.id;
+      pendingKeyboardFocus.current=id===nodeId?null:id;browse(id);
+    }}>
+      <ReactFlow key={`${filter}:${nodeId}`} onInit={initializeCanvas} nodeTypes={nodeTypes} nodes={positionedNodes} edges={edges} fitView fitViewOptions={{padding:0.2}} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} onNodesChange={changes=>setPositions(previous=>{const moved=changes.filter(change=>change.type==='position'&&change.position&&(previous[change.id]?.x!==change.position.x||previous[change.id]?.y!==change.position.y));if(!moved.length)return previous;const next={...previous};for(const change of moved)if(change.type==='position'&&change.position)next[change.id]=change.position;return next;})} onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#315681" gap={36} size={1}/><Controls showInteractive={false}/></ReactFlow>
     </div>
     <p id="node-map-status" className="text-xs text-slate-500 my-3" aria-live="polite">{selected?`${selected.label}: ${incident.length} direct reviewed connection${incident.length===1?'':'s'} shown below.`:'Arrows preserve reviewed direction. Dashed links are references; shared nodes use one canonical catalog identity.'}</p>
     <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2" aria-label="Node type legend">{kinds.map(kind=>{const color=palette(kind);return <span key={kind} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full" style={{background:color,border:`2px solid ${color}`}}/>{kind}</span>})}</div>
