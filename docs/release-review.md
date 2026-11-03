@@ -51,4 +51,4 @@ A frontend rollback does not roll back database migrations, source observations 
 
 ## Remaining review
 
-Automated beta and native PDF-dialog checks are complete locally. Representative owner/maintenance feedback and the user's final supported-scope/publishing decision remain outstanding. No paid plan, new source expansion or account system is required to review this build.
+The user requested a reference-inspired network redesign before publication; its visual review now takes priority. Automated beta, radial graph workspace and native PDF-dialog checks are complete locally. Representative owner/maintenance feedback and the user's final supported-scope/publishing decision remain outstanding. No paid plan, new source expansion or account system is required to review this build.

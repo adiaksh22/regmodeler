@@ -23,6 +23,7 @@ Run `npm.cmd run check` for lint, frontend/worker tests, database migration and 
 node scripts/beta-journey-smoke.cjs
 node scripts/profile-smoke.cjs
 node scripts/graph-navigation-smoke.cjs
+node scripts/network-design-smoke.cjs
 node scripts/monitoring-smoke.cjs
 node scripts/revision82-smoke.cjs
 node scripts/pdf-dialog-smoke.cjs

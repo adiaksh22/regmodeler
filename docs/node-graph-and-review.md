@@ -8,7 +8,7 @@ Open TCDS 2A13, select PA-28-140 or PA-28-181, then select **Relationships > Nod
 
 Users can zoom, pan, fit and drag nodes. Moving nodes changes only local display positions; users cannot create, delete or approve regulatory relationships through the canvas. Relationship-type filters narrow the view. The connection list provides keyboard-accessible navigation alongside the canvas. Profiles remain model-specific; unknown configuration relevance stays visible.
 
-React Flow provides the interaction and accessibility foundation; Dagre lays out the directed graph. Both load only when Nodes is opened. Canonical catalog UUIDs identify nodes, so shared certificates are not duplicated and different amendment editions are not merged because their labels resemble each other. No separate graph database is needed.
+React Flow provides the interaction and accessibility foundation; A lightweight radial layout positions the canonical nodes; focused views center the selected node and place its direct neighbors around it. Both load only when Nodes is opened. Canonical catalog UUIDs identify nodes, so shared certificates are not duplicated and different amendment editions are not merged because their labels resemble each other. No separate graph database is needed.
 
 ## Review coverage
 
@@ -60,3 +60,13 @@ Next: expand reviewed rules and aircraft configuration only where originals supp
 See [PA-28 review batch 2](pa28-review-batch2.md) for additional model-specific references, final-publication provenance and remaining coverage.
 
 See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-specific scope, supersession, publisher links and graph search.
+
+### Reference-inspired network workspace
+
+The November 3 visual redesign follows the user's Boeing Safety Experience screenshot: a navy canvas, custom SVG hexagonal markers, a radial focused neighborhood, restrained category colors and a left source-evidence inspector. It uses RegModeler branding and reviewed catalog entities. Decorative canvas dots do not represent additional FAA records. Shared nodes, arrow direction and dashed reference semantics remain unchanged. Only the selected link displays its type label on the canvas; every connection retains its type in the accessible connection list.
+
+The workspace opens wide on desktop and offers Compact/Expand controls. Search, type and node selection share one desktop toolbar. Mobile retains the evidence-list default, and a focused node map uses a readable zoom with panning for peripheral nodes; the complete connection list remains below. Full node labels are available in the node tooltip, search, focus panel and connection cards.
+
+Node navigation previews a relevant cited connection in the inspector. This does not fetch detailed applicability or mark evidence reviewed. Read source evidence remains the explicit action that loads additional reviewed logic/source-quality material. The inspector names the actual cited source rather than presenting a referenced target as the source document.
+
+`node scripts/network-design-smoke.cjs` checks radial hexagons, left-panel placement, toolbar alignment, wide/compact controls, mobile width and zero detailed-applicability requests while browsing. Existing navigation, source-PDF and beta journey checks remain relevant. The graph chunk decreased from about 238 KB to 191 KB before compression after removing the Dagre layout import.
