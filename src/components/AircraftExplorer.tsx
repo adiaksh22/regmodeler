@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { ExplorerDetails } from '../domain/explorer';
 import type { CatalogDocument } from '../domain/catalog';
@@ -37,6 +37,15 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [expanded, setExpanded] = useState('');
   const [view, setView] = useState<'graph'|'list'|'nodes'>(()=>typeof window!=='undefined' && window.matchMedia?.('(max-width: 639px)').matches?'list':'nodes');
   const [evidenceId, setEvidenceId] = useState('');
+  const evidencePanel=useRef<HTMLElement>(null);
+  const nodeMap=useRef<HTMLDivElement>(null);
+  const selectNodeEvidence=(id:string)=>{
+    setEvidenceId(id);
+    if(window.matchMedia?.('(max-width: 1023px)').matches)requestAnimationFrame(()=>{
+      evidencePanel.current?.focus({preventScroll:true});
+      evidencePanel.current?.scrollIntoView({block:'start'});
+    });
+  };
   const [compareModels,setCompareModels]=useState(false);
   const [showAll, setShowAll] = useState(false);
   const [profile,setProfile] = useState<AircraftProfile|null>(null);
@@ -93,7 +102,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> Show shared relationships across every reviewed model in this TCDS</label>}
       {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
-        {view==='nodes'?<Suspense fallback={<p>Loading node view?</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} selectedId={evidence?.id??''} onSelect={r=>setEvidenceId(r.id)}/></Suspense>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
+        {view==='nodes'?<div ref={nodeMap} className="min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
               <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>
@@ -108,7 +117,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           </div>
         </div>
         }
-        {evidence && <aside aria-label="Relationship source evidence" className="rounded-lg border border-blue-200 bg-blue-50 p-4 lg:sticky lg:top-6">
+        {evidence && <aside ref={evidencePanel} tabIndex={-1} aria-label="Relationship source evidence" className="rounded-lg border border-blue-200 bg-blue-50 p-4 lg:sticky lg:top-6">
+          {view==='nodes'&&<button className="mb-3 text-sm text-blue-800 underline lg:hidden" onClick={()=>{nodeMap.current?.focus({preventScroll:true});nodeMap.current?.scrollIntoView({block:'start'});}}>Return to relationship map</button>}
           <h3 className="font-bold mb-2">{evidence.target}</h3><p className="text-xs mb-2">Model context: {evidence.model}</p>
           <SourceStatus status="reviewed" explain/>
           <p className="text-sm mb-2">{evidence.source_document_type??'TCDS'} {evidence.source_document_number??doc.tcds_number} · {evidence.evidence_revision} · page {evidence.evidence_page}</p>
