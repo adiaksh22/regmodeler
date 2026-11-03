@@ -87,8 +87,15 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
     <p className="text-sm text-slate-600 mb-4">Reviewed connections are limited to the cited FAA evidence shown here. Related records may contain additional model-index matches. Individual-aircraft applicability and compliance are not determined here.</p>
     {details.monitoring&&<details className={`mb-4 rounded-lg border p-3 ${healthWarnings?'border-amber-300 bg-amber-50':'border-slate-200'}`}><summary className="cursor-pointer text-sm font-semibold">Source check health and monitoring limits{healthWarnings?` · ${healthWarnings} ${healthWarnings===1?'check needs':'checks need'} attention`:''}</summary><SourceMonitoring checks={details.monitoring} certificate={doc.tcds_number}/></details>}
     {selected.startsWith('PA-28')?<AircraftProfileEditor key={selected} model={selected} equipmentOptions={equipmentOptions} onChange={setProfile} onDirty={setProfileDirty}/>:<p className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Configuration profiles will appear for this model after component and AD applicability rules are reviewed. Family and certification links are available now.</p>}
-    <div className="flex flex-wrap gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data">
-      {(['relationships','history','related','review'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
+    <div className="flex flex-wrap gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data" onKeyDown={event=>{
+      const tabs=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+      const index=tabs.indexOf(document.activeElement as HTMLButtonElement);
+      if(index<0)return;
+      const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:null;
+      if(next===null)return;
+      event.preventDefault();tabs[next].focus();
+    }}>
+      {(['relationships','history','related','review'] as const).map(name=><button key={name} id={`tab-${name}`} role="tab" tabIndex={tab===name?0:-1} aria-selected={tab===name} aria-controls={`panel-${name}`} onClick={()=>setTab(name)} className={`px-3 py-3 border-b-2 ${tab===name?'border-blue-600 text-blue-700 font-semibold':'border-transparent text-slate-600'}`}>
         {name==='review'?'Review coverage':name==='relationships'?'Relationships':name==='related'?'Related ADs & STCs':historyState==='ready'?`Revision history (${revisions.length})`:'Revision history'}
       </button>)}
     </div>
@@ -102,7 +109,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> Show shared relationships across every reviewed model in this TCDS</label>}
       {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
-        {view==='nodes'?<div ref={nodeMap} className="min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
+        {view==='nodes'?<div ref={nodeMap} className="min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} profile={activeProfile} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
               <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>

@@ -81,7 +81,7 @@ The initial schema and importer migrations are applied to both local and hosted 
 
 Connect your repository and select these build settings:
 
-In Cloudflare, open **Workers & Pages**, select **Create application**, choose **Pages**, and import the existing GitHub repository `adiaksh22/regmodeler`. Use `main` as the production branch. These steps are documented in [Cloudflare's React deployment guide](https://developers.cloudflare.com/pages/framework-guides/deploy-a-react-site/). Review the build settings before deploying; the current app is a three-sample prototype and live imports, the relationship graph, and alerts are still planned work.
+In Cloudflare, open **Workers & Pages**, select **Create application**, choose **Pages**, and import the existing GitHub repository `adiaksh22/regmodeler`. Use `main` as the production branch. These steps are documented in [Cloudflare's React deployment guide](https://developers.cloudflare.com/pages/framework-guides/deploy-a-react-site/). Prepare these settings for release review; deployment is still deferred. Live scoped imports, the relationship graph, browser profiles and an in-app source-change feed are implemented. Follow [beta readiness](beta-readiness.md) before publishing; email alerts remain future work.
 
 | Setting | Value |
 | --- | --- |

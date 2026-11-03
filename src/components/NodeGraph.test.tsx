@@ -3,18 +3,34 @@ import {createRoot,type Root} from 'react-dom/client';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import NodeGraph from './NodeGraph';
 import type {EvidenceRelationship} from '../domain/explorer';
-vi.mock('@xyflow/react',()=>({ReactFlow:({children,nodes,edges}:{children:React.ReactNode;nodes:{id:string}[];edges:{id:string;source:string;target:string}[]})=><div data-testid="canvas" data-nodes={nodes.map(node=>node.id).join(',')} data-edges={JSON.stringify(edges.map(({id,source,target})=>({id,source,target})))}>{children}</div>,Background:()=>null,Controls:()=>null,MarkerType:{ArrowClosed:'arrowclosed'}}));
+const flowRender=vi.hoisted(()=>vi.fn());
+vi.mock('@xyflow/react',()=>({ReactFlow:({children,nodes,edges,onNodesChange}:{children:React.ReactNode;nodes:{id:string}[];edges:{id:string;source:string;target:string}[];onNodesChange:(changes:{type:string;id:string}[])=>void})=>{flowRender({onNodesChange});return <div data-testid="canvas" data-nodes={nodes.map(node=>node.id).join(',')} data-edges={JSON.stringify(edges.map(({id,source,target})=>({id,source,target})))}>{children}</div>;},Background:()=>null,Controls:()=>null,MarkerType:{ArrowClosed:'arrowclosed'}}));
 const edge=(changes:Partial<EvidenceRelationship>):EvidenceRelationship=>({id:'certificate',tcds_number:'A16WE',model:'Aircraft',target:'Certificate',target_type:'certificate',relationship_type:'covered_by',evidence_page:1,evidence_excerpt:'Reviewed',applicability_conditions:{},evidence_revision:'82',source_url:'https://drs.faa.gov',direction:'outgoing',source_entity_id:'aircraft',target_entity_id:'certificate',model_entity_id:'aircraft',...changes});
 const rows=[edge({}),edge({id:'engine',target:'Engine',target_type:'engine_model',target_entity_id:'engine',relationship_type:'powered_by'}),edge({id:'reference',source_entity_id:'certificate',target_entity_id:'bulletin',target:'Bulletin',target_type:'service_document',path_via:'Certificate',relationship_type:'references'})];
 let host:HTMLDivElement;let root:Root;
 const onSelect=vi.fn();
 async function click(label:string){await act(async()=>{[...host.querySelectorAll('button')].find(node=>node.textContent===label)!.click();});}
 beforeEach(async()=>{
- Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});onSelect.mockReset();host=document.createElement('div');document.body.append(host);root=createRoot(host);
+ Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});onSelect.mockReset();flowRender.mockClear();host=document.createElement('div');document.body.append(host);root=createRoot(host);
  await act(async()=>root.render(<NodeGraph rows={rows} onSelect={onSelect} selectedId="certificate"/>));
 });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
 describe('graph exploration controls',()=>{
+ it('does not rerender controlled nodes in response to measurement-only changes',async()=>{
+  const before=flowRender.mock.calls.length;
+  await act(async()=>flowRender.mock.calls.at(-1)![0].onNodesChange([{type:'dimensions',id:'aircraft'}]));
+  expect(flowRender.mock.calls.length).toBe(before);
+ });
+ it('shows model-scoped profile relevance on connection cards',async()=>{
+  const scoped=[edge({relationship_type:'applies_to',source_document_type:'AD',applicability_conditions:{serial_ranges:'28-20001 through 28-26946'}})];
+  const profile={id:'test',model:'Aircraft',name:'Test',serial:'',modifications:[],updatedAt:'2026-11-03'};
+  await act(async()=>root.render(<NodeGraph rows={scoped} profile={profile} onSelect={onSelect} selectedId="certificate"/>));
+  expect(host.querySelector('[aria-label="Node connections"]')?.textContent).toContain('Serial number needs review');
+  await act(async()=>root.render(<NodeGraph rows={scoped} profile={{...profile,serial:'28-20001'}} onSelect={onSelect} selectedId="certificate"/>));
+  expect(host.querySelector('[aria-label="Node connections"]')?.textContent).toContain('Within reviewed serial range');
+  await act(async()=>root.render(<NodeGraph rows={scoped} profile={{...profile,model:'Other model'}} onSelect={onSelect} selectedId="certificate"/>));
+  expect(host.querySelector('[aria-label="Node connections"]')?.textContent).not.toContain('Serial number needs review');
+ });
  it('lays out only direct connections while preserving full-catalog search and edge direction',async()=>{
   await click('Explore Bulletin');
   expect(host.querySelector('[data-testid="canvas"]')?.getAttribute('data-nodes')?.split(',')).toEqual(['certificate','bulletin']);

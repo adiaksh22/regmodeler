@@ -21,6 +21,16 @@ beforeEach(()=>{
 });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
 describe('related record evidence states',()=>{
+ it('distinguishes visible profile-filtered records from loaded index matches',async()=>{
+  load.mockResolvedValue({documents:[{...source('TEST'),model:'PA-28-140',document_type:'AD'}],total:1});
+  const edge={id:'edge',tcds_number:'2A13',model:'PA-28-140',target:'AD TEST',target_type:'certificate',relationship_type:'applies_to',evidence_page:1,evidence_excerpt:'Reviewed range',evidence_revision:'1',source_url:'https://drs.faa.gov',evidence_version_id:'TEST',source_document_type:'AD',applicability_conditions:{serial_ranges:'28-20001 through 28-26946'}};
+  const profile={id:'test',model:'PA-28-140',name:'Test',serial:'28-26947',modifications:[],updatedAt:'2026-11-03'};
+  await act(async()=>root.render(<RelatedDocuments model="PA-28-140" relationships={[edge]} profile={profile}/>));
+  await act(async()=>{[...host.querySelectorAll('label')].find(label=>label.textContent?.includes('Hide records'))!.querySelector('input')!.click();});
+  expect(host.textContent).toContain('0 source records after profile filtering');
+  expect(host.textContent).toContain('1 of 1 loaded');
+  expect(host.querySelector('button[aria-pressed]')).toBeNull();
+ });
  it('shows a deferred identity mismatch and explains saved PDF completeness separately',async()=>{
   load.mockResolvedValue({documents:[source('SA04009NY')],total:1});
   await act(async()=>root.render(<RelatedDocuments model="737-800" relationships={[]}/>));

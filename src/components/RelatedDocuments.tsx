@@ -38,7 +38,7 @@ export default function RelatedDocuments({model,relationships,profile=null}:{mod
     {profile&&<label className="block text-sm mb-3"><input type="checkbox" checked={profileOnly} onChange={e=>{setProfileOnly(e.target.checked);setSelectedId('');}}/> Hide records outside reviewed serial ranges. Records needing review remain visible.</label>}
     {checked.find(c=>c.document_type===kind)&&<p className="text-xs text-slate-600 mb-3">{kind} index last checked {new Date(checked.find(c=>c.document_type===kind)!.last_checked).toLocaleString()}</p>}
     {busy&&<p role="status">Loading related FAA records…</p>}{notice&&<p role="status" className="text-amber-900">{notice}</p>}
-    {!busy&&!notice&&<p className="text-sm mb-3">Showing {documents.length} of {total} source records {history?'including history':'with current FAA status'}.</p>}
+    {!busy&&!notice&&<p className="text-sm mb-3" role="status">Showing {profileOnly?`${shown.length} source records after profile filtering · ${documents.length} of ${total} loaded`:`${documents.length} of ${total} source records`} {history?'including history':'with current FAA status'}.</p>}
     {!busy&&shown.length===0&&<p>{configuredModels.includes(model)?'No matches in this view. This is not a complete applicability determination.':'Related-source discovery has not been configured for this model yet.'}</p>}
     <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
       <div className="space-y-2">{shown.map(d=><button key={d.id} onClick={()=>setSelectedId(d.id)} aria-pressed={selected?.id===d.id} className={`block text-left w-full rounded-lg border p-3 ${selected?.id===d.id?'border-blue-600 bg-blue-50':'border-slate-200'}`}>

@@ -4,6 +4,7 @@ import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import type {EvidenceRelationship} from '../domain/explorer';
 import {buildNodeGraph,relationshipLabel} from '../domain/nodeGraph';
+import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 
 const palette=(kind:string)=>{
   const value=kind.toLowerCase();
@@ -15,7 +16,7 @@ const palette=(kind:string)=>{
   return {border:'#64748b',background:'#ffffff',accent:'#475569'};
 };
 
-export default function NodeGraph({rows,onSelect,selectedId}:{rows:EvidenceRelationship[];onSelect:(row:EvidenceRelationship)=>void;selectedId:string}) {
+export default function NodeGraph({rows,onSelect,selectedId,profile=null}:{rows:EvidenceRelationship[];onSelect:(row:EvidenceRelationship)=>void;selectedId:string;profile?:AircraftProfile|null}) {
   const [trail,setTrail]=useState<string[]>(['']);
   const [filter,setFilter]=useState('all');
   const [query,setQuery]=useState('');
@@ -41,6 +42,7 @@ export default function NodeGraph({rows,onSelect,selectedId}:{rows:EvidenceRelat
     const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;return {id:e.id,source:e.source,target:e.target,label:relationshipLabel(e.relationship.relationship_type),markerEnd:{type:MarkerType.ArrowClosed,color:active?'#1d4ed8':'#64748b'},labelStyle:{fill:active?'#1e3a8a':'#475569',fontSize:11,fontWeight:active?700:600},labelShowBg:true,labelBgStyle:{fill:'#ffffff',fillOpacity:.92},labelBgPadding:[5,3],labelBgBorderRadius:5,style:{stroke:active?'#1d4ed8':'#64748b',strokeWidth:active?3:1.5,strokeDasharray:e.relationship.relationship_type==='references'?'5 4':undefined,transition:'opacity 160ms ease'},interactionWidth:24}});
     return {nodes,edges};
   },[visibleGraph,nodeId,selectedId]);
+  const positionedNodes=useMemo(()=>nodes.map(node=>({...node,position:positions[node.id]??node.position})),[nodes,positions]);
   const incident=graph.edges.filter(e=>!nodeId||e.source===nodeId||e.target===nodeId);
   const browse=(id:string)=>{setQuery('');setPositions({});setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);};
   const back=()=>{setPositions({});setTrail(previous=>previous.length>1?previous.slice(0,-1):['']);};
@@ -63,12 +65,12 @@ export default function NodeGraph({rows,onSelect,selectedId}:{rows:EvidenceRelat
     <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2" aria-label="Node type legend">{kinds.map(kind=>{const colors=palette(kind);return <span key={kind} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full" style={{background:colors.background,border:`2px solid ${colors.border}`}}/>{kind}</span>})}</div>
     {selected&&<section aria-label="Focused graph node" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Exploring · {selected.kind}</p><h3 className="mt-1 font-bold break-words">{selected.label}</h3><p className="mt-1 text-sm text-slate-600">{incident.length} direct reviewed {incident.length===1?'connection':'connections'}. The map shows this node and its immediate neighbors. Show all nodes to restore the overview. Use a connection below to read evidence or explore the next node.</p></section>}
     <div ref={container} className="h-[560px] border border-slate-300 rounded-2xl overflow-hidden bg-slate-50 shadow-inner" aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status">
-      <ReactFlow key={`${filter}:${nodeId}`} onInit={setCanvas} nodes={nodes.map(n=>({...n,position:positions[n.id]??n.position}))} edges={edges} fitView fitViewOptions={{padding:0.2}} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} onNodesChange={changes=>setPositions(previous=>{const next={...previous};for(const change of changes)if(change.type==='position'&&change.position)next[change.id]=change.position;return next;})} onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#cbd5e1" gap={22}/><Controls showInteractive={false}/></ReactFlow>
+      <ReactFlow key={`${filter}:${nodeId}`} onInit={setCanvas} nodes={positionedNodes} edges={edges} fitView fitViewOptions={{padding:0.2}} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} onNodesChange={changes=>setPositions(previous=>{const moved=changes.filter(change=>change.type==='position'&&change.position&&(previous[change.id]?.x!==change.position.x||previous[change.id]?.y!==change.position.y));if(!moved.length)return previous;const next={...previous};for(const change of moved)if(change.type==='position'&&change.position)next[change.id]=change.position;return next;})} onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#cbd5e1" gap={22}/><Controls showInteractive={false}/></ReactFlow>
     </div>
     <p id="node-map-status" className="text-xs text-slate-500 my-3" aria-live="polite">{selected?`${selected.label}: ${incident.length} direct reviewed connection${incident.length===1?'':'s'} shown below.`:'Arrows preserve reviewed direction. Dashed links are references; shared nodes use one canonical catalog identity.'}</p>
     <h3 className="font-semibold text-sm mt-4 mb-2">{selected?'Connections to explore':'Reviewed connections'}</h3>
     <ul aria-label="Node connections" className="space-y-2 max-h-80 overflow-auto">{incident.map(e=>{const source=graph.nodes.find(n=>n.id===e.source);const target=graph.nodes.find(n=>n.id===e.target);const neighbor=nodeId?(e.source===nodeId?target:source):null;return <li key={e.id} className={`rounded-lg border p-3 ${selectedId===e.id?'bg-blue-50 border-blue-500':'border-slate-200'}`}>
-      <button aria-pressed={selectedId===e.id} className="w-full text-left text-sm rounded focus-visible:outline-2 focus-visible:outline-blue-600" onClick={()=>onSelect(e.relationship)}>{source?.label} → {target?.label}<span className="block text-xs text-slate-600 mt-1">{relationshipLabel(e.relationship.relationship_type)} · Read source evidence</span></button>
+      <button aria-pressed={selectedId===e.id} className="w-full text-left text-sm rounded focus-visible:outline-2 focus-visible:outline-blue-600" onClick={()=>onSelect(e.relationship)}>{source?.label} → {target?.label}<span className="block text-xs text-slate-600 mt-1">{relationshipLabel(e.relationship.relationship_type)} · Read source evidence</span>{profileRelevance(profile,e.relationship)&&<span className="block text-xs text-blue-800 mt-1">{profileRelevance(profile,e.relationship)!.label}</span>}</button>
       <div className="flex flex-wrap gap-2 mt-2">{(neighbor?[neighbor]:[source,target]).filter((node):node is NonNullable<typeof node>=>!!node).map(node=><button key={node.id} className="text-xs text-blue-800 border border-blue-200 rounded-md bg-white px-2 py-1 text-left break-words" onClick={()=>browse(node.id)}>Explore {node.label}</button>)}</div>
     </li>;})}</ul>
     {!incident.length&&<p className="text-sm">No reviewed connections match this filter.</p>}
