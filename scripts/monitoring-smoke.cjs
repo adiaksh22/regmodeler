@@ -9,7 +9,7 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
   await page.waitForSelector('[aria-label="Source check health"] li',{timeout:30000});
   assert.equal(await page.$$eval('[aria-label="Source check health"] li',nodes=>nodes.length),6);
   const health=await page.$eval('[aria-label="Source check health"]',node=>node.innerText);
-  assert.match(health,/Piper PA-28 · STC index/);assert.match(health,/Latest check failed/);
+  assert.match(health,/Piper PA-28 · STC index/);assert.match(health,/Latest check failed|Checked with scope gaps/);
   assert.match(health,/TCDS PDF bytes are verified during reconciliation/);
   await page.select('[aria-label="Change feed model"]','737-800');
   await page.waitForFunction(()=>document.querySelectorAll('[aria-label="Source check health"] li').length===3,{timeout:20000});
@@ -26,6 +26,6 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
   await page.setViewport({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await (await page.$('[aria-label="Source check health"]')).screenshot({path:'.artifacts/monitoring-health-mobile.png'});
   await page.screenshot({path:'.artifacts/monitoring-mobile.png',fullPage:true});
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({status:'passed',checks:['six named sources','failed PA-28 STC check visible','Boeing model filter','correct certificate links','completed lazy history','TCDS health panel','mobile layout','zero browser errors']}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({status:'passed',checks:['six named sources','PA-28 STC health visible','Boeing model filter','correct certificate links','completed lazy history','TCDS health panel','mobile layout','zero browser errors']}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(JSON.stringify({status:'failed',message:error.message}));process.exitCode=1;});

@@ -8,6 +8,11 @@ describe('source check health',()=>{
   expect(sourceHealth(check({status:'failed'}),now).label).toBe('Latest check failed');
   expect(sourceHealth(check(),now).attention).toBe(false);
  });
+ it('keeps coverage gaps visible after a successful check',()=>{
+  const state=sourceHealth(check({quarantined_count:8,accepted_count:849,returned_count:857}),now);
+  expect(state.label).toBe('Checked with scope gaps');expect(state.attention).toBe(true);
+  expect(sourceHealth(check({quarantined_count:0}),now).label).toBe('Recently checked');
+ });
  it('distinguishes overdue, missing, running and interrupted attempts',()=>{
   expect(sourceHealth(check({last_success:'2026-10-26T00:00:00Z'}),now).label).toBe('Check overdue');
   expect(sourceHealth(check({last_success:null}),now).label).toBe('Freshness unconfirmed');

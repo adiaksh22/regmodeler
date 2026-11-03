@@ -1,11 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchingModels,relatedSnapshot,collectRelated,importRelated,relatedSourceKey,relatedDeltaNeeded } from '../src/related.mjs';
+import { matchingModels,relatedSnapshot,collectRelated,importRelated,relatedSourceKey,relatedDeltaNeeded,unconfirmedStcScope } from '../src/related.mjs';
 import { extractReference } from '../src/reference-text.mjs';
 import {tcdsDeltaNeeded} from '../src/import-tcds-family.mjs';
 
 const record=(id='TEST',more={})=>({'drs:documentNumber':'SA_TEST','drs:status':'Current','drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-181'],documentGuid:id,documentURL:`https://drs.faa.gov/browse/excelExternalWindow/${id}.0001`,docLastModifiedDate:'2025-12-01T00:00:00Z',...more});
 const page=(documents,offset=0,more=false,total=documents.length)=>({documents,summary:{count:documents.length,offset,hasMoreItems:more,totalItems:total}});
+const unconfirmed=()=>record('UNCONFIRMED',{'drs:stcTCNumbersMakeModel':['OTHER -- Piper -- PA-28-181','2A13 -- Piper -- OTHER MODEL'],'drs:stcTCNumbers':['OTHER','2A13'],'drs:stcModel':['PA-28-181','OTHER MODEL']});
+
+test('quarantine accepts broad-query candidates without assigning a model or weakening strict source review',async()=>{
+ const suspect=unconfirmed();assert.equal(unconfirmedStcScope(suspect),true);assert.deepEqual(matchingModels('STC',suspect),[]);
+ const source={metadata:async()=>page([record(),suspect])};
+ await assert.rejects(collectRelated(source,'STC'),/OUT_OF_SCOPE_RELATED_RECORD/);
+ const rows=await collectRelated(source,'STC',undefined,'PA28',{allowUnconfirmed:true});assert.equal(rows.length,2);
+ const verified=await importRelated(null,source,'STC',{verifyOnly:true});assert.equal(verified.acceptedRecords,1);assert.equal(verified.quarantinedRecords,1);
+ await assert.rejects(collectRelated({metadata:async()=>page([record('UNRELATED',{'drs:stcTCNumbersMakeModel':[]})])},'STC',undefined,'PA28',{allowUnconfirmed:true}),/OUT_OF_SCOPE_RELATED_RECORD/);
+});
+test('unchanged quarantined overlap avoids reimport; scope recovery requires reconciliation',()=>{
+ const suspect=unconfirmed();const row=relatedSnapshot('STC',suspect,'2026-11-03').row;
+ const q={identity:row.metadata.source_identity,metadata_hash:row.metadata.metadata_sha256};
+ assert.equal(relatedDeltaNeeded([suspect],[],'STC','PA28',[q]),false);
+ assert.equal(relatedDeltaNeeded([suspect],[],'STC'),true);
+ assert.equal(relatedDeltaNeeded([{...suspect,'drs:title':'Changed'}],[],'STC','PA28',[q]),true);
+ const recovered={...suspect,'drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-181']};
+ const fixed=relatedSnapshot('STC',recovered,'2026-11-03').row;
+ assert.equal(relatedDeltaNeeded([recovered],[{identity:fixed.metadata.source_identity,metadata_hash:fixed.metadata.metadata_sha256,status:fixed.status,active:true}],'STC','PA28',[q]),true);
+});
 test('STC matches require the model and certificate to belong to the same tuple',()=>{
   assert.deepEqual(matchingModels('STC',{'drs:stcTCNumbersMakeModel':['2A13 -- Piper -- PA-28-140','OTHER -- Other -- PA-28-181']}),['PA-28-140']);
   assert.deepEqual(matchingModels('STC',{'drs:stcTCNumbers':['2A13','OTHER'],'drs:stcModel':['OTHER MODEL','PA-28-181']}),[]);

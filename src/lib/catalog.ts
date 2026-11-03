@@ -42,7 +42,7 @@ export async function loadExplorerDetails(number: string): Promise<ExplorerDetai
   try {
     const [relationships, checked, variants] = await Promise.all([
       client.from('model_graph').select('*').eq('tcds_number',number.toUpperCase()).order('target'),
-      client.rpc('source_monitoring'),
+      client.rpc('source_monitoring_coverage'),
       client.from('aircraft_variant_catalog').select('*').eq('tcds_number',number.toUpperCase()).order('display_name'),
     ]);
     if (relationships.error || checked.error || variants.error) throw new Error('Unavailable');

@@ -40,6 +40,7 @@ export interface Database {
       search_related_documents:{Args:{p_model:string;p_type:string;p_include_history?:boolean;p_query?:string;p_offset?:number;p_limit?:number};Returns:(RelatedDocument&{total_count:number})[]};
       search_related_documents_with_review:{Args:{p_model:string;p_type:string;p_include_history?:boolean;p_query?:string;p_offset?:number;p_limit?:number};Returns:(RelatedDocument&{total_count:number})[]};
       source_monitoring:{Args:Record<never,never>;Returns:SourceMonitoring[]};
+      source_monitoring_coverage:{Args:Record<never,never>;Returns:SourceMonitoring[]};
       source_quality_details:{Args:{p_version:string;p_model:string};Returns:SourceQualityFinding[]};
     };
     Enums: Record<string, never>;

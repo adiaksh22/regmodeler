@@ -596,4 +596,35 @@ try {
     const failed=(await query("select * from public.source_monitoring() where source='FAA:TCDSMODEL:A16WE'")).rows[0];
     assert.equal(failed.status,'failed');assert.equal(failed.last_success.getTime(),repaired.last_success.getTime(),'Failed attempts and checkpoint maintenance cannot fabricate a new success time');
   }finally{await query('rollback');}
+  await assert.rejects(asRole('anon',null,()=>query("select public.commit_related_query(null,'B737','STC','[]','[]')")),/permission denied/);
+  await assert.rejects(asRole('anon',null,()=>query('select * from public.source_query_quarantine')),/permission denied/);
+  await assert.rejects(asRole('anon',null,()=>query('select * from public.source_query_coverage')),/permission denied/);
+  await query('begin');
+  try{
+    const acceptedRow=resolutionRows.find(row=>row.document_number==='ST04009NY');
+    const previous=resolutionRows.find(row=>row.document_number==='ST01635LA');
+    const held={...previous,models:[],metadata:{...previous.metadata,metadata_sha256:'e'.repeat(64),metadata_storage_path:`FAA/STC/B737/${'e'.repeat(64)}.json`}};
+    const startQuery=async()=>(await query("insert into public.ingestion_runs(source,status) values('FAA:STC:B737','running') returning id")).rows[0].id;
+    const commitQuery=async(rows,quarantine)=>{const run=await startQuery();await query('select public.commit_related_query($1,$2,$3,$4::jsonb,$5::jsonb)',[run,'B737','STC',JSON.stringify(rows),JSON.stringify(quarantine)]);return run;};
+    await commitQuery([acceptedRow],[held]);
+    const identity=held.metadata.source_identity;
+    assert.equal((await query("select count(*)::integer n from public.model_graph where source_document_number='ST01635LA'")).rows[0].n,0,'Quarantine suspends previously reviewed model paths');
+    assert.equal((await query("select count(*)::integer n from public.source_change_events where source='FAA:STC:B737' and identity=$1 and kind='missing_from_index'",[identity])).rows[0].n,0,'Returned unconfirmed identity is not falsely missing');
+    assert.equal((await query("select active from public.source_observations where source='FAA:STC:B737' and identity=$1",[identity])).rows[0].active,true,'Last trusted observation retained separately');
+    const coverage=(await query("select returned_count,accepted_count,quarantined_count from public.source_monitoring_coverage() where source='FAA:STC:B737'")).rows[0];
+    assert.deepEqual(coverage,{returned_count:2,accepted_count:1,quarantined_count:1});
+    await commitQuery([acceptedRow],[held]);
+    assert.equal((await query('select count(*)::integer n from public.source_query_quarantine')).rows[0].n,1,'Repeated quarantine is idempotent');
+    await query('savepoint before_absence');
+    await commitQuery([acceptedRow],[]);
+    assert.equal((await query("select count(*)::integer n from public.source_change_events where source='FAA:STC:B737' and identity=$1 and kind='missing_from_index'",[identity])).rows[0].n,1,'True subsequent absence remains detectable');
+    await query('rollback to before_absence');
+    const recovered={...previous,source_version_id:identity+'@'+'f'.repeat(64),metadata:{...previous.metadata,metadata_sha256:'f'.repeat(64),metadata_storage_path:`FAA/STC/B737/${'f'.repeat(64)}.json`}};
+    await commitQuery([acceptedRow,recovered],[]);
+    assert.equal((await query('select count(*)::integer n from public.source_query_quarantine where active')).rows[0].n,0,'Resolved record leaves active quarantine');
+    assert.equal((await query("select count(*)::integer n from public.model_graph where source_document_number='ST01635LA'")).rows[0].n,0,'Corrected metadata does not automatically approve a new source version');
+    await commitQuery([],[held]);
+    assert.equal((await query("select accepted_count from public.source_query_coverage where source='FAA:STC:B737'")).rows[0].accepted_count,0,'An all-quarantined complete query is accounted for');
+    console.log('Quarantine checks passed: private raw rows, service-only commit, full inventory counts, old-path suspension, no false index absence, real disappearance, repeat imports and corrected-source review boundary.');
+  }finally{await query('rollback');}
 } finally { await db.close(); }

@@ -66,7 +66,13 @@ export function matchingModels(type, record, scopeKey='PA28') {
   const tc=record['drs:stcTCNumbers'],names=record['drs:stcModel'];
   return Array.isArray(tc)&&Array.isArray(names)&&tc.length===names.length ? definition.models.filter(model=>names.some((name,i)=>name===model.source&&tc[i]===definition.certificate)).map(model=>model.canonical) : [];
 }
-export async function collectRelated(source,type,since,scopeKey='PA28') {
+export function unconfirmedStcScope(record,scopeKey='PA28'){
+  const definition=scopeDefinition(scopeKey);
+  return !matchingModels('STC',record,scopeKey).length
+    && Array.isArray(record['drs:stcTCNumbers'])&&record['drs:stcTCNumbers'].includes(definition.certificate)
+    && Array.isArray(record['drs:stcModel'])&&definition.models.some(model=>record['drs:stcModel'].includes(model.source));
+}
+export async function collectRelated(source,type,since,scopeKey='PA28',{allowUnconfirmed=false}={}) {
   const scope=sourceContract(type,scopeKey);
   const rows=[];const seen=new Set();let total;
   for(let page=0;page<10;page++){
@@ -80,22 +86,32 @@ export async function collectRelated(source,type,since,scopeKey='PA28') {
       if(url.origin!=='https://drs.faa.gov'||url.username||url.password||url.search||url.hash||!/^\/browse\/excelExternalWindow\/[A-Za-z0-9._-]+$/.test(url.pathname)||!row.documentGuid||!url.pathname.endsWith(row.documentGuid+'.0001')||!['Current','Historical','Pending'].includes(row['drs:status'])||!clean(row['drs:documentNumber'])||(row.docLastModifiedDate!==null&&!Number.isFinite(Date.parse(row.docLastModifiedDate))))throw new ImportError('INVALID_RELATED_RECORD');
       if(seen.has(row.documentURL))throw new ImportError('DUPLICATE_PAGE_RECORD');
       if(since&&(!Number.isFinite(Date.parse(row.docLastModifiedDate))||Date.parse(row.docLastModifiedDate)<=Date.parse(since)))throw new ImportError('INCREMENTAL_FILTER_MISMATCH');
-      if(type!=='CAR'&&!matchingModels(type,row,scopeKey).length)throw new ImportError('OUT_OF_SCOPE_RELATED_RECORD');
+      if(type!=='CAR'&&!matchingModels(type,row,scopeKey).length&&!(allowUnconfirmed&&type==='STC'&&unconfirmedStcScope(row,scopeKey)))throw new ImportError('OUT_OF_SCOPE_RELATED_RECORD');
       seen.add(row.documentURL);rows.push(row);
     }
     if(!s.hasMoreItems){if(rows.length!==total)throw new ImportError('INCOMPLETE_CATALOG');return rows;}
     if(result.documents.length!==750)throw new ImportError('INCOMPLETE_PAGE');
   }throw new ImportError('PAGE_LIMIT_EXCEEDED');
 }
-export function relatedDeltaNeeded(records,observations,type,scopeKey='PA28') {
+export function relatedDeltaNeeded(records,observations,type,scopeKey='PA28',quarantined=[]) {
   const known=new Map(observations.map(row=>[row.identity,row]));
-  return records.some(record=>{const snapshot=relatedSnapshot(type,record,'1970-01-01T00:00:00.000Z',scopeKey).row;const old=known.get(snapshot.metadata.source_identity);return !old||!old.active||old.status!==snapshot.status||old.metadata_hash!==snapshot.metadata.metadata_sha256;});
+  const held=new Map(quarantined.map(row=>[row.identity,row]));
+  return records.some(record=>{const snapshot=relatedSnapshot(type,record,'1970-01-01T00:00:00.000Z',scopeKey).row;const identity=snapshot.metadata.source_identity;const old=known.get(identity);const q=held.get(identity);
+    if(type==='STC'&&!snapshot.models.length)return !q||q.metadata_hash!==snapshot.metadata.metadata_sha256;
+    return !!q||!old||!old.active||old.status!==snapshot.status||old.metadata_hash!==snapshot.metadata.metadata_sha256;});
 }
 
 async function readObservations(client,source,identities) {
-  const rows=[];
-  for(let index=0;index<identities.length;index+=100){const result=await client.from('source_observations').select('identity,metadata_hash,status,active').eq('source',source).in('identity',identities.slice(index,index+100));if(result.error)throw new ImportError('CHECKPOINT_READ_FAILED');rows.push(...(result.data??[]));}
-  return rows;
+  const rows=[];const quarantined=[];
+  for(let index=0;index<identities.length;index+=100){
+    const ids=identities.slice(index,index+100);
+    const [result,held]=await Promise.all([
+      client.from('source_observations').select('identity,metadata_hash,status,active').eq('source',source).in('identity',ids),
+      client.from('source_query_quarantine').select('identity,metadata_hash').eq('source',source).eq('active',true).in('identity',ids),
+    ]);
+    if(result.error||held.error)throw new ImportError('CHECKPOINT_READ_FAILED');rows.push(...(result.data??[]));quarantined.push(...(held.data??[]));
+  }
+  return {rows,quarantined};
 }
 
 export async function checkRelated(client,source,type,{now=()=>new Date().toISOString(),scope='PA28'}={}) {
@@ -105,10 +121,10 @@ export async function checkRelated(client,source,type,{now=()=>new Date().toISOS
   if(checkpoint.error)throw new ImportError('CHECKPOINT_READ_FAILED');
   if(!checkpoint.data?.source_modified_at)return null;
   const since=new Date(Date.parse(checkpoint.data.source_modified_at)-86400000).toISOString();
-  const records=await collectRelated(source,type,since,scope);
+  const records=await collectRelated(source,type,since,scope,{allowUnconfirmed:true});
   const identities=records.map(record=>new URL(record.documentURL).pathname.split('/').at(-1));
   const observations=await readObservations(client,sourceKey,identities);
-  if(relatedDeltaNeeded(records,observations,type,scope))return null;
+  if(relatedDeltaNeeded(records,observations.rows,type,scope,observations.quarantined))return null;
   const heartbeat=await client.rpc('record_source_check',{p_source:sourceKey,p_observed_modified_at:records.reduce((latest,row)=>!latest||Date.parse(row.docLastModifiedDate)>Date.parse(latest)?row.docLastModifiedDate:latest,checkpoint.data.source_modified_at)});
   if(heartbeat.error)throw new ImportError('CHECKPOINT_WRITE_FAILED');
   return {mode:'checked',scope,type,deltaRecords:records.length,reconciled:false};
@@ -121,18 +137,19 @@ export function relatedSnapshot(type,record,retrievedAt,scopeKey='PA28') {
   const identity=new URL(record.documentURL).pathname.split('/').at(-1);
   const title=clean(record['drs:title']) || clean(record['drs:adfrawdSubject']) || record['drs:documentNumber'];
   const rawStatus=record['drs:status'].toLowerCase();
+  const matchedModels=matchingModels(type,record,scopeKey);
   return { bytes, row: {
     document_number:record['drs:documentNumber'].trim().toUpperCase(),title,
     source_version_id:identity+'@'+hash,revision_label:type==='CAR'?clean(record['drs:amendRegNo'])||'Historical CAR source':clean(record['drs:stcStatusDate']??record['drs:adfrawdIssueDate'])||'Registry snapshot',
     revision_date:date(record['drs:stcStatusDate']??record['drs:adfrawdIssueDate']??record['drs:effectiveDate']),status:rawStatus,
-    source_url:record.documentURL,retrieved_at:retrievedAt,models:matchingModels(type,record,scopeKey),
+    source_url:record.documentURL,retrieved_at:retrievedAt,models:matchedModels,
     metadata:{ title,source_identity:identity,source_guid:record.documentGuid,source_modified_at:record.docLastModifiedDate,
       source_status:rawStatus,missing_modified_date:record.docLastModifiedDate===null,metadata_sha256:hash,metadata_storage_path:`FAA/${type}/${definition.archiveSlug}/${hash}.json`,
       effective_date:date(record['drs:effectiveDate']),holder:clean(record['drs:stcHolder']),
       summary:clean(record['drs:adfrawdSummary']).slice(0,3000),regulatory_text:clean(record['drs:adfrawdRegulatoryText']),
       superseded_by:record['drs:adfrawdSupersededBy']??[],supersedes:record['drs:adfrawdSupersededAD']??[],
       primary_pdf_pending:true,additional_attachments_pending:record.hasMoreAttachments===true,
-      amendment:clean(record['drs:amendRegNo']),candidate_reason:'Exact FAA registry model match; aircraft-specific applicability or installation is not verified.',
+      amendment:clean(record['drs:amendRegNo']),candidate_reason:type==='STC'&&!matchedModels.length?'Returned by scoped FAA query; certificate/model tuple unconfirmed. No model connection assigned.':'Exact FAA registry model match; aircraft-specific applicability or installation is not verified.',
     },
   }};
 }
@@ -141,15 +158,16 @@ export async function importRelated(client,source,type,{verifyOnly=false,now=()=
   let runId;
   try{
     if(!verifyOnly){const run=await client.from('ingestion_runs').insert({source:relatedSourceKey(type,scope),status:'running'}).select('id').single();if(run.error)throw new ImportError('RUN_START_FAILED');runId=run.data.id;}
-    const records=await collectRelated(source,type,undefined,scope);
+    const records=await collectRelated(source,type,undefined,scope,{allowUnconfirmed:true});
     if(!records.length)throw new ImportError('EMPTY_RELATED_CATALOG');
     const knownDates=records.map(r=>Date.parse(r.docLastModifiedDate)).filter(Number.isFinite);
     if(!knownDates.length)throw new ImportError('NO_SOURCE_MODIFICATION_DATES');
     const since=new Date(Math.max(...knownDates)-86400000).toISOString();
-    const incremental=await collectRelated(source,type,since,scope);
+    const incremental=await collectRelated(source,type,since,scope,{allowUnconfirmed:true});
     const hashes=records.filter(r=>Date.parse(r.docLastModifiedDate)>Date.parse(since)).map(r=>sha256(Buffer.from(JSON.stringify(canonical(r))))).sort();
     if(JSON.stringify(hashes)!==JSON.stringify(incremental.map(r=>sha256(Buffer.from(JSON.stringify(canonical(r))))).sort()))throw new ImportError('INCREMENTAL_RECONCILIATION_MISMATCH');
-    if(verifyOnly)return {scope,type,records:records.length,undatedRecords:records.length-knownDates.length,positiveIncrementalRecords:incremental.length};
+    const quarantinedCount=records.filter(record=>type==='STC'&&!matchingModels(type,record,scope).length).length;
+    if(verifyOnly)return {scope,type,records:records.length,acceptedRecords:records.length-quarantinedCount,quarantinedRecords:quarantinedCount,undatedRecords:records.length-knownDates.length,positiveIncrementalRecords:incremental.length};
     const retrievedAt=now();const prepared=records.map(record=>relatedSnapshot(type,record,retrievedAt,scope));
     let next=0;
     const results=await Promise.allSettled(Array.from({length:4},async()=>{while(next<prepared.length){
@@ -162,9 +180,9 @@ export async function importRelated(client,source,type,{verifyOnly=false,now=()=
       }
     }}));
     const failed=results.find(r=>r.status==='rejected');if(failed)throw failed.reason;
-    const batch=prepared.map(p=>p.row);
-    const committed=await client.rpc('commit_related_catalog',{p_run_id:runId,p_scope:scope,p_type:type,p_records:batch});if(committed.error)throw new ImportError('BATCH_COMMIT_FAILED');
-    return {scope,type,records:records.length,undatedRecords:records.length-knownDates.length,modelMatches:batch.reduce((n,r)=>n+r.models.length,0),positiveIncrementalRecords:incremental.length};
+    const batch=prepared.map(p=>p.row);const quarantined=batch.filter(row=>type==='STC'&&!row.models.length);const accepted=batch.filter(row=>type!=='STC'||row.models.length);
+    const committed=await client.rpc('commit_related_query',{p_run_id:runId,p_scope:scope,p_type:type,p_records:accepted,p_quarantined:quarantined});if(committed.error)throw new ImportError('BATCH_COMMIT_FAILED');
+    return {scope,type,records:records.length,acceptedRecords:accepted.length,quarantinedRecords:quarantined.length,undatedRecords:records.length-knownDates.length,modelMatches:accepted.reduce((n,r)=>n+r.models.length,0),positiveIncrementalRecords:incremental.length};
   }catch(error){
     const code=error instanceof ImportError?error.code:'RELATED_IMPORT_FAILED';
     if(runId)await client.from('ingestion_runs').update({status:'failed',completed_at:now(),error_code:code}).eq('id',runId).eq('status','running');

@@ -12,6 +12,7 @@ export default function SourceMonitoring({checks,model='',type='',certificate=''
     <p className="mt-2">Last success: {check?.last_success?new Date(check.last_success).toLocaleString():'Not recorded'}</p>
     <p className="mt-1">Latest attempt: {check?.last_attempt?new Date(check.last_attempt).toLocaleString():'Not recorded'}</p>
     <p className="mt-1">{check?.baseline_ready?'Change baseline established':'Change baseline not established'}</p>
+    {check?.returned_count!=null&&<div className="mt-2 border-t border-slate-300 pt-2"><p>Last full query: {check.returned_count} returned · {check.accepted_count} exact-match candidates · {check.quarantined_count} scope unconfirmed</p><p className="mt-1">Coverage recorded: {check.coverage_checked_at?new Date(check.coverage_checked_at).toLocaleString():'Not recorded'}. Counts describe records, including historical observations, rather than aircraft approvals.</p>{!!check.quarantined_count&&<p className="mt-1">Unconfirmed records were returned by the FAA. They have not been treated as missing from its index or assigned to an aircraft model.</p>}</div>}
    </li>;
   })}</ul>
  </section>;

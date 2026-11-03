@@ -21,5 +21,6 @@ export function sourceHealth(check:SourceMonitoring,now=Date.now()):{label:strin
  if(!Number.isFinite(success)||success>now+5*60*1000)return {label:'Freshness unconfirmed',attention:true,explanation:'No valid successful check time is available.'};
  if(now-success>36*60*60*1000)return {label:'Check overdue',attention:true,explanation:'No successful check in the past 36 hours. Daily scheduled checks can be delayed.'};
  if(!check.baseline_ready)return {label:'Baseline pending',attention:true,explanation:'A successful check exists, but change-event coverage has not established a baseline.'};
+ if((check.quarantined_count??0)>0)return {label:'Checked with scope gaps',attention:true,explanation:'Some returned records have unconfirmed certificate/model associations. They remain outside model results and reviewed connections.'};
  return {label:'Recently checked',attention:false,explanation:'A successful source check was recorded within 36 hours. This is not an aircraft compliance determination.'};
 }

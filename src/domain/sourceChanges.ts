@@ -4,5 +4,5 @@ export type SourceChange = {
   old_source_status:string|null;new_source_status:string|null;
   old_metadata:Record<string,string|null>|null;new_metadata:Record<string,string|null>|null;
 };
-export type SourceMonitoring={source:string;last_success:string|null;last_attempt:string|null;status:string|null;baseline_ready:boolean};
+export type SourceMonitoring={source:string;last_success:string|null;last_attempt:string|null;status:string|null;baseline_ready:boolean;returned_count?:number|null;accepted_count?:number|null;quarantined_count?:number|null;coverage_checked_at?:string|null};
 export function changeLabel(kind:string){return {discovered:'First observed after baseline',changed:'Source observation changed',missing_from_index:'No longer returned by scoped index',returned_to_index:'Returned to scoped index'}[kind]??'Source observation';}

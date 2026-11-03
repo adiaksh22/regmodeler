@@ -1,5 +1,7 @@
 # Source monitoring audit — October 28, 2026
 
+November 3 follow-up: the [scoped query quarantine](scoped-query-quarantine.md) now lets valid PA-28 STC updates proceed while retaining the eight unconfirmed records separately. Hosted reconciliation and a subsequent unchanged delta check succeeded; the UI reports explicit scope gaps. The audit findings below remain the historical diagnosis, rather than the current import status.
+
 The daily and weekly GitHub workflows are active, with `SOURCE_CHECKS_ENABLED=true`. Recent scheduled runs failed on PA-28 STC tuple validation. The daily job continued through the Boeing checks; the weekly job previously stopped at its first failing source. Weekly source steps now continue independently while preserving the job's failure result.
 
 ## Repairs completed

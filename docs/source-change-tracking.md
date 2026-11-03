@@ -30,6 +30,8 @@ The feed exposes the last successful check, latest database-recorded attempt sta
 
 ## Validation
 
+The November 3 [scoped query quarantine](scoped-query-quarantine.md) restored PA-28 STC updates: the complete query is accounted for as 849 exact-match candidates plus eight scope-unconfirmed records. The public health card keeps that coverage gap visible after a successful check. Quarantined identities are not falsely reported as missing from the FAA index, and their prior model matches are suspended. Raw metadata remains privately archived; no model approval is inferred from the quarantine.
+
 The hosted baseline passed: 23 TCDS revisions, 58 AD observations, 856 STC observations; all three baselines are established, zero initial events, and 19 reviewed connections preserved. No fabricated change events are inserted into the hosted database.
 
 Database tests cover baseline semantics, corrections, repeated imports, no-change heartbeats, bounded public paging, rollback, disappearance/return, immutable observed statuses, publication of both sides and private core functions. Worker tests cover overlap deduplication and TCDS/related delta decisions. Browser tests check the live empty baseline and a mocked before/after event, model navigation, mobile layout, profiles and outages.
