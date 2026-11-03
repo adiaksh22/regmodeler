@@ -15,7 +15,7 @@ import ApplicabilityLogic from './ApplicabilityLogic';
 import SourceQualityPanel from './SourceQualityPanel';
 import SourceStatus from './SourceStatus';
 import SourceMonitoring from './SourceMonitoring';
-import {monitoredSources,sourceHealth} from '../domain/sourceHealth';
+import {monitoredSources,monitoredModels,sourceHealth} from '../domain/sourceHealth';
 import {aircraftModelIdentity} from '../domain/aircraftModelIdentity';
 import {loadRelationshipEvidence,loadRevisionHistory} from '../lib/catalog';
 import type {ApplicabilityRule,OfficialRevision,RegulationSource} from '../domain/explorer';
@@ -66,6 +66,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const chooseModel=(model:string)=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model},{replace:true});setEvidenceId('');setExpanded('');};
   return <section className="bg-white rounded-xl border border-slate-200 p-5 mb-6" aria-label="Aircraft data explorer">
     <AircraftFamilySummary variants={details.variants??[]} selected={selected} onSelect={chooseModel}/>
+    {details.variants?.some(variant=>variant.model_key===selected&&variant.faa_status==='faa_approved')&&!monitoredModels.includes(selected)&&<p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">TCDS evidence is available for {selected}. Related AD/STC discovery and monitoring have not been configured for this model.</p>}
     <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
       <div><label htmlFor="aircraft-model" className="block text-sm font-semibold text-slate-600 mb-1">Aircraft model</label>
         <select id="aircraft-model" value={selected} onChange={e=>chooseModel(e.target.value)} className="border rounded-lg p-2 font-semibold max-w-full">

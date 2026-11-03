@@ -21,6 +21,10 @@ describe('aircraft family evidence summary',()=>{
   expect(html).toContain('Earlier revision; renewed review needed');expect(html).toContain('Listed in reviewed');
   expect(html).not.toContain('current FAA TCDS Revision 81');expect(html).not.toContain('Matches the imported current revision');
  });
+ it('displays an approved MAX 10 without an obsolete project warning',()=>{
+  const html=renderToStaticMarkup(<AircraftFamilySummary variants={[variant({model_key:'737-10',display_name:'737 MAX 10',approved_on:'2026-10-20',evidence_revision:'82',evidence_is_current:true,facts:{maximum_passengers:{numeric_value:230,text_value:null,unit:'seats',conditions:{configuration:'Requires a Type C exit.'},evidence_page:68,evidence_excerpt:'Reviewed exit-dependent maximum.'}}})]} selected="737-10" onSelect={()=>{}}/>);
+  expect(html).toContain('230 seats');expect(html).toContain('Type C');expect(html).not.toContain('not listed');expect(html).toContain('Matches the imported current revision');
+ });
  it('renders alternative applicability groups as explicit OR paths',()=>{
   const rule=(group:string,label:string):ApplicabilityRule=>({relationship_id:'edge',rule_set_label:'Alternative display path',outcome:'requires_review',group_id:group,group_order:group==='a'?1:2,match_operator:'all',group_label:label,predicate_id:group, predicate_order:1,subject_kind:'stc',subject_key:group==='a'?'SA01899WI':'SA02658SE',comparison:'present',expected:true,evidence_page:3,evidence_excerpt:'Reviewed'});
   const html=renderToStaticMarkup(<ApplicabilityLogic rules={[rule('a','G3X Touch path'),rule('b','GI 275 path')]}/>);

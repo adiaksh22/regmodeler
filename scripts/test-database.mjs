@@ -627,4 +627,34 @@ try {
     assert.equal((await query("select accepted_count from public.source_query_coverage where source='FAA:STC:B737'")).rows[0].accepted_count,0,'An all-quarantined complete query is accounted for');
     console.log('Quarantine checks passed: private raw rows, service-only commit, full inventory counts, old-path suspension, no false index absence, real disappearance, repeat imports and corrected-source review boundary.');
   }finally{await query('rollback');}
+  const revision82=JSON.parse(readFileSync(new URL('../apps/worker/src/boeing-revision82.json',import.meta.url),'utf8'));
+  await assert.rejects(asRole('anon',null,()=>query('select public.review_boeing_revision82()')),/permission denied/);
+  await assert.rejects(query('select public.review_boeing_revision82()'),/Reviewed A16WE Revision 82 original missing/);
+  await query('begin');
+  try{
+    const nextIdentity=revision82.source_url.split('/').at(-1);
+    const next={...a16weRecord,source_version_id:nextIdentity,revision_label:'82',revision_date:revision82.date,source_url:revision82.source_url,
+      content_sha256:revision82.hash,storage_path:`FAA/TCDS/A16WE/${revision82.hash}.pdf`,retrieved_at:'2026-11-03T00:00:00Z',
+      metadata:{...a16weRecord.metadata,source_identity:nextIdentity,source_guid:nextIdentity.split('.')[0],snapshot_sha256:'e'.repeat(64),model_list:revision82.models,model:revision82.models.join(' | '),source_modified_at:'2026-10-20T20:10:07Z'}};
+    const run=(await query("insert into public.ingestion_runs(source,status) values('FAA:TCDSMODEL:A16WE','running') returning id")).rows[0].id;
+    await query('select public.commit_tcds_catalog($1,$2,$3::jsonb)',[run,'A16WE',JSON.stringify([{...a16weRecord,status:'historical'},next])]);
+    assert.equal((await query('select public.review_boeing_revision82() n')).rows[0].n,21);
+    const refreshed=(await query("select * from public.aircraft_variant_catalog where tcds_number='A16WE'")).rows;
+    assert.equal(refreshed.length,7);assert.ok(refreshed.every(row=>row.faa_status==='faa_approved'&&row.evidence_revision==='82'&&row.evidence_is_current));
+    assert.equal(refreshed.reduce((count,row)=>count+Object.keys(row.facts).length,0),49);
+    const max10=refreshed.find(row=>row.model_key==='737-10');
+    assert.equal(max10.facts.maximum_takeoff_weight.numeric_value,197900);assert.equal(max10.facts.maximum_passengers.numeric_value,230);
+    assert.match(max10.facts.maximum_passengers.conditions.configuration,/Type C/);assert.equal(max10.approved_on,'2026-10-20');
+    assert.equal(refreshed.find(row=>row.model_key==='737-8').facts.minimum_crew.evidence_page,68,'Current facts use the corrected Revision 82 page');
+    assert.equal((await query("select count(*)::integer n from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows[0].n,21);
+    const factsCount=(await query('select count(*)::integer n from public.aircraft_variant_facts')).rows[0].n;
+    await query('select public.review_boeing_revision82()');
+    assert.equal((await query('select count(*)::integer n from public.aircraft_variant_facts')).rows[0].n,factsCount,'Repeat review preserves source-bound fact identities');
+    assert.equal((await query("select count(*)::integer n from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows[0].n,21,'Repeat review does not duplicate graph paths');
+    await query("update public.document_versions set content_sha256=$1 where id=$2",['f'.repeat(64),max10.evidence_version_id]);
+    await query('savepoint changed_original');
+    await assert.rejects(query('select public.review_boeing_revision82()'),/Reviewed A16WE Revision 82 original missing/);
+    await query('rollback to changed_original');
+    console.log('Revision 82 checks passed: exact-source guard, seven approved variants, conditional MAX 10 limits, 49 revision-bound facts, 21 paths, retired project notice and repeat review.');
+  }finally{await query('rollback');}
 } finally { await db.close(); }

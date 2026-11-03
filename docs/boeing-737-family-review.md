@@ -1,5 +1,7 @@
 # Boeing 737 family review
 
+The current reviewed slice is now [Revision 82](boeing-revision82-review.md), including source-backed 737-10 facts and corrected MAX page references. The following records the original Revision 81 review; its project boundary and counts are historical.
+
 Verified October 15, 2026, against the official FAA DRS record for TCDS A16WE, Revision 81, dated August 3, 2026. The website remains unpublished.
 
 ## Source and import result
