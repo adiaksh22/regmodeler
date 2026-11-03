@@ -37,6 +37,14 @@ Attachment evidence has a composite foreign key tying it to its parent source ve
 
 ## Validation and limits
 
+### November 3 network-navigation refinement
+
+The first UI refinement pass adds a focused-node panel, a bounded 20-entry exploration trail, Back one node, Show all nodes and Fit map controls. Each connection has separate actions to read the cited evidence or explore a connected node. Navigating the graph changes display state only; it does not create or approve relationships. Switching connection-type filters resets the exploration trail.
+
+Selecting a node fits that node and its direct neighbors into view, retaining dimmed context. Resizing the canvas refits the focused neighborhood so mobile/orientation changes do not leave the selected node outside the viewport. Dense family-wide maps can zoom out further; the readable connection cards remain available alongside the canvas controls. Search selection clears the query after focusing a result.
+
+Validation passed 99 frontend tests, 43 worker tests, all database checks, lint, types and build. Hosted browser checks cover PA-28 AD-to-neighbor traversal, back navigation, exact evidence selection, filter reset, mobile focused-node visibility and the refreshed Revision 82 Boeing map/archive links. Network exploration is the user's selected first UI priority; broader layout/readability refinement and beta journey QA remain before release.
+
 Review coverage now uses a single server-side search request per page, with 20 records in the interface and a database ceiling of 50. Status and document-type filters combine with literal, case-insensitive document-number/title search. Search waits 250 ms after typing; filter changes return to page one. Counts include all matching published records and a separate model-wide reviewed count, including when a search returns no rows. Late responses cannot replace a newer model or search. Failed requests offer retry. No FAA request or new import is triggered by browsing this queue. The database still evaluates the model-scoped queue to calculate exact counts; pagination bounds network payload and browser memory, rather than promising constant database cost as the catalog grows.
 
 Hosted verification for 737-800 returned 20 of 1,067 pending candidates in approximately 11 KB per page, instead of downloading the full queue. Tests cover filtering, disjoint pages, empty-page counts, publication access, maximum page size, changed-source priority through FAA Series aliases, debounce, stale responses and retry.

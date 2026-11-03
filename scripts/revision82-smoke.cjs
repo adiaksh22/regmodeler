@@ -12,7 +12,7 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
   assert.match(family,/197,900 lb/);assert.match(family,/Type C/);assert.match(family,/Reviewed TCDS revision: 82/);assert.match(family,/Matches the imported current revision/);assert.doesNotMatch(family,/not listed|Earlier revision/);
   assert.match(await page.$eval('body',node=>node.innerText),/Related AD\/STC discovery and monitoring have not been configured for this model/);
   await page.waitForSelector('[aria-label="Node connections"] button',{timeout:30000});
-  assert.equal(await page.$$eval('[aria-label="Node connections"] button',nodes=>nodes.length),3);
+  assert.equal(await page.$$eval('[aria-label="Node connections"] button[aria-pressed]',nodes=>nodes.length),3);
   await page.evaluate(()=>[...document.querySelectorAll('[aria-label="Node connections"] button')].find(node=>node.textContent.includes('LEAP-1B')).click());
   const evidence=await page.$eval('[aria-label="Relationship source evidence"]',node=>node.innerText);assert.match(evidence,/82.*page 67/);
   await page.evaluate(()=>[...document.querySelectorAll('[aria-label="Relationship source evidence"] button')].find(node=>node.textContent==='View cited PDF').click());

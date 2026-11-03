@@ -150,3 +150,9 @@ Last updated: 2026-10-15 (Boeing related-source expansion locally and hosted ver
   - MAX 10 AD/STC discovery remains unconfigured; UI explicitly states TCDS-only coverage. Existing six-model Boeing discovery/monitoring scope is unchanged;
   - local quality checks passed: 96 frontend, 43 worker tests plus database guards/idempotence/revision-isolation tests, lint/types/build. `scripts/revision82-smoke.cjs` passed real graph links, exact archived page, new-model facts/conditions, model switching, history and mobile width. Desktop screenshot visually inspected;
   - user answered UI preference: **make the node/network view easier to explore first**. Next UI work should focus on clear node focus/navigation and easy access to exact evidence. Site remains unpublished.
+- First network UI refinement pass completed:
+  - added focused-node context, a bounded exploration breadcrumb trail, Back one node, Show all nodes and Fit map;
+  - split connection-card source selection from Explore-neighbor actions, so users can follow reviewed paths without precise canvas clicks. Traversal never edits relationships; filters reset navigation state;
+  - viewport now fits a selected node and its direct neighbors, refits after canvas resize, and supports smaller overview zoom. Mobile visual QA caught/fixed an empty-canvas resize condition; selected-node intersection is now a browser assertion;
+  - complete local checks passed: 99 frontend/43 worker tests, database guards/lifecycle checks, lint/types/build. `scripts/graph-navigation-smoke.cjs` and updated `scripts/revision82-smoke.cjs` passed hosted data, source-PDF viewing, navigation and mobile layout; mobile screenshot inspected;
+  - current next stage is continued **network UI readability/layout and beta journey refinement**, followed by release preparation/user approval. The selected Boeing data review is finished; avoid adding unrelated source-expansion work before UI polish. Site remains unpublished.
