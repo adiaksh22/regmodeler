@@ -1,10 +1,12 @@
 import { useReactTable, getCoreRowModel, flexRender, createColumnHelper } from '@tanstack/react-table';
 import { Issue } from '../types/tcds';
 import { updateIssueStatus } from '../utils/storageManager';
+import {useState} from 'react';
 
 const columnHelper = createColumnHelper<Issue>();
 
 export default function IssuesTable({ data, onUpdate }: { data: Issue[]; onUpdate: () => void }) {
+  const [notice,setNotice]=useState('');
   const columns = [
     columnHelper.accessor('tcds_number', { header: 'TCDS Number' }),
     columnHelper.accessor('issue_type', { header: 'Issue Type' }),
@@ -15,10 +17,11 @@ export default function IssuesTable({ data, onUpdate }: { data: Issue[]; onUpdat
       header: 'Status',
       cell: info => (
         <select
+          aria-label={`Issue status for ${info.row.original.tcds_number} ${info.row.original.field_name}`}
           value={info.getValue()}
           onChange={(e) => {
-            updateIssueStatus(info.row.original.id, e.target.value as Issue['status']);
-            onUpdate();
+            try{updateIssueStatus(info.row.original.id, e.target.value as Issue['status']);setNotice('');onUpdate();}
+            catch{setNotice('The issue status could not be saved. Existing browser records were preserved.');}
           }}
           className="border rounded px-2 py-1"
         >
@@ -38,6 +41,7 @@ export default function IssuesTable({ data, onUpdate }: { data: Issue[]; onUpdat
 
   return (
     <div className="overflow-x-auto">
+      {notice&&<p role="status" className="text-sm text-amber-900">{notice}</p>}
       <table className="min-w-full border-collapse border border-gray-300">
         <thead className="bg-gray-100">
           {table.getHeaderGroups().map(headerGroup => (

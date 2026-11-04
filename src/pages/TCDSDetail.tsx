@@ -18,6 +18,7 @@ export default function TCDSDetail() {
   const [revisions, setRevisions] = useState<TCDSRevision[]>([]);
   const [crossRefGroup, setCrossRefGroup] = useState<CrossRefGroup | null>(null);
   const [linkInput, setLinkInput] = useState('');
+  const [linkNotice,setLinkNotice]=useState('');
   const [loading, setLoading] = useState(false);
   const [reload, setReload] = useState(0);
   const [details, setDetails] = useState<ExplorerDetails>({revisions:[],relationships:[],lastChecked:null,available:false});
@@ -53,14 +54,11 @@ export default function TCDSDetail() {
 
     const normalized = linkInput.trim().toUpperCase();
 
-    if (crossRefGroup) {
-      addToGroup(crossRefGroup.group_id, normalized);
-    } else {
-      createGroup([tcdsNumber.toUpperCase(), normalized], 'manual');
-    }
-
-    setCrossRefGroup(getGroupByMember(tcdsNumber));
-    setLinkInput('');
+    try {
+      if (crossRefGroup) addToGroup(crossRefGroup.group_id, normalized);
+      else createGroup([tcdsNumber.toUpperCase(), normalized], 'manual');
+      setCrossRefGroup(getGroupByMember(tcdsNumber));setLinkInput('');setLinkNotice('Personal link saved in this browser.');
+    }catch{setLinkNotice('The link could not be saved. Existing browser records were preserved.');}
 
   };
 
@@ -162,6 +160,7 @@ export default function TCDSDetail() {
                 Link
               </button>
             </div>
+            {linkNotice&&<p role="status" className="mt-3 text-sm text-amber-900">{linkNotice}</p>}
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">

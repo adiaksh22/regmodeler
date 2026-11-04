@@ -1,7 +1,10 @@
 import { TCDSDocument } from '../types/tcds';
 import { TCDSRevision, FieldChange, NormalizedTCDS } from '../types/revision';
+import {readBrowserRecord,writeBrowserRecord,recordObject,stringFields} from '../lib/browserRecords';
 
 const REVISIONS_KEY = 'tcds_revisions';
+const validRevision=(value:unknown)=>recordObject(value)&&stringFields(value,['id','tcds_number','timestamp','revision','revision_date','model','url','content_hash'])&&['current','historical'].includes(String(value.status))&&Number.isFinite(Date.parse(String(value.timestamp)))&&typeof value.content_length==='number'&&(value.holder===undefined||typeof value.holder==='string')&&(value.field_changes===undefined||(Array.isArray(value.field_changes)&&value.field_changes.every(field=>recordObject(field)&&typeof field.field==='string'&&['old_value','new_value'].every(key=>field[key]===undefined||typeof field[key]==='string'))));
+const validRevisions=(value:unknown)=>Array.isArray(value)?value.every(validRevision):recordObject(value)&&Object.entries(value).every(([key,rows])=>/^[A-Z0-9-]+$/.test(key)&&Array.isArray(rows)&&rows.every(row=>validRevision(row)&&row.tcds_number===key));
 
 // FNV-1a hash (32-bit) - deterministic, fast, browser-safe
 // Note: Not cryptographic, small collision risk acceptable for this use case
@@ -32,7 +35,7 @@ const sortKeys = (obj: unknown): unknown => {
 const migrateRevisionsFormat = (data: TCDSRevision[] | Record<string, TCDSRevision[]>): Record<string, TCDSRevision[]> => {
   if (Array.isArray(data)) {
     // Old format: flat array
-    const map: Record<string, TCDSRevision[]> = {};
+    const map: Record<string, TCDSRevision[]> = Object.create(null);
     data.forEach((rev: TCDSRevision) => {
       if (!map[rev.tcds_number]) {
         map[rev.tcds_number] = [];
@@ -40,7 +43,7 @@ const migrateRevisionsFormat = (data: TCDSRevision[] | Record<string, TCDSRevisi
       map[rev.tcds_number].push(rev);
     });
     // Save migrated format
-    localStorage.setItem(REVISIONS_KEY, JSON.stringify(map));
+    try{writeBrowserRecord(REVISIONS_KEY,map,validRevisions);}catch{/* Preserve readable legacy data if migration cannot be saved. */}
     return map;
   }
   // Already in new format
@@ -118,10 +121,7 @@ export const diffFields = (oldDoc: NormalizedTCDS | null, newDoc: NormalizedTCDS
 };
 
 const getRevisionsMap = (): Record<string, TCDSRevision[]> => {
-  const data = localStorage.getItem(REVISIONS_KEY);
-  if (!data) return {};
-
-  const parsed = JSON.parse(data) as TCDSRevision[] | Record<string, TCDSRevision[]>;
+  const parsed=readBrowserRecord<TCDSRevision[]|Record<string,TCDSRevision[]>>(REVISIONS_KEY,{},validRevisions);
   return migrateRevisionsFormat(parsed);
 };
 
@@ -179,5 +179,5 @@ export const saveRevision = (doc: TCDSDocument): void => {
   }
   map[normalized.tcds_number].push(newRevision);
 
-  localStorage.setItem(REVISIONS_KEY, JSON.stringify(map));
+  writeBrowserRecord(REVISIONS_KEY,map,validRevisions);
 };

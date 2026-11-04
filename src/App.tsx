@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import {lazy,Suspense} from 'react';
 import HomePage from './pages/HomePage';
+import BrowserStorageNotice from './components/BrowserStorageNotice';
+import PageErrorBoundary from './components/PageErrorBoundary';
 const TCDSDetail=lazy(()=>import('./pages/TCDSDetail'));
 const ChangeLogPage=lazy(()=>import('./pages/ChangeLogPage'));
 
@@ -16,12 +18,13 @@ function App() {
           </div>
         </nav>
         <div className="border-b border-amber-200 bg-amber-50" role="note"><p className="container mx-auto px-4 py-2 text-xs text-amber-950"><strong>Research prototype.</strong> Reviewed FAA evidence helps locate records; it does not determine individual-aircraft applicability or compliance.</p></div>
-        <main id="main-content" tabIndex={-1}><Suspense fallback={<p role="status" className="p-6">Loading page…</p>}><Routes>
+        <BrowserStorageNotice/>
+        <main id="main-content" tabIndex={-1}><PageErrorBoundary><Suspense fallback={<p role="status" className="p-6">Loading page…</p>}><Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/tcds/:tcdsNumber" element={<TCDSDetail />} />
           <Route path="/changelog" element={<ChangeLogPage />} />
           <Route path="*" element={<section className="mx-auto max-w-3xl px-4 py-12"><h1 className="text-3xl font-bold">Page not found</h1><p className="mt-3 text-slate-600">This address does not match a page in RegModeler.</p><Link to="/" className="mt-5 inline-block text-blue-700 underline">Return to aircraft search</Link></section>} />
-        </Routes></Suspense></main>
+        </Routes></Suspense></PageErrorBoundary></main>
       </div>
     </BrowserRouter>
   );

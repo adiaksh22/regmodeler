@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { catalog } from '../lib/catalog';
 import type { CatalogDocument, CatalogSource } from '../domain/catalog';
+import {matchedAircraftModel} from '../domain/aircraftModelIdentity';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function HomePage() {
 }
 
 function CatalogCard({document,query}:{document:CatalogDocument;query:string}){
- const exactModel=document.model.split('|').some(model=>model.trim().toUpperCase()===query.toUpperCase());
+ const exactModel=matchedAircraftModel(document.tcds_number,document.model.split('|'),query);
  const title=document.tcds_number==='2A13'?'Piper PA-28 family':document.tcds_number==='A16WE'?'Boeing 737 family':document.holder;
- return <Link to={`/tcds/${document.tcds_number}${exactModel?`?model=${encodeURIComponent(query.toUpperCase())}`:''}`} className="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"><span className="text-xs font-bold uppercase tracking-wide text-blue-700">TCDS {document.tcds_number}</span><span className="float-right rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">Revision {document.revision}</span><h3 className="mt-2 text-lg font-bold text-slate-950 group-hover:text-blue-800">{title}</h3><p className="mt-1 text-sm text-slate-600">{document.product_type} · {document.holder}</p><p className="mt-3 text-sm text-slate-500">{document.model.split('|').slice(0,3).join(' · ')}{document.model.split('|').length>3?' · more models':''}</p></Link>;
+ return <Link to={`/tcds/${document.tcds_number}${exactModel?`?model=${encodeURIComponent(exactModel)}`:''}`} className="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"><span className="text-xs font-bold uppercase tracking-wide text-blue-700">TCDS {document.tcds_number}</span><span className="float-right rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">Revision {document.revision}</span><h3 className="mt-2 text-lg font-bold text-slate-950 group-hover:text-blue-800">{title}</h3><p className="mt-1 text-sm text-slate-600">{document.product_type} · {document.holder}</p><p className="mt-3 text-sm text-slate-500">{document.model.split('|').slice(0,3).join(' · ')}{document.model.split('|').length>3?' · more models':''}</p></Link>;
 }

@@ -1,10 +1,12 @@
 import { CrossRefGroup } from '../types/crossReference';
+import {readBrowserRecord,writeBrowserRecord,recordObject,stringFields} from '../lib/browserRecords';
 
 const CROSS_REF_KEY = 'tcds_cross_references';
+const validGroups=(value:unknown)=>Array.isArray(value)&&value.every(group=>recordObject(group)&&stringFields(group,['group_id','created_at','updated_at'])&&Array.isArray(group.members)&&group.members.every(member=>typeof member==='string')&&['manual','auto'].includes(String(group.method)));
+const saveGroups=(groups:CrossRefGroup[])=>writeBrowserRecord(CROSS_REF_KEY,groups,validGroups);
 
 export const listGroups = (): CrossRefGroup[] => {
-  const data = localStorage.getItem(CROSS_REF_KEY);
-  return data ? JSON.parse(data) : [];
+  return readBrowserRecord<CrossRefGroup[]>(CROSS_REF_KEY,[],validGroups);
 };
 
 export const getGroup = (groupId: string): CrossRefGroup | null => {
@@ -31,7 +33,7 @@ export const createGroup = (members: string[], method: 'manual' | 'auto' = 'manu
   };
 
   groups.push(newGroup);
-  localStorage.setItem(CROSS_REF_KEY, JSON.stringify(groups));
+  saveGroups(groups);
   return newGroup;
 };
 
@@ -46,7 +48,7 @@ export const addToGroup = (groupId: string, tcdsNumber: string): boolean => {
   if (!groups[index].members.includes(normalized)) {
     groups[index].members.push(normalized);
     groups[index].updated_at = new Date().toISOString();
-    localStorage.setItem(CROSS_REF_KEY, JSON.stringify(groups));
+    saveGroups(groups);
   }
 
   return true;
@@ -67,7 +69,7 @@ export const removeFromGroup = (groupId: string, tcdsNumber: string): boolean =>
     groups.splice(index, 1);
   }
 
-  localStorage.setItem(CROSS_REF_KEY, JSON.stringify(groups));
+  saveGroups(groups);
   return true;
 };
 
@@ -77,6 +79,6 @@ export const deleteGroup = (groupId: string): boolean => {
 
   if (filtered.length === groups.length) return false;
 
-  localStorage.setItem(CROSS_REF_KEY, JSON.stringify(filtered));
+  saveGroups(filtered);
   return true;
 };

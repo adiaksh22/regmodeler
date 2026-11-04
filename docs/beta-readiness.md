@@ -29,9 +29,12 @@ node scripts/family-graph-smoke.cjs
 node scripts/monitoring-smoke.cjs
 node scripts/revision82-smoke.cjs
 node scripts/pdf-dialog-smoke.cjs
+node scripts/audit-correctness-smoke.cjs
 ```
 
 The beta test reads hosted public data and simulates outages only inside its isolated browser. It does not import FAA records, alter hosted data or publish the site. Historical tests elsewhere in `scripts/` may assume earlier catalog inventories; this list identifies current journey checks.
+
+The audit-correctness journey also verifies all 17 Boeing model summaries, model-bound AD details, explicit evidence failures/retry, NG search aliases, corrupt personal records and denied-storage startup. It supports `SMOKE_BASE_URL` and `SMOKE_BROWSER_EXECUTABLE`; the November 3 repair pass ran it in Windows Chrome and Edge. See [the full audit and repair status](tool-audit-2026-11-03.md) for open findings; earlier journey passes do not close those issues.
 
 ## Release sequence
 

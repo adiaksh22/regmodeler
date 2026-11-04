@@ -1,11 +1,12 @@
 import { TCDSDocument } from '../types/tcds';
 import { saveRevision } from './revisionManager';
+import {readBrowserRecord,writeBrowserRecord,recordObject,stringFields} from '../lib/browserRecords';
 
 const DOCUMENTS_KEY = 'tcds_documents';
+const validDocuments=(value:unknown)=>Array.isArray(value)&&value.every(doc=>recordObject(doc)&&stringFields(doc,['tcds_number','revision','revision_date','url','model'])&&['current','historical'].includes(String(doc.status))&&(doc.holder===undefined||typeof doc.holder==='string'));
 
 export const getDocuments = (): TCDSDocument[] => {
-  const data = localStorage.getItem(DOCUMENTS_KEY);
-  return data ? JSON.parse(data) : [];
+  return readBrowserRecord<TCDSDocument[]>(DOCUMENTS_KEY,[],validDocuments);
 };
 
 export const getDocumentByNumber = (tcdsNumber: string): TCDSDocument | null => {
@@ -24,5 +25,5 @@ export const saveDocument = (doc: TCDSDocument): void => {
   } else {
     docs.push(normalizedDoc);
   }
-  localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(docs));
+  writeBrowserRecord(DOCUMENTS_KEY,docs,validDocuments);
 };
