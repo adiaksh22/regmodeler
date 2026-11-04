@@ -6,7 +6,7 @@ Prepared November 3, 2026. **No deployment has been created by this work.** The 
 
 RegModeler is a research prototype for finding FAA aircraft evidence and following cited connections. The beta includes model-first search, a directed node graph, page-cited source viewing, current/history AD/STC discovery, browser-private aircraft profiles and a source-change feed.
 
-Deep profile support covers PA-28-140 and PA-28-181. The Boeing slice includes seven reviewed TCDS variants; 737-10 AD/STC discovery remains unconfigured. Reviewed evidence, metadata candidates and unknown applicability must remain visibly distinct. The beta does not determine compliance or promise complete regulatory coverage or uninterrupted alerts.
+Deep profile support covers PA-28-140 and PA-28-181. The Boeing slice includes 17 reviewed family/TCDS identities and seven detailed technical profiles; 737-10 AD/STC discovery remains unconfigured. Reviewed evidence, metadata candidates and unknown applicability must remain visibly distinct. The beta does not determine compliance or promise complete regulatory coverage or uninterrupted alerts.
 
 ## Proposed Cloudflare Pages settings
 

@@ -25,6 +25,7 @@ node scripts/beta-journey-smoke.cjs
 node scripts/profile-smoke.cjs
 node scripts/graph-navigation-smoke.cjs
 node scripts/network-design-smoke.cjs
+node scripts/family-graph-smoke.cjs
 node scripts/monitoring-smoke.cjs
 node scripts/revision82-smoke.cjs
 node scripts/pdf-dialog-smoke.cjs
@@ -39,4 +40,4 @@ The beta test reads hosted public data and simulates outages only inside its iso
 3. Review the prepared [release settings and rollback plan](release-review.md). The guarded `npm run build:release` requires hosted public configuration; backend credentials stay in the worker environment. Deployed deep links and environment settings still need verification after an approved first release.
 4. Obtain the user's release decision, then publish and verify the deployed build and supported workflows.
 
-New aircraft/source expansion is deferred until this UI/release phase is complete. The supported deep-profile scope remains PA-28-140/181; Boeing has seven reviewed TCDS variants, while 737-10 AD/STC discovery is explicitly unconfigured. The graph is research evidence, not an individual-aircraft compliance determination.
+New aircraft/source expansion is deferred until this UI/release phase is complete. The supported deep-profile scope remains PA-28-140/181; Boeing has 17 reviewed family/TCDS identities and seven detailed technical profiles, while 737-10 AD/STC discovery is explicitly unconfigured. The graph is research evidence, not an individual-aircraft compliance determination.

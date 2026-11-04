@@ -78,3 +78,9 @@ The reference was clarified as the Boeing **Aerospace Safety Timeline** at https
 Source details can now be hidden to give the canvas the full workspace width. Node browsing respects that preference; explicitly choosing source evidence reopens the inspector. Enter and Space on a focused canvas node explore its direct neighborhood. Keyboard focus is restored after the new canvas initializes so navigation can continue without returning to the page top. The browser regression checks these behaviors, including no detailed-applicability fetches while keyboard browsing.
 
 This design pass is ready for user visual feedback. Publishing remains deferred; no additional source expansion is needed to review the interaction.
+
+### Circle endpoints and complete Boeing model index
+
+The subsequent user review identified arrows attached to invisible rectangular handles and a family focus restricted to one model. The node renderer now uses simple circles and a custom edge renderer that stops each path at the circle circumference, with the arrow tip aligned to that endpoint. Endpoint geometry follows node dragging and selected-circle size.
+
+Boeing defaults to a family-wide scope. Family focus includes all 17 page-1-listed models, shared A16WE membership/certificate paths and the seven existing engine paths, arranged between the family and certification-source hubs. Clicking an individual model still isolates its direct reviewed neighborhood. In this family overview, edge labels are kept in the connection list to avoid overlapping model names. See [family index review](boeing-family-index.md) for source evidence, review limits and tests.

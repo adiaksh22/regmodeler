@@ -48,7 +48,9 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       evidencePanel.current?.scrollIntoView({block:'start'});
     });
   };
-  const [compareModels,setCompareModels]=useState(false);
+  const [modelScope,setModelScope]=useState<{certificate:string;all:boolean}|null>(null);
+  const compareModels=modelScope?.certificate===doc.tcds_number?modelScope.all:doc.tcds_number==='A16WE';
+  const setCompareModels=(all:boolean)=>setModelScope({certificate:doc.tcds_number,all});
   const [mapWide,setMapWide]=useState(true);
   const [showAll, setShowAll] = useState(false);
   const [profile,setProfile] = useState<AircraftProfile|null>(null);
@@ -67,7 +69,8 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const links = allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).filter(r=>!profileOnly||profileRelevance(activeProfile,r)?.category!=='outside').sort((a,b)=>
     Number(b.relationship_type==='covered_by')-Number(a.relationship_type==='covered_by') || a.target.localeCompare(b.target,undefined,{numeric:true}));
   const nodeLinks=details.relationships.filter(r=>compareModels||r.model===selected).filter(r=>!profileOnly||r.model!==selected||profileRelevance(activeProfile,r)?.category!=='outside');
-  const evidence = (view==='nodes'?nodeLinks:links).find(r=>r.id===(evidenceId||previewId)) ?? (view==='nodes'?nodeLinks:links)[0];
+  const evidenceRows=view==='nodes'?nodeLinks:links;
+  const evidence = evidenceRows.find(r=>r.id===(evidenceId||previewId)) ?? evidenceRows.find(r=>r.relationship_type==='covered_by'&&r.model===selected) ?? evidenceRows[0];
   const activeEvidenceId=evidence?.id;
   const activeBasisKey=evidence?.basis_key;
   const activeTargetType=evidence?.target_type;
@@ -78,7 +81,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const chooseModel=(model:string)=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model},{replace:true});setEvidenceId('');setPreviewId('');setExpanded('');setSourcePanelOpen(true);};
   return <section className={`bg-white rounded-xl border border-slate-200 p-5 mb-6 ${mapWide&&view==='nodes'?'reg-wide-explorer':''}`} aria-label="Aircraft data explorer">
     <AircraftFamilySummary variants={details.variants??[]} selected={selected} onSelect={chooseModel}/>
-    {details.variants?.some(variant=>variant.model_key===selected&&variant.faa_status==='faa_approved')&&!monitoredModels.includes(selected)&&<p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">TCDS evidence is available for {selected}. Related AD/STC discovery and monitoring have not been configured for this model.</p>}
+    {details.relationships.some(row=>row.model===selected&&row.source_document_type==='TCDS')&&!monitoredModels.includes(selected)&&<p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">TCDS evidence is available for {selected}. Related AD/STC discovery and monitoring have not been configured for this model.</p>}
     <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
       <div><label htmlFor="aircraft-model" className="block text-sm font-semibold text-slate-600 mb-1">Aircraft model</label>
         <select id="aircraft-model" value={selected} onChange={e=>chooseModel(e.target.value)} className="border rounded-lg p-2 font-semibold max-w-full">
@@ -111,10 +114,11 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       {activeProfile&&<label className="block text-sm mb-4"><input type="checkbox" checked={profileOnly} onChange={e=>setProfileOnly(e.target.checked)}/> Hide connections outside reviewed serial or reported equipment scope. Unknown relevance remains visible.</label>}
       {view==='nodes'&&<button className="mb-3 mr-4 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" aria-pressed={mapWide} onClick={()=>setMapWide(value=>!value)}>{mapWide?'Compact workspace':'Expand workspace'}</button>}
       {view==='nodes'&&nodeLinks.length>0&&<button className="mb-3 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" aria-expanded={sourcePanelOpen} aria-controls="relationship-source-evidence" onClick={()=>setSourcePanelOpen(open=>!open)}>{sourcePanelOpen?'Hide source details':'Show source details'}</button>}
-      {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> Show shared relationships across every reviewed model in this TCDS</label>}
+      {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> {doc.tcds_number==='A16WE'?'Family network: show all reviewed models and shared certification paths':'Show shared relationships across every reviewed model in this TCDS'}</label>}
+      {view==='nodes'&&doc.tcds_number==='A16WE'&&compareModels&&<p className="mb-3 text-xs text-slate-600">Showing {new Set(nodeLinks.map(row=>row.model)).size} models with reviewed connections. Models connect through their shared family and TCDS. Detailed technical facts and engine paths are reviewed for {details.variants?.length??0} variants; AD/STC coverage remains model-specific.</p>}
       {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className={view==='nodes'?`reg-graph-workspace grid items-start ${sourcePanelOpen?'':'reg-details-hidden'}`:'grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start'}>
-        {view==='nodes'?<div ref={nodeMap} className="reg-map-column min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} profile={activeProfile} onPreview={r=>{setEvidenceId('');setPreviewId(r.id);setEvidenceRules([]);setSourceMaterials([]);setEvidenceLoading(false);}} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
+        {view==='nodes'?<div ref={nodeMap} className="reg-map-column min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} familyOverview={doc.tcds_number==='A16WE'&&compareModels} profile={activeProfile} onPreview={r=>{setEvidenceId('');setPreviewId(r.id);setEvidenceRules([]);setSourceMaterials([]);setEvidenceLoading(false);}} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
               <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>

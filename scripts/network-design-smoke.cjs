@@ -13,7 +13,7 @@ let phase='load';
   await page.waitForFunction(()=>document.querySelectorAll('.react-flow__node-evidence').length===7&&document.querySelectorAll('.react-flow__edge').length===6);
   assert.match(await page.$eval('[aria-label="Relationship source evidence"] h3',node=>node.textContent),/2022-03-15/);
   assert.equal(detailRequests.length,0,'Node browsing must not load detailed applicability');
-  assert.equal(await page.$$eval('.react-flow__node-evidence svg polygon',nodes=>nodes.length),14);
+  assert.equal(await page.$$eval('.react-flow__node-evidence svg circle',nodes=>nodes.length),14);
   const layout=await page.evaluate(()=>{
    const panel=document.querySelector('[aria-label="Relationship source evidence"]').getBoundingClientRect();
    const map=document.querySelector('[aria-label="Interactive relationship node-link diagram"]').getBoundingClientRect();
@@ -51,6 +51,6 @@ let phase='load';
   await page.$eval('.reg-network-canvas',node=>node.scrollIntoView({block:'start'}));
   await page.screenshot({path:'.artifacts/network-studio-mobile.png'});
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',checks:['hexagonal nodes','radial focused connections','left evidence panel','wide canvas','single-row desktop toolbar','compact/expand controls','collapsible source details','keyboard node activation and focus restoration','details reopen on evidence selection','no detail calls while keyboard browsing','mobile width','focused node visible','zero browser errors']}));
+  console.log(JSON.stringify({status:'passed',checks:['circular nodes','radial focused connections','left evidence panel','wide canvas','single-row desktop toolbar','compact/expand controls','collapsible source details','keyboard node activation and focus restoration','details reopen on evidence selection','no detail calls while keyboard browsing','mobile width','focused node visible','zero browser errors']}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(JSON.stringify({status:'failed',phase,message:error.message}));process.exitCode=1;});

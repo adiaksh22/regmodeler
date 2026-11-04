@@ -651,10 +651,25 @@ try {
     await query('select public.review_boeing_revision82()');
     assert.equal((await query('select count(*)::integer n from public.aircraft_variant_facts')).rows[0].n,factsCount,'Repeat review preserves source-bound fact identities');
     assert.equal((await query("select count(*)::integer n from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows[0].n,21,'Repeat review does not duplicate graph paths');
+    await query('set local role anon');
+    await query('savepoint public_index');
+    await assert.rejects(query('select public.review_boeing_family_index()'),/permission denied/);
+    await query('rollback to public_index');await query('reset role');
+    assert.equal((await query('select public.review_boeing_family_index() n')).rows[0].n,34);
+    const indexed=(await query("select * from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows;
+    assert.equal(indexed.length,41);assert.equal(new Set(indexed.map(row=>row.model)).size,17);
+    assert.equal(indexed.filter(row=>row.evidence_page===1).length,20);
+    assert.equal((await query("select count(*)::integer n from public.aircraft_variant_catalog where tcds_number='A16WE'")).rows[0].n,7,'Index review does not invent technical profiles');
+    await query('select public.review_boeing_family_index()');
+    assert.equal((await query("select count(*)::integer n from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows[0].n,41,'Index promotion is idempotent');
     await query("update public.document_versions set content_sha256=$1 where id=$2",['f'.repeat(64),max10.evidence_version_id]);
     await query('savepoint changed_original');
     await assert.rejects(query('select public.review_boeing_revision82()'),/Reviewed A16WE Revision 82 original missing/);
     await query('rollback to changed_original');
+    await query('savepoint changed_index');
+    await assert.rejects(query('select public.review_boeing_family_index()'),/Reviewed A16WE family index original missing/);
+    await query('rollback to changed_index');
+    console.log('Family index checks passed: exact-source guard, 17 model identities, 34 membership/certificate paths, unchanged technical profiles, private review and idempotence.');
     console.log('Revision 82 checks passed: exact-source guard, seven approved variants, conditional MAX 10 limits, 49 revision-bound facts, 21 paths, retired project notice and repeat review.');
   }finally{await query('rollback');}
 } finally { await db.close(); }

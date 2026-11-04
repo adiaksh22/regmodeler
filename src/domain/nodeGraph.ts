@@ -15,3 +15,13 @@ export function buildNodeGraph(rows:EvidenceRelationship[]) {
   }
   return {nodes:[...nodes.values()],edges:[...edges.values()]};
 }
+
+export function focusedNodeGraph(graph:ReturnType<typeof buildNodeGraph>,nodeId:string){
+ if(!nodeId)return graph;
+ const direct=graph.edges.filter(edge=>edge.source===nodeId||edge.target===nodeId);
+ const family=graph.nodes.find(node=>node.id===nodeId)?.kind==='aircraft family';
+ const members=new Set(direct.filter(edge=>edge.relationship.relationship_type==='member_of').flatMap(edge=>[edge.source,edge.target]).filter(id=>id!==nodeId));
+ const edges=family?graph.edges.filter(edge=>direct.includes(edge)||(members.has(edge.source)&&['covered_by','certified_against','powered_by'].includes(edge.relationship.relationship_type))):direct;
+ const ids=new Set([nodeId,...edges.flatMap(edge=>[edge.source,edge.target])]);
+ return {nodes:graph.nodes.filter(node=>ids.has(node.id)),edges};
+}

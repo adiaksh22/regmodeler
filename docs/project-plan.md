@@ -213,3 +213,7 @@ See [fuel-system and airframe review](pa28-fuel-airframe-review.md) for serial-s
 ### Latest source review: Garmin publication and configuration paths
 
 Three additional Garmin ADs now use verified GovInfo final publications when the current FAA DRS main-document delivery is HTML. The graph preserves distinct GFC 500/GSA 28, G3X/GI 275/GEA 24 and affected GNS 430 configurations, their STC alternatives and cited bulletin paths. See [Garmin publication review](pa28-garmin-publication-review.md). The website remains unpublished. Current UI and beta work takes priority over further source expansion; follow the release sequence in [beta readiness](beta-readiness.md).
+
+### Complete Boeing model-index overview
+
+The [A16WE family-index review](boeing-family-index.md) now connects all 17 listed models through their shared Boeing family and type certificate. The complete TCDS graph has 41 paths, including the seven existing engine paths. Detailed specifications remain reviewed for seven variants; AD/STC discovery scope is unchanged. The Boeing node map opens in family-wide mode, while a single-model filter and individual-node focus remain available. Circle-boundary arrow geometry replaces the earlier fixed-handle renderer.

@@ -16,4 +16,11 @@ describe('radial evidence layout',()=>{
   expect(new Set([...positions.values()].map(position=>JSON.stringify(position))).size).toBe(3);
  });
  it('handles an empty filtered graph',()=>{expect(radialGraphLayout([],[]).size).toBe(0);});
+ it('separates all family members from shared certification sources',()=>{
+  const nodes=[{id:'family',kind:'aircraft family'},...Array.from({length:17},(_,i)=>({id:`model-${i}`,kind:'Aircraft model'})),{id:'certificate',kind:'certificate'}];
+  const positions=radialGraphLayout(nodes,[],'family');
+  expect(positions.size).toBe(19);expect(new Set([...positions.values()].map(position=>JSON.stringify(position))).size).toBe(19);
+  expect(positions.get('family')!.y).toBeLessThan(positions.get('model-0')!.y);
+  expect(positions.get('certificate')!.y).toBeGreaterThan(positions.get('model-16')!.y);
+ });
 });
