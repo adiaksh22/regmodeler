@@ -40,7 +40,11 @@ The first phase did not change hosted data or publication. The later loading/nav
 
 The older `revision82-smoke.cjs` and `family-graph-smoke.cjs` assert an exact current Revision 82 family inventory. They are historical checks while Revision 83 awaits review, not current hosted release gates. Database fixtures continue to verify Revision 82 facts and suspension on a newer source. The native modal check now uses a currently reviewed source and verifies its selected page dynamically.
 
-Next: review the targeted Revision 83 source before restoring the full Boeing TCDS network, then continue graph readability/motion/accessibility and the remaining profile/personal-link workflows. Site publication still awaits explicit release approval.
+### November 16 source-review follow-up
+
+The subsequent [targeted Revision 83 review](boeing-revision83-review.md) restored the Boeing TCDS network after matching current FAA and archived bytes and rechecking the cited pages. Hosted results: 17 models, 41 current TCDS paths, seven profiles and 49 facts. The service-only transaction retains exact-original guards and historical facts; AD/STC scope is unchanged. Current `family-graph-smoke.cjs` and new `revision83-smoke.cjs` passed in Chrome and Edge, including physical pages 1/67, arrow boundaries after dragging, model switching and mobile width. Earlier observations above describe the pre-review state and remain part of the audit history.
+
+Next: continue graph readability/motion/accessibility and the remaining profile/personal-link workflows. Site publication still awaits explicit release approval.
 
 ## P1 — correctness and recovery
 

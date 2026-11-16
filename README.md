@@ -119,4 +119,4 @@ See [fuel-system and airframe review](docs/pa28-fuel-airframe-review.md) for ser
 
 Latest source review: [PA-28 Garmin publication and configuration relationships](docs/pa28-garmin-publication-review.md). The [product and delivery plan](docs/project-plan.md#how-the-system-scales) describes how canonical sources, components, profiles and aircraft families expand without copying regulatory records per aircraft.
 
-Boeing expansion: [A16WE 737 family review](docs/boeing-737-family-review.md) and [relationship/applicability architecture](docs/relationship-architecture.md).
+Boeing expansion: [current A16WE Revision 83 review](docs/boeing-revision83-review.md), [initial 737 family review](docs/boeing-737-family-review.md) and [relationship/applicability architecture](docs/relationship-architecture.md).

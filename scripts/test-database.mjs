@@ -662,6 +662,39 @@ try {
     assert.equal((await query("select count(*)::integer n from public.aircraft_variant_catalog where tcds_number='A16WE'")).rows[0].n,7,'Index review does not invent technical profiles');
     await query('select public.review_boeing_family_index()');
     assert.equal((await query("select count(*)::integer n from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows[0].n,41,'Index promotion is idempotent');
+    await query('savepoint before_revision83');
+    const revision83=JSON.parse(readFileSync(new URL('../apps/worker/src/boeing-revision83.json',import.meta.url),'utf8'));
+    const identity83=revision83.source_url.split('/').at(-1);
+    const next83={...next,source_version_id:identity83,revision_label:'83',revision_date:revision83.date,source_url:revision83.source_url,
+      content_sha256:revision83.hash,storage_path:`FAA/TCDS/A16WE/${revision83.hash}.pdf`,retrieved_at:'2026-11-16T00:00:00Z',
+      metadata:{...next.metadata,source_identity:identity83,source_guid:identity83.split('.')[0],snapshot_sha256:'d'.repeat(64),source_modified_at:'2026-11-13T00:00:00Z'}};
+    const run83=(await query("insert into public.ingestion_runs(source,status) values('FAA:TCDSMODEL:A16WE','running') returning id")).rows[0].id;
+    await query('select public.commit_tcds_catalog($1,$2,$3::jsonb)',[run83,'A16WE',JSON.stringify([{...a16weRecord,status:'historical'},{...next,status:'historical'},next83])]);
+    assert.equal((await query("select count(*)::integer n from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows[0].n,0,'New source suspends earlier reviewed paths');
+    for(const role of ['anon','authenticated']){
+      await query(`set local role ${role}`);await query('savepoint private83');
+      await assert.rejects(query('select public.review_boeing_revision83()'),/permission denied/);
+      await query('rollback to private83');await query('reset role');
+    }
+    assert.equal((await query('select public.review_boeing_revision83() n')).rows[0].n,41);
+    const reviewed83=(await query("select * from public.aircraft_variant_catalog where tcds_number='A16WE'")).rows;
+    assert.equal(reviewed83.length,7);assert.ok(reviewed83.every(row=>row.evidence_revision==='83'&&row.evidence_is_current));
+    assert.equal(reviewed83.reduce((n,row)=>n+Object.keys(row.facts).length,0),49);
+    const graph83=(await query("select * from public.model_graph where tcds_number='A16WE' and source_document_type='TCDS'")).rows;
+    assert.equal(graph83.length,41);assert.equal(new Set(graph83.map(row=>row.model)).size,17);assert.ok(graph83.every(row=>row.evidence_revision==='83'));
+    assert.equal(graph83.filter(row=>row.evidence_page===1).length,20,'Detailed citations preserved for seven profiles');
+    assert.match(reviewed83.find(row=>row.model_key==='737-10').facts.maximum_passengers.conditions.configuration,/Type C/);
+    const inventory83=(await query('select count(*)::integer n from public.aircraft_variant_facts')).rows[0].n;
+    assert.equal((await query('select public.review_boeing_revision83() n')).rows[0].n,41);
+    assert.equal((await query('select count(*)::integer n from public.aircraft_variant_facts')).rows[0].n,inventory83,'Revision 83 repeat preserves historical fact rows');
+    for(const [column,value] of [['content_sha256','a'.repeat(64)],['storage_path','wrong.pdf'],['revision_label','84'],['revision_date','2026-11-12']]){
+      await query('savepoint guard83');
+      await query(`update public.document_versions set ${column}=$1 where id=$2`,[value,reviewed83[0].evidence_version_id]);
+      await assert.rejects(query('select public.review_boeing_revision83()'),/Reviewed A16WE Revision 83 original missing/);
+      await query('rollback to guard83');
+    }
+    await query('rollback to before_revision83');
+    console.log('Revision 83 checks passed: new-source suspension, private exact-original review, 17 models/41 current paths, seven profiles/49 facts, preserved history, archive/date/revision/hash guards and idempotence.');
     await query("update public.document_versions set content_sha256=$1 where id=$2",['f'.repeat(64),max10.evidence_version_id]);
     await query('savepoint changed_original');
     await assert.rejects(query('select public.review_boeing_revision82()'),/Reviewed A16WE Revision 82 original missing/);

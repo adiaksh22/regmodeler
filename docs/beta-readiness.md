@@ -30,6 +30,8 @@ node scripts/pdf-dialog-smoke.cjs
 node scripts/audit-correctness-smoke.cjs
 node scripts/explorer-loading-smoke.cjs
 node scripts/source-status-smoke.cjs
+node scripts/revision83-smoke.cjs
+node scripts/family-graph-smoke.cjs
 ```
 
 The beta test reads hosted public data and simulates outages only inside its isolated browser. It does not import FAA records, alter hosted data or publish the site. Historical tests elsewhere in `scripts/` may assume earlier catalog inventories; this list identifies current journey checks.
@@ -38,12 +40,12 @@ The audit-correctness journey also verifies all 17 Boeing model summaries, model
 
 The loading journey verifies selected-model queries, explicit family expansion, cache reuse, independent section retries, retained dated data on failed refresh, canonical reference traversal and the real cited archive page. It supports the same base URL/browser overrides. The browser read cache lasts two minutes; it is separate from the scheduled FAA source checks.
 
-As observed November 16, the hosted A16WE catalog is at Revision 83, while technical profiles still cite reviewed Revision 82. The source guard correctly withholds earlier TCDS graph paths; reviewed current AD/STC paths remain available. The exact-inventory `family-graph-smoke.cjs` and `revision82-smoke.cjs` are historical checks until the new source is reviewed. Do not force-publish their old paths to satisfy those assertions. The UI exposes the gap and preserves citation/model context.
+The November 16 [Revision 83 review](boeing-revision83-review.md) restored 41 current TCDS paths across 17 Boeing models and seven profiles with 49 revision-bound facts. The source guard remains active for future revisions. `family-graph-smoke.cjs` now verifies the reviewed Revision 83 inventory; `revision83-smoke.cjs` verifies current facts and cited PDFs. Both passed in Chrome and Edge. `revision82-smoke.cjs` remains a historical check.
 
 ## Release sequence
 
 1. Completed locally: native PDF modal keyboard containment, escape/close behavior, focus restoration, unavailable-original messaging and supported-scope/source-status presentation checks. This does not replace assistive-technology/user testing.
-2. Renew the targeted A16WE source review before presenting the complete Boeing TCDS family graph. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, saving an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
+2. Finish the open graph readability/motion/accessibility and profile/link audit repairs. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, saving an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
 3. Review the prepared [release settings and rollback plan](release-review.md). The guarded `npm run build:release` requires hosted public configuration; backend credentials stay in the worker environment. Deployed deep links and environment settings still need verification after an approved first release.
 4. Obtain the user's release decision, then publish and verify the deployed build and supported workflows.
 
