@@ -14,6 +14,7 @@ Updated November 16, 2026. The website remains unpublished. This report covers a
 | Change feed | Named source health, model filtering, correct certificate links, completed revision history |
 | Graph interaction | Source details collapse/reopen, Enter/Space explore canvas nodes, and keyboard focus survives neighborhood changes without extra detail requests |
 | Graph rendering | Focused directed edges, neighbor/back navigation, overview restoration and mobile evidence round trip; measurement-only events no longer trigger controlled-node update churn |
+| Graph readability/motion | Responsive family columns and full mobile fit, bounded label scaling, readable zoom, keyboard/hover path highlighting, stable canvas, interruptible 240 ms motion, reduced-motion preferences and overlap-safe dragging |
 | Small screens | Home and change-feed layouts fit 320/390px; profile and graph workflows have separate mobile checks |
 | Recovery | Unknown routes offer aircraft search; simulated database outage shows labeled snapshots; retry restores hosted relationships and removes outage notices |
 | PDF dialog | Native modal makes background controls inert; keyboard stays inside, Escape/Close restore focus, page scrolling is restored, mobile sizing and unavailable-original guidance pass browser checks |
@@ -32,6 +33,7 @@ node scripts/explorer-loading-smoke.cjs
 node scripts/source-status-smoke.cjs
 node scripts/revision83-smoke.cjs
 node scripts/family-graph-smoke.cjs
+node scripts/graph-ui-smoke.cjs
 ```
 
 The beta test reads hosted public data and simulates outages only inside its isolated browser. It does not import FAA records, alter hosted data or publish the site. Historical tests elsewhere in `scripts/` may assume earlier catalog inventories; this list identifies current journey checks.
@@ -40,13 +42,15 @@ The audit-correctness journey also verifies all 17 Boeing model summaries, model
 
 The loading journey verifies selected-model queries, explicit family expansion, cache reuse, independent section retries, retained dated data on failed refresh, canonical reference traversal and the real cited archive page. It supports the same base URL/browser overrides. The browser read cache lasts two minutes; it is separate from the scheduled FAA source checks.
 
+The graph UI journey verifies the 17-model/41-path family fit and label readability at desktop, tablet and 320/390px widths; all 41 links remain visible during overlap stress. It checks keyboard highlighting, stable canvas identity through navigation, readable zoom/fit, reduced motion and actual mobile touch scrolling. On narrow screens the family map grows vertically to preserve readable labels; Move map and Scroll page distinguish panning from normal page scrolling. Dense all-catalog overviews still benefit from focused exploration. These automated checks do not replace assistive-technology or owner/maintenance-professional feedback.
+
 The November 16 [Revision 83 review](boeing-revision83-review.md) restored 41 current TCDS paths across 17 Boeing models and seven profiles with 49 revision-bound facts. The source guard remains active for future revisions. `family-graph-smoke.cjs` now verifies the reviewed Revision 83 inventory; `revision83-smoke.cjs` verifies current facts and cited PDFs. Both passed in Chrome and Edge. `revision82-smoke.cjs` remains a historical check.
 
 ## Release sequence
 
 1. Completed locally: native PDF modal keyboard containment, escape/close behavior, focus restoration, unavailable-original messaging and supported-scope/source-status presentation checks. This does not replace assistive-technology/user testing.
-2. Finish the open graph readability/motion/accessibility and profile/link audit repairs. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, saving an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
+2. Finish the open profile/link and route/context/accessibility audit repairs. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, saving an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
 3. Review the prepared [release settings and rollback plan](release-review.md). The guarded `npm run build:release` requires hosted public configuration; backend credentials stay in the worker environment. Deployed deep links and environment settings still need verification after an approved first release.
 4. Obtain the user's release decision, then publish and verify the deployed build and supported workflows.
 
-New aircraft expansion is deferred until this UI/release phase is complete. Renewed review of the current A16WE source is needed before restoring its full TCDS graph. The supported deep-profile scope remains PA-28-140/181; Boeing has 17 model identities from the earlier reviewed family listing and seven detailed technical profiles, while 737-10 AD/STC discovery is explicitly unconfigured. The graph is research evidence, not an individual-aircraft compliance determination.
+New aircraft expansion is deferred until this UI/release phase is complete. The reviewed Revision 83 Boeing network is restored with 17 model identities, 41 TCDS paths and seven detailed technical profiles; 737-10 AD/STC discovery remains explicitly unconfigured. Browser configuration profiles support PA-28-140/181. The graph is research evidence, not an individual-aircraft compliance determination.

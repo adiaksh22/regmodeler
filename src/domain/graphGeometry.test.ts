@@ -7,7 +7,10 @@ describe('circle edge boundaries',()=>{
   expect(Math.hypot(edge.end.x-x,edge.end.y-y)).toBeCloseTo(28);
   expect(edge.end.x-edge.start.x).toBeCloseTo(x*(1-47/Math.hypot(x,y)));
  });
- it('omits an overlapping path rather than drawing a reversed arrow',()=>{
-  expect(circleLink({x:0,y:0,radius:28},{x:0,y:0,radius:19})).toBeNull();
+ it.each([[0,0],[10,10],[30,0]])('routes an overlapping transition without losing its directed path at %s,%s',(x,y)=>{
+  const edge=circleLink({x:0,y:0,radius:28},{x,y,radius:19});
+  expect(edge.path).toContain(' C ');expect(edge.path).not.toMatch(/NaN|Infinity/);
+  expect(Math.hypot(edge.start.x,edge.start.y)).toBeCloseTo(28);
+  expect(Math.hypot(edge.end.x-x,edge.end.y-y)).toBeCloseTo(19);
  });
 });

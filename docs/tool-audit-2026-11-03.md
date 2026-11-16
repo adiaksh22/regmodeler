@@ -4,7 +4,7 @@ Original audited commit: `cac5ba68b61e475d8cd2717246c47758373aa6b9`. The initial
 
 ## Assessment
 
-The tool has useful, traceable research workflows, but it is **not ready for publication**. Two confirmed display defects can associate the wrong aircraft specifications or applicability conditions with the selected model. Browser-storage failures can also blank an entire page. Correctness and recovery should come before further visual polish or aircraft expansion.
+At the initial audit, the tool had useful, traceable research workflows but was **not ready for publication**. The two model/evidence display defects and browser-storage startup failures found then are fixed, as recorded below. Remaining profile/link workflows, accessibility/usability validation and release checks still require work before publication.
 
 The existing source architecture has valuable safeguards: immutable source fingerprints, private originals, publication controls, source-version review guards, model-scoped relationships, quarantine, and separate discovery/review states. Passing these controls establishes evidence provenance and selected invariants. It does not establish that every relationship has been independently re-reviewed against every original, that FAA coverage is complete, or that any individual aircraft complies.
 
@@ -44,7 +44,16 @@ The older `revision82-smoke.cjs` and `family-graph-smoke.cjs` assert an exact cu
 
 The subsequent [targeted Revision 83 review](boeing-revision83-review.md) restored the Boeing TCDS network after matching current FAA and archived bytes and rechecking the cited pages. Hosted results: 17 models, 41 current TCDS paths, seven profiles and 49 facts. The service-only transaction retains exact-original guards and historical facts; AD/STC scope is unchanged. Current `family-graph-smoke.cjs` and new `revision83-smoke.cjs` passed in Chrome and Edge, including physical pages 1/67, arrow boundaries after dragging, model switching and mobile width. Earlier observations above describe the pre-review state and remain part of the audit history.
 
-Next: continue graph readability/motion/accessibility and the remaining profile/personal-link workflows. Site publication still awaits explicit release approval.
+### November 16 graph readability and motion follow-up
+
+**A09's responsive family presentation and A10's stable canvas/motion/overlap repairs are implemented.** The family layout uses six, four or two model columns according to canvas width, with shared certificate/engine identities retained. A taller narrow-screen family canvas shows every member instead of cropping them to preserve a minimum zoom. Labels compensate for zoom within a bounded scale; the tested family labels remain at least 12 screen pixels at widths 320, 390, 768 and 1600. Full dense-catalog overviews can still require Readable zoom or a focused neighborhood. Fit map fits all visible nodes, while Readable zoom centers a readable close-up. Hover and keyboard focus highlight incident paths without changing evidence.
+
+- React Flow no longer remounts when exploring another node or changing the relationship filter. Shared nodes interpolate over 240 ms; the camera uses a short transition, and user interaction interrupts layout motion. System reduced-motion preferences disable those transitions and the edge-color transition, including preference changes during a layout.
+- Drag constraints preserve space for symbols and labels while leaving other nodes still. A curved boundary-to-boundary route keeps an edge represented if circles temporarily pass during interpolation. Fixed node measurements preserve React Flow handle bounds across controlled position updates; the new stress check confirmed all 41 family edges remain rendered throughout dragging onto another model. This is bounded deterministic motion, not a continuous force simulation.
+- Narrow-screen map backgrounds scroll the page by default. Move map explicitly enables panning; Scroll page restores native page scrolling. Zoom controls remain available, normal mouse-wheel page scrolling is preserved, and primary graph controls have 44-pixel targets.
+- `scripts/graph-ui-smoke.cjs` verifies readable labels, full family fit, keyboard path highlighting, collision handling with frame-by-frame edge counts, stable canvas identity, readable zoom/fit, reduced motion, mobile touch scrolling and pan controls. It supports the same base URL/browser overrides as the loading check. Frame observations are machine-specific rather than a performance guarantee; source review, accessibility certification and real-user usability are separate work.
+
+Next: finish A11/A12 profile-draft and personal-link workflows and A13 route/context/accessibility work, then complete release validation. Site publication still awaits explicit release approval.
 
 ## P1 — correctness and recovery
 
@@ -111,12 +120,16 @@ Next: continue graph readability/motion/accessibility and the remaining profile/
 
 ### A09. Family overview fits the viewport at the expense of readability
 
+Remediated for the tested family presentation; see the November 16 graph follow-up above. The bullets below retain the original finding.
+
 - **Visual/browser confirmed:** on desktop, fitting 21 family-context nodes makes labels much smaller than ordinary UI text and produces many crossing links. On mobile, the minimum focused zoom preserves larger symbols but crops peripheral members. “Fit map” therefore does not necessarily show the whole family on a narrow screen.
 - There was no document-level horizontal overflow at 320, 390, 768, 1024, or 1600 px in the tested Boeing journey. That does not make all graph content readable or visible.
 - Fix: separate readable neighborhood exploration from overview. Consider generation groups, progressively expanded siblings, highlighted paths on hover/focus, and an explicit “Fit all / readable zoom” distinction. Keep every reviewed path accessible through the list.
 - Do not invent model-to-model derivation relationships to make the diagram look connected; shared certificate/family identities already express reviewed connections.
 
 ### A10. Layout changes jump, and dragged nodes can hide their links
+
+Stable canvas, bounded transitions, reduced motion and overlap handling are implemented; see the November 16 graph follow-up above. The bullets below retain the original finding. Real-user/device performance remains part of release validation.
 
 - **Code and browser confirmed:** React Flow remounts when focus changes; custom Fit map uses `duration: 0`. There is no force simulation, collision avoidance, or animated layout interpolation. This is deterministic layout plus interactive dragging/panning/zooming.
 - Dragging connected Boeing nodes onto one another reduced rendered edge paths from 41 to 40 because circle-overlap geometry intentionally returns no path. No collision constraint or alternate route explains the missing visual link.

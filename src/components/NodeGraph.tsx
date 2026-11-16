@@ -1,11 +1,12 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
-import {ReactFlow,Background,Controls,Handle,Position,type Node,type NodeProps,type Edge,type ReactFlowInstance} from '@xyflow/react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {ReactFlow,Background,Controls,Handle,Position,useStore,getNodesBounds,getViewportForBounds,type Node,type NodeProps,type Edge,type ReactFlowInstance} from '@xyflow/react';
 import {radialGraphLayout} from '../domain/graphLayout';
 import EvidenceGraphEdge from './EvidenceGraphEdge';
 import '@xyflow/react/dist/style.css';
 import type {EvidenceRelationship} from '../domain/explorer';
 import {buildNodeGraph,focusedNodeGraph,relationshipLabel} from '../domain/nodeGraph';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
+import {useGraphMotion,useReducedMotion} from '../lib/useGraphMotion';
 
 const palette=(kind:string)=>{
  const value=kind.toLowerCase();
@@ -19,7 +20,8 @@ const palette=(kind:string)=>{
 };
 function EvidenceNode({data,selected}:NodeProps){
  const color=String(data.color);
- return <div className={`reg-orbit-node ${selected?'is-focused':''}`} title={String(data.label)}>
+ const labelScale=useStore(state=>Math.min(1.6,Math.max(1,.82/state.transform[2])));
+ return <div className={`reg-orbit-node ${selected?'is-focused':''}`} title={String(data.label)} style={{'--node-label-scale':labelScale} as React.CSSProperties}>
   <Handle type="target" position={Position.Left} style={{left:64,top:30,opacity:0}}/>
   <svg aria-hidden="true" viewBox="0 0 60 60" className="reg-node-symbol" style={{color}}><circle cx="30" cy="30" r={selected?26:17} fill="#0b1d3b" stroke="currentColor" strokeWidth={selected?3:1.5}/><circle cx="30" cy="30" r={selected?19:12} fill="currentColor"/></svg>
   <Handle type="source" position={Position.Right} style={{right:64,top:30,opacity:0}}/>
@@ -37,8 +39,18 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const [trail,setTrail]=useState<string[]>(()=>{const family=familyOverview?buildNodeGraph(rows).nodes.find(node=>node.kind==='aircraft family'):undefined;return family?['',family.id]:[''];});
   const [filter,setFilter]=useState('all');
   const [query,setQuery]=useState('');
-  const [positions,setPositions]=useState<Record<string,{x:number;y:number}>>({});
+  const [width,setWidth]=useState(1024);
+  const [touchPan,setTouchPan]=useState(false);
+  const [hoveredNode,setHoveredNode]=useState('');
+  const [keyboardNode,setKeyboardNode]=useState('');
+  const [cameraMoving,setCameraMoving]=useState(true);
+  const reducedMotion=useReducedMotion();
   const [canvas,setCanvas]=useState<ReactFlowInstance|null>(null);
+  const cameraToken=useRef(0);
+  const moveCamera=useCallback((operation:()=>Promise<boolean>)=>{
+    const token=++cameraToken.current;setCameraMoving(true);
+    void operation().finally(()=>{if(cameraToken.current===token)setCameraMoving(false);});
+  },[]);
   const container=useRef<HTMLDivElement>(null);
   const pendingKeyboardFocus=useRef<string|null>(null);
   const processedFocus=useRef<typeof focusRequest>(null);
@@ -47,7 +59,7 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     if(processedFocus.current===focusRequest)return;
     processedFocus.current=focusRequest;
     const id=focusRequest.id;
-    pendingKeyboardFocus.current=id;setFilter('all');setQuery('');setPositions({});
+    pendingKeyboardFocus.current=id;setFilter('all');setQuery('');
     setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);
     onFocusHandled?.(focusRequest.token);
   },[focusRequest,filter,trail,onFocusHandled]);
@@ -71,50 +83,68 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     frame=requestAnimationFrame(restore);return()=>cancelAnimationFrame(frame);
   },[canvas,nodeId,focusRequest]);
   useEffect(()=>{
-    if(!container.current||!canvas)return;
+    if(!container.current||typeof ResizeObserver!=='function')return;
     let frame=0;
-    const observer=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{void canvas.fitView({padding:familyFocus?.12:.25,minZoom:nodeId&&container.current&&container.current.clientWidth<500?.65:.03,duration:0});});});
+    const observer=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{if(container.current)setWidth(container.current.clientWidth);});});
     observer.observe(container.current);return()=>{observer.disconnect();cancelAnimationFrame(frame);};
-  },[canvas,visibleGraph,nodeId,familyFocus]);
+  },[]);
   const nodes=useMemo(()=>{
-    const layout=radialGraphLayout(visibleGraph.nodes,visibleGraph.edges,nodeId);
-    return visibleGraph.nodes.map((n):Node=>({id:n.id,type:'evidence',data:{label:n.label,kind:n.kind,color:palette(n.kind)},position:layout.get(n.id)!,selected:n.id===nodeId,ariaLabel:`${n.kind}: ${n.label}`,style:{width:160,height:116,background:'transparent',border:0}}));
-  },[visibleGraph,nodeId]);
+    const layout=radialGraphLayout(visibleGraph.nodes,visibleGraph.edges,nodeId,width);
+    return visibleGraph.nodes.map((n):Node=>({id:n.id,type:'evidence',data:{label:n.label,kind:n.kind,color:palette(n.kind)},position:layout.get(n.id)!,selected:n.id===nodeId,ariaLabel:`${n.kind}: ${n.label}`,width:160,height:156,measured:{width:160,height:156},style:{width:160,height:156,background:'transparent',border:0}}));
+  },[visibleGraph,nodeId,width]);
+  const motion=useGraphMotion(nodes,reducedMotion);
+  const bounds=useMemo(()=>getNodesBounds(nodes),[nodes]);
+  const height=familyFocus?Math.max(680,Math.min(1800,Math.ceil(bounds.height*Math.min(1,(width-32)/Math.max(1,bounds.width))+64))):width<500?620:720;
+  useEffect(()=>{
+    if(!nodes.length){setCameraMoving(false);return;}
+    if(!canvas)return;
+    const viewport=getViewportForBounds(getNodesBounds(nodes),width,height,.03,1.15,.08);
+    moveCamera(()=>canvas.setViewport(viewport,{duration:reducedMotion?0:240,ease:t=>1-(1-t)**3}));
+  },[canvas,nodes,width,height,reducedMotion,moveCamera]);
+  const highlightedNode=[hoveredNode,keyboardNode].find(id=>visibleGraph.nodes.some(node=>node.id===id))??'';
   const edges=useMemo(()=>{
-    const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:active?'#93c5fd':'#496483',strokeWidth:active?2.5:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
+    const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;const highlighted=highlightedNode&&(e.source===highlightedNode||e.target===highlightedNode);return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:active?'#93c5fd':highlighted?'#7dd3fc':highlightedNode?'#263e5a':'#496483',strokeWidth:active?2.5:highlighted?2:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
     return edges;
-  },[visibleGraph,selectedId,familyFocus]);
-  const positionedNodes=useMemo(()=>nodes.map(node=>({...node,position:positions[node.id]??node.position})),[nodes,positions]);
+  },[visibleGraph,selectedId,familyFocus,highlightedNode]);
   const incident=familyFocus?visibleGraph.edges:graph.edges.filter(e=>!nodeId||e.source===nodeId||e.target===nodeId);
   const preview=(id:string)=>{const candidates=graph.edges.filter(edge=>edge.source===id||edge.target===id);const row=candidates.find(edge=>edge.relationship.relationship_type==='covered_by')??candidates.find(edge=>edge.relationship.source_entity_id===id)??candidates[0];if(id&&row)onPreview?.(row.relationship);};
-  const browse=(id:string)=>{preview(id);setQuery('');setPositions({});setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);};
-  const back=()=>{const previous=trail.length>1?trail.slice(0,-1):[''];preview(previous[previous.length-1]);setPositions({});setTrail(previous);};
+  const browse=(id:string)=>{preview(id);setQuery('');setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);};
+  const back=()=>{const previous=trail.length>1?trail.slice(0,-1):[''];preview(previous[previous.length-1]);setTrail(previous);};
   const kinds=[...new Set(graph.nodes.map(node=>node.kind))];
   const selected=graph.nodes.find(node=>node.id===nodeId);
   return <div className={`min-w-0 w-full reg-node-map reg-network-studio ${familyFocus?'reg-family-network':''}`}>
     <div className="reg-studio-heading"><div><p>REGULATORY CONNECTIONS</p><h3>Explore the evidence network</h3></div><span>Reviewed sources only</span></div>
     <div className="reg-studio-meta"><p className="sr-only">Select a node to explore its direct connections, then select a labeled link for page-cited evidence. Drag nodes to arrange the map; use zoom and fit controls to navigate. Press Enter or Space on a focused node to explore its connections.</p><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{visibleGraph.nodes.length} of {graph.nodes.length} nodes · {visibleGraph.edges.length} of {graph.edges.length} links</span></div>
     <div className="reg-studio-tools">
-      <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Connection type <select className="border rounded p-2 block max-w-full" value={filter} onChange={e=>{setFilter(e.target.value);setTrail(['']);setPositions({});}}><option value="all">All reviewed types</option>{[...new Set(rows.map(r=>r.relationship_type))].map(t=><option key={t} value={t}>{relationshipLabel(t)}</option>)}</select></label>
+      <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Connection type <select className="border rounded p-2 block max-w-full" value={filter} onChange={e=>{setFilter(e.target.value);setTrail(['']);}}><option value="all">All reviewed types</option>{[...new Set(rows.map(r=>r.relationship_type))].map(t=><option key={t} value={t}>{relationshipLabel(t)}</option>)}</select></label>
       <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Browse node <select className="border rounded p-2 block max-w-full" value={nodeId} onChange={e=>browse(e.target.value)}><option value="">All nodes</option>{graph.nodes.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>
     <label className="text-sm min-w-0 reg-node-search">Find a node<input aria-label="Find a relationship node" type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search a certificate, bulletin or regulation" className="block border rounded p-2 mt-1 w-full"/></label>
     </div>
     <nav aria-label="Graph exploration history" className="flex flex-wrap items-center gap-2 mb-3 text-xs">
       <button className="rounded border border-slate-300 px-3 py-2 font-semibold disabled:opacity-40" disabled={trail.length<2} onClick={back}>Back one node</button>
       <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>{setQuery('');browse('');}}>Show all nodes</button>
-      <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>void canvas?.fitView({padding:familyFocus?.12:.2,minZoom:nodeId&&container.current&&container.current.clientWidth<500?.65:.03,duration:0})}>Fit map</button>
-      <ol className="flex flex-wrap gap-x-2 gap-y-1 min-w-0" aria-label="Exploration trail">{trail.map((id,index)=>{const label=id?graph.nodes.find(n=>n.id===id)?.label:'All nodes';return label?<li key={index} className="min-w-0 break-words"><span aria-hidden="true">{index>0?'› ':''}</span><button className="text-blue-700 underline text-left" aria-current={index===trail.length-1?'location':undefined} onClick={()=>{preview(id);setTrail(trail.slice(0,index+1));setPositions({});}}>{label}</button></li>:null;})}</ol>
+      <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>{motion.stop();if(canvas)moveCamera(()=>canvas.fitView({padding:.08,minZoom:.03,maxZoom:1.15,duration:reducedMotion?0:240}));}}>Fit map</button>
+      <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>{motion.stop();const anchor=motion.nodes.find(node=>node.id===nodeId)??motion.nodes[0];if(anchor&&canvas)moveCamera(()=>canvas.setCenter(anchor.position.x+80,anchor.position.y+58,{zoom:1,duration:reducedMotion?0:240}));}}>Readable zoom</button>
+      {width<500&&<button className="rounded border border-slate-300 px-3 py-2 font-semibold" aria-pressed={touchPan} onClick={()=>setTouchPan(value=>!value)}>{touchPan?'Scroll page':'Move map'}</button>}
+      <ol className="flex flex-wrap gap-x-2 gap-y-1 min-w-0" aria-label="Exploration trail">{trail.map((id,index)=>{const label=id?graph.nodes.find(n=>n.id===id)?.label:'All nodes';return label?<li key={index} className="min-w-0 break-words"><span aria-hidden="true">{index>0?'› ':''}</span><button className="text-blue-700 underline text-left" aria-current={index===trail.length-1?'location':undefined} onClick={()=>{preview(id);setTrail(trail.slice(0,index+1));}}>{label}</button></li>:null;})}</ol>
     </nav>
     {query.trim()&&<div className="mb-3" aria-label="Node search results"><p className="text-xs text-slate-600 mb-2">Matches within the current model and connection-type filters.</p><ul className="max-h-48 overflow-auto space-y-1">{graph.nodes.filter(n=>n.label.toLowerCase().includes(query.trim().toLowerCase())).map(n=><li key={n.id}><button className="border rounded p-2 w-full text-sm text-left hover:bg-blue-50" onClick={()=>browse(n.id)}>{n.label}</button></li>)}</ul>{!graph.nodes.some(n=>n.label.toLowerCase().includes(query.trim().toLowerCase()))&&<p role="status" className="text-sm">No matching nodes. Try another search or connection type.</p>}</div>}
     {selected&&<section aria-label="Focused graph node" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Exploring · {selected.kind}</p><h3 className="mt-1 font-bold break-words">{selected.label}</h3><p className="mt-1 text-sm text-slate-600">{familyFocus?`${incident.length} reviewed family and certification paths`:`${incident.length} direct reviewed ${incident.length===1?'connection':'connections'}`}. Follow a neighboring node or select a link to read its source.</p></section>}
-    <div ref={container} className="h-[620px] lg:h-[720px] reg-network-canvas overflow-hidden" aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status" onKeyDownCapture={event=>{
+    <p className="reg-map-help">{width<500?(touchPan?'Drag the background to move the map. Choose Scroll page to continue down the page.':'Swipe the background to scroll this page. Choose Move map to pan, or select a model below.'):'Drag to arrange nodes; drag the background to pan. Use the zoom controls or Readable zoom for a closer look.'}</p>
+    <div ref={container} className="reg-network-canvas overflow-hidden" style={{height}} data-pan-enabled={width>=500||touchPan} data-motion={motion.moving||cameraMoving?'moving':'settled'} aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status"
+     onFocusCapture={event=>setKeyboardNode((event.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id??'')}
+     onBlurCapture={event=>setKeyboardNode((event.relatedTarget as HTMLElement|null)?.closest?.<HTMLElement>('.react-flow__node')?.dataset.id??'')}
+     onKeyDownCapture={event=>{
       if(event.key!=='Enter'&&event.key!==' ')return;
       const node=(event.target as HTMLElement).closest<HTMLElement>('.react-flow__node');
       if(!node?.dataset.id)return;
       event.preventDefault();event.stopPropagation();const id=node.dataset.id;
       pendingKeyboardFocus.current=id===nodeId?null:id;browse(id);
     }}>
-      <ReactFlow key={`${filter}:${nodeId}`} onInit={initializeCanvas} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodes={positionedNodes} edges={edges} fitView fitViewOptions={{padding:familyFocus?.12:.2}} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} onNodesChange={changes=>setPositions(previous=>{const moved=changes.filter(change=>change.type==='position'&&change.position&&(previous[change.id]?.x!==change.position.x||previous[change.id]?.y!==change.position.y));if(!moved.length)return previous;const next={...previous};for(const change of moved)if(change.type==='position'&&change.position)next[change.id]=change.position;return next;})} onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#315681" gap={36} size={1}/><Controls showInteractive={false}/></ReactFlow>
+      <ReactFlow onInit={initializeCanvas} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodes={motion.nodes} edges={edges} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
+       autoPanOnNodeFocus={false} panOnDrag={width>=500||touchPan} zoomOnScroll={false} preventScrolling={false} onNodeDragStart={motion.stop} onMoveStart={event=>{if(event){++cameraToken.current;setCameraMoving(true);motion.stop();}}} onMoveEnd={event=>{if(event)setCameraMoving(false);}} onNodesChange={motion.onNodesChange}
+       onNodeMouseEnter={(_,node)=>setHoveredNode(node.id)} onNodeMouseLeave={()=>setHoveredNode('')}
+       onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#315681" gap={36} size={1}/><Controls showInteractive={false}/></ReactFlow>
     </div>
     <p id="node-map-status" className="text-xs text-slate-500 my-3" aria-live="polite">{selected?`${selected.label}: ${incident.length} ${familyFocus?'family and certification paths':`direct reviewed connection${incident.length===1?'':'s'}`} shown below.`:'Arrows preserve reviewed direction. Dashed links are references; shared nodes use one canonical catalog identity.'}</p>
     <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2" aria-label="Node type legend">{kinds.map(kind=>{const color=palette(kind);return <span key={kind} className="flex items-center gap-1.5 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full" style={{background:color,border:`2px solid ${color}`}}/>{kind}</span>})}</div>
