@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { ExplorerDetails } from '../domain/explorer';
 import type { CatalogDocument } from '../domain/catalog';
@@ -19,6 +19,8 @@ import {monitoredSources,monitoredModels,sourceHealth} from '../domain/sourceHea
 import {aircraftModelIdentity} from '../domain/aircraftModelIdentity';
 import {loadRevisionHistory} from '../lib/catalog';
 import {useRelationshipEvidence} from '../lib/useRelationshipEvidence';
+import {useExplorerData} from '../lib/useExplorerData';
+import {referencedSourceNode} from '../domain/nodeGraph';
 import type {OfficialRevision} from '../domain/explorer';
 
 const NodeGraph=lazy(()=>import('./NodeGraph'));
@@ -29,7 +31,7 @@ export function sourceDate(value: string | null) {
   return new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(value));
 }
 
-export default function AircraftExplorer({ doc, details }: { doc: CatalogDocument; details: ExplorerDetails }) {
+export default function AircraftExplorer({ doc, details:providedDetails,reload=0,ready=true }: { doc: CatalogDocument; details?: ExplorerDetails;reload?:number;ready?:boolean }) {
   const [params, setParams] = useSearchParams();
   const models = doc.model.split('|').map(m=>aircraftModelIdentity(doc.tcds_number,m.trim())).filter(Boolean);
   const requestedModel=aircraftModelIdentity(doc.tcds_number,params.get('model')??'');
@@ -37,8 +39,15 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [tab, setTab] = useState<'relationships'|'history'|'related'|'review'>('relationships');
   const [expanded, setExpanded] = useState('');
   const [view, setView] = useState<'graph'|'list'|'nodes'>(()=>typeof window!=='undefined' && window.matchMedia?.('(max-width: 639px)').matches?'list':'nodes');
-  const [evidenceId, setEvidenceId] = useState('');
-  const [previewId,setPreviewId]=useState('');
+  const context=JSON.stringify([doc.tcds_number,selected]);
+  const [selection,setSelection]=useState({id:'',context:''});
+  const [preview,setPreview]=useState({id:'',context:''});
+  const evidenceId=selection.context===context?selection.id:'';
+  const previewId=preview.context===context?preview.id:'';
+  const setEvidenceId=(id:string)=>setSelection({id,context});
+  const setPreviewId=(id:string)=>setPreview({id,context});
+  const [focusRequest,setFocusRequest]=useState<{id:string;token:number;context:string}|null>(null);
+  const focusToken=useRef(0);
   const [sourcePanelOpen,setSourcePanelOpen]=useState(true);
   const evidencePanel=useRef<HTMLElement>(null);
   const nodeMap=useRef<HTMLDivElement>(null);
@@ -57,21 +66,24 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const [profile,setProfile] = useState<AircraftProfile|null>(null);
   const [profileDirty,setProfileDirty] = useState(false);
   const [profileOnly,setProfileOnly] = useState(false);
+  const loaded=useExplorerData(doc,selected,compareModels&&view==='nodes',!providedDetails&&ready,reload);
+  const details=providedDetails??loaded.details;
   const [revisions,setRevisions]=useState<OfficialRevision[]>(details.revisions);
   const [historyState,setHistoryState]=useState<'idle'|'loading'|'ready'|'error'>('idle');
-  const allLinks = details.relationships.filter(r=>r.model===selected);
+  const allLinks = useMemo(()=>details.relationships.filter(r=>r.model===selected),[details.relationships,selected]);
   const relevantEquipmentKeys=new Set(allLinks.filter(r=>!r.path_via&&typeof r.applicability_conditions.equipment_key==='string').map(r=>r.applicability_conditions.equipment_key));
   const equipmentOptions=[...new Map(allLinks.filter(r=>r.relationship_type==='affects_component'&&r.basis_key&&relevantEquipmentKeys.has(r.basis_key)).map(r=>[r.basis_key!,{key:r.basis_key!,label:r.target}])).values()].sort((a,b)=>a.label.localeCompare(b.label));
   const activeProfile = profile?.model===selected?profile:null;
   const rowHeight = activeProfile?104:78;
-  const links = allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).filter(r=>!profileOnly||profileRelevance(activeProfile,r)?.category!=='outside').sort((a,b)=>
-    Number(b.relationship_type==='covered_by')-Number(a.relationship_type==='covered_by') || a.target.localeCompare(b.target,undefined,{numeric:true}));
-  const nodeLinks=details.relationships.filter(r=>compareModels||r.model===selected).filter(r=>!profileOnly||r.model!==selected||profileRelevance(activeProfile,r)?.category!=='outside');
+  const links = useMemo(()=>allLinks.filter(r=>expanded?r.path_via===expanded:!r.path_via).filter(r=>!profileOnly||profileRelevance(activeProfile,r)?.category!=='outside').sort((a,b)=>
+    Number(b.relationship_type==='covered_by')-Number(a.relationship_type==='covered_by') || a.target.localeCompare(b.target,undefined,{numeric:true})),[allLinks,expanded,profileOnly,activeProfile]);
+  const nodeLinks=useMemo(()=>details.relationships.filter(r=>compareModels||r.model===selected).filter(r=>!profileOnly||r.model!==selected||profileRelevance(activeProfile,r)?.category!=='outside'),[details.relationships,compareModels,selected,profileOnly,activeProfile]);
   const evidenceRows=view==='nodes'?nodeLinks:links;
-  const evidence = evidenceRows.find(r=>r.id===(evidenceId||previewId)) ?? evidenceRows.find(r=>r.relationship_type==='covered_by'&&r.model===selected) ?? evidenceRows[0];
+  const evidence = evidenceRows.find(r=>r.id===(evidenceId||previewId)) ?? evidenceRows.find(r=>r.relationship_type==='covered_by'&&r.model===selected) ?? evidenceRows.find(r=>r.model===selected);
   const activeEvidenceId=evidence?.id;
   const activeBasisKey=evidence?.basis_key;
   const activeTargetType=evidence?.target_type;
+  const referenceNode=evidence?referencedSourceNode(allLinks,evidence):null;
   const evidenceSelected=!!evidenceId&&evidenceId===activeEvidenceId;
   const evidenceDetails=useRelationshipEvidence(JSON.stringify([doc.tcds_number,selected,activeEvidenceId,evidence?.evidence_version_id]),evidenceSelected&&activeEvidenceId?activeEvidenceId:null,activeTargetType==='regulatory_provision'?activeBasisKey:undefined);
   const {rules:evidenceRules,materials:sourceMaterials}=evidenceDetails;
@@ -80,9 +92,20 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
   const healthWarnings=details.monitoring?.filter(check=>monitoredSources.some(source=>source.source===check.source&&source.certificate===doc.tcds_number)&&sourceHealth(check).attention).length??0;
   useEffect(()=>{if(tab!=='history')return;let stopped=false;setHistoryState('loading');void loadRevisionHistory(doc.tcds_number).then(rows=>{if(!stopped){setRevisions(rows);setHistoryState('ready');}}).catch(()=>{if(!stopped)setHistoryState('error');});return()=>{stopped=true;};},[tab,doc.tcds_number]);
   const chooseModel=(model:string)=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model},{replace:true});setEvidenceId('');setPreviewId('');setExpanded('');setSourcePanelOpen(true);};
+  const exploreReferences=()=>{
+    if(!evidence||!referenceNode)return;
+    if(view==='nodes'){
+      setPreviewId(evidence.id);
+      setFocusRequest({id:referenceNode,token:++focusToken.current,context});
+      nodeMap.current?.focus({preventScroll:true});nodeMap.current?.scrollIntoView({block:'start'});
+    }else setExpanded(evidence.target);
+    setEvidenceId('');
+  };
   return <section className={`bg-white rounded-xl border border-slate-200 p-5 mb-6 ${mapWide&&view==='nodes'?'reg-wide-explorer':''}`} aria-label="Aircraft data explorer">
+    {!ready&&<p role="status" className="mb-3 text-sm text-slate-600">Loading reviewed aircraft data…</p>}
     <AircraftFamilySummary variants={details.variants??[]} selected={selected} onSelect={chooseModel}/>
-    {details.relationships.some(row=>row.model===selected&&row.source_document_type==='TCDS')&&!monitoredModels.includes(selected)&&<p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">TCDS evidence is available for {selected}. Related AD/STC discovery and monitoring have not been configured for this model.</p>}
+    {details.available&&details.variants?.some(variant=>variant.evidence_is_current===false)&&!details.relationships.some(row=>row.source_document_type==='TCDS')&&<p role="note" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Catalog revision {doc.revision} is newer than the reviewed technical profiles. TCDS graph connections require renewed source review. Earlier profiles identify their reviewed revision above.</p>}
+    {!monitoredModels.includes(selected)&&(doc.tcds_number==='A16WE'||allLinks.some(row=>row.source_document_type==='TCDS'))&&<p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">{allLinks.some(row=>row.source_document_type==='TCDS')?'TCDS evidence is available':'Reviewed TCDS connections are not available in this view'} for {selected}. Related AD/STC discovery and monitoring have not been configured for this model.</p>}
     <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
       <div><label htmlFor="aircraft-model" className="block text-sm font-semibold text-slate-600 mb-1">Aircraft model</label>
         <select id="aircraft-model" value={selected} onChange={e=>chooseModel(e.target.value)} className="border rounded-lg p-2 font-semibold max-w-full">
@@ -107,8 +130,12 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       </button>)}
     </div>
     {details.notice && <p role="status" className="text-amber-900 mb-4">{details.notice}</p>}
+    {details.sections&&<div className="mb-4 space-y-2" aria-label="Aircraft data loading status">{(['relationships','variants','monitoring'] as const).map(section=>{
+      const state=details.sections![section];const label={relationships:'Reviewed relationships',variants:'Technical profiles',monitoring:'Source check health'}[section];
+      return state.status==='loading'?<p key={section} role="status" className="text-sm text-slate-600">{state.loadedAt?`Refreshing ${label.toLowerCase()}…`:`Loading ${label.toLowerCase()}…`}</p>:state.status==='error'?<div key={section} role="status" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><p>{label} {section==='monitoring'?'is':'are'} temporarily unavailable. {state.error}</p>{state.loadedAt&&<p>Showing data loaded {new Date(state.loadedAt).toLocaleString()}. New observations may be missing.</p>}<button className="mt-2 font-semibold underline" onClick={()=>loaded.retry(section)}>Retry {label.toLowerCase()}</button></div>:null;
+    })}</div>}
     {tab==='relationships' && <div role="tabpanel" id="panel-relationships" aria-labelledby="tab-relationships">
-      <div className="flex flex-wrap justify-between gap-2 mb-3"><h2 className="font-bold text-lg">How {expanded||selected} connects</h2>
+      <div className="flex flex-wrap justify-between gap-2 mb-3"><h2 className="font-bold text-lg">How {view==='nodes'?selected:expanded||selected} connects</h2>
         <div className="flex gap-2">{(['nodes','graph','list'] as const).map(mode=><button key={mode} onClick={()=>setView(mode)} aria-pressed={view===mode} className={`px-3 py-1 rounded border ${view===mode?'bg-blue-50 border-blue-400':'border-slate-200'}`}>{mode==='nodes'?'Node map':mode==='graph'?'Paths':'Evidence list'}</button>)}</div>
       </div>
       <p className="text-sm text-slate-600 mb-4">Select a connection to read its source evidence. Amendment dates identify the historical certification basis.</p>
@@ -116,10 +143,10 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
       {view==='nodes'&&<button className="mb-3 mr-4 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" aria-pressed={mapWide} onClick={()=>setMapWide(value=>!value)}>{mapWide?'Compact workspace':'Expand workspace'}</button>}
       {view==='nodes'&&nodeLinks.length>0&&<button className="mb-3 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" aria-expanded={sourcePanelOpen} aria-controls="relationship-source-evidence" onClick={()=>setSourcePanelOpen(open=>!open)}>{sourcePanelOpen?'Hide source details':'Show source details'}</button>}
       {view==='nodes'&&<label className="block text-sm mb-3"><input type="checkbox" checked={compareModels} onChange={e=>setCompareModels(e.target.checked)}/> {doc.tcds_number==='A16WE'?'Family network: show all reviewed models and shared certification paths':'Show shared relationships across every reviewed model in this TCDS'}</label>}
-      {view==='nodes'&&doc.tcds_number==='A16WE'&&compareModels&&<p className="mb-3 text-xs text-slate-600">Showing {new Set(nodeLinks.map(row=>row.model)).size} models with reviewed connections. Models connect through their shared family and TCDS. Detailed technical facts and engine paths are reviewed for {details.variants?.length??0} variants; AD/STC coverage remains model-specific.</p>}
+      {view==='nodes'&&doc.tcds_number==='A16WE'&&compareModels&&<p className="mb-3 text-xs text-slate-600">Showing {new Set(nodeLinks.map(row=>row.model)).size} models with reviewed connections. Family, certificate and engine paths appear when their source evidence is current and reviewed. Technical profiles cover {details.variants?.length??0} variants; check their evidence revision above. AD/STC coverage remains model-specific.</p>}
       {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className={view==='nodes'?`reg-graph-workspace grid items-start ${sourcePanelOpen?'':'reg-details-hidden'}`:'grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start'}>
-        {view==='nodes'?<div ref={nodeMap} className="reg-map-column min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} familyOverview={doc.tcds_number==='A16WE'&&compareModels} profile={activeProfile} onPreview={r=>{setEvidenceId('');setPreviewId(r.id);}} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
+        {view==='nodes'?<div ref={nodeMap} className="reg-map-column min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} familyOverview={doc.tcds_number==='A16WE'&&compareModels} focusRequest={focusRequest?.context===context?focusRequest:null} onFocusHandled={token=>setFocusRequest(request=>request?.token===token?null:request)} profile={activeProfile} onPreview={r=>{setEvidenceId('');setPreviewId(r.id);}} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
               <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>
@@ -134,6 +161,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           </div>
         </div>
         }
+        {!evidence&&view==='nodes'&&<aside id="relationship-source-evidence" hidden={!sourcePanelOpen} aria-label="Relationship source evidence" className="reg-evidence-inspector"><h3 className="font-bold">No selected source citation</h3><p className="mt-3 text-sm">Model context: {selected}</p><p className="mt-3 text-sm">No reviewed source citation is available for this model in the current graph. Select a family connection to inspect its cited evidence.</p></aside>}
         {evidence && <aside ref={evidencePanel} id="relationship-source-evidence" hidden={view==='nodes'&&!sourcePanelOpen} tabIndex={-1} aria-label="Relationship source evidence" className={`rounded-lg border border-blue-200 bg-blue-50 p-4 lg:sticky lg:top-6 ${view==='nodes'?'reg-evidence-inspector':''}`}>
           {view==='nodes'&&<button className="mb-3 text-sm text-blue-800 underline lg:hidden" onClick={()=>{nodeMap.current?.focus({preventScroll:true});nodeMap.current?.scrollIntoView({block:'start'});}}>Return to relationship map</button>}
           <p className="mb-2 text-[10px] font-bold uppercase tracking-[.15em]">Source evidence</p><h3 className="font-bold mb-2">{evidence.source_document_number?`${evidence.source_document_type??'Source'} ${evidence.source_document_number}`:evidence.target}</h3><p className="text-xs mb-2">Model context: {evidence.model}</p>
@@ -151,7 +179,7 @@ export default function AircraftExplorer({ doc, details }: { doc: CatalogDocumen
           <a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-700 underline text-sm mt-3">{evidence.original_source_url?'Open FAA record':`Open FAA source · see page ${evidence.evidence_page}`}</a>
           {evidence.original_source_url&&<a href={evidence.original_source_url} target="_blank" rel="noopener noreferrer" className="block text-blue-700 underline text-sm mt-3">Open published original · see PDF page {evidence.evidence_page}</a>}
           {evidence.evidence_version_id&&<SourcePdf key={evidence.evidence_version_id+(evidence.evidence_attachment_id??'')} versionId={evidence.evidence_version_id} attachmentId={evidence.evidence_attachment_id??undefined} page={evidence.evidence_page}/>}
-          {allLinks.some(r=>r.path_via===evidence.target)&&<button className="block text-blue-700 underline mt-3 text-sm" onClick={()=>{setExpanded(evidence.target);setEvidenceId('');}}>Explore referenced documents</button>}
+          {referenceNode&&<button className="block text-blue-700 underline mt-3 text-sm" onClick={exploreReferences}>Explore referenced documents</button>}
           {evidence.evidence_file_name&&<p className="text-xs mt-2">Cited attachment: {evidence.evidence_file_name}</p>}
           {evidence.target_type==='regulatory_provision'&&<div className="mt-4 space-y-3">
             {sourceMaterials.filter(s=>s.basis_key===evidence.basis_key).map(s=><details key={s.id} className="border-t border-blue-200 pt-3"><summary className="cursor-pointer text-sm font-semibold">{s.title}</summary><p className="text-xs my-2">{s.source_kind==='later_reference'?'Later reference edition dated '+s.edition_date+'. This is not the historical amendment wording cited by the TCDS.':'Historical original dated '+s.edition_date+'. The baseline and selected amendments do not form a complete consolidated certification basis.'}</p>{s.body_text?<pre className="text-xs whitespace-pre-wrap max-h-80 overflow-auto">{s.body_text}</pre>:<SourcePdf versionId={s.id} label="View historical original"/>}<a className="text-xs text-blue-700 underline block mt-2" href={s.source_url} target="_blank" rel="noopener noreferrer">Open official regulation source</a></details>)}

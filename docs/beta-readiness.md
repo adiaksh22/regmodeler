@@ -1,6 +1,6 @@
 # Portfolio beta readiness
 
-Updated November 3, 2026. The website remains unpublished. This report covers automated browser journeys and local quality checks; it is not a completed usability study or accessibility certification.
+Updated November 16, 2026. The website remains unpublished. This report covers automated browser journeys and local quality checks; it is not a completed usability study or accessibility certification.
 
 ## Verified journeys
 
@@ -25,22 +25,26 @@ node scripts/beta-journey-smoke.cjs
 node scripts/profile-smoke.cjs
 node scripts/graph-navigation-smoke.cjs
 node scripts/network-design-smoke.cjs
-node scripts/family-graph-smoke.cjs
 node scripts/monitoring-smoke.cjs
-node scripts/revision82-smoke.cjs
 node scripts/pdf-dialog-smoke.cjs
 node scripts/audit-correctness-smoke.cjs
+node scripts/explorer-loading-smoke.cjs
+node scripts/source-status-smoke.cjs
 ```
 
 The beta test reads hosted public data and simulates outages only inside its isolated browser. It does not import FAA records, alter hosted data or publish the site. Historical tests elsewhere in `scripts/` may assume earlier catalog inventories; this list identifies current journey checks.
 
 The audit-correctness journey also verifies all 17 Boeing model summaries, model-bound AD details, explicit evidence failures/retry, NG search aliases, corrupt personal records and denied-storage startup. It supports `SMOKE_BASE_URL` and `SMOKE_BROWSER_EXECUTABLE`; the November 3 repair pass ran it in Windows Chrome and Edge. See [the full audit and repair status](tool-audit-2026-11-03.md) for open findings; earlier journey passes do not close those issues.
 
+The loading journey verifies selected-model queries, explicit family expansion, cache reuse, independent section retries, retained dated data on failed refresh, canonical reference traversal and the real cited archive page. It supports the same base URL/browser overrides. The browser read cache lasts two minutes; it is separate from the scheduled FAA source checks.
+
+As observed November 16, the hosted A16WE catalog is at Revision 83, while technical profiles still cite reviewed Revision 82. The source guard correctly withholds earlier TCDS graph paths; reviewed current AD/STC paths remain available. The exact-inventory `family-graph-smoke.cjs` and `revision82-smoke.cjs` are historical checks until the new source is reviewed. Do not force-publish their old paths to satisfy those assertions. The UI exposes the gap and preserves citation/model context.
+
 ## Release sequence
 
 1. Completed locally: native PDF modal keyboard containment, escape/close behavior, focus restoration, unavailable-original messaging and supported-scope/source-status presentation checks. This does not replace assistive-technology/user testing.
-2. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, saving an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
+2. Renew the targeted A16WE source review before presenting the complete Boeing TCDS family graph. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, saving an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
 3. Review the prepared [release settings and rollback plan](release-review.md). The guarded `npm run build:release` requires hosted public configuration; backend credentials stay in the worker environment. Deployed deep links and environment settings still need verification after an approved first release.
 4. Obtain the user's release decision, then publish and verify the deployed build and supported workflows.
 
-New aircraft/source expansion is deferred until this UI/release phase is complete. The supported deep-profile scope remains PA-28-140/181; Boeing has 17 reviewed family/TCDS identities and seven detailed technical profiles, while 737-10 AD/STC discovery is explicitly unconfigured. The graph is research evidence, not an individual-aircraft compliance determination.
+New aircraft expansion is deferred until this UI/release phase is complete. Renewed review of the current A16WE source is needed before restoring its full TCDS graph. The supported deep-profile scope remains PA-28-140/181; Boeing has 17 model identities from the earlier reviewed family listing and seven detailed technical profiles, while 737-10 AD/STC discovery is explicitly unconfigured. The graph is research evidence, not an individual-aircraft compliance determination.

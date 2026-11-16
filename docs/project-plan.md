@@ -16,7 +16,7 @@ Users can browse model information without a profile. Profiles add user-reported
 | Maintenance professional preparing a review | Select the intended aircraft, inspect current/history AD/STC records and compare source conditions with aircraft records | Organized sources, exact evidence and unresolved questions |
 | Prospective buyer organizing research | Record supplied aircraft details and identify source material to discuss with a seller or maintenance professional | Research context; seller-supplied details remain unverified |
 | User managing several aircraft | Keep separately named profiles and switch between them | Avoid repeated entry and prevent one model's profile from being applied to another |
-| Future user monitoring changes | Subscribe to model/aircraft source changes and investigate new events | Planned traceable change feed and later explicit notifications |
+| User monitoring scoped source changes | Filter the shared change feed and investigate source observations | Traceable metadata changes and coverage dates; subscriptions and notifications remain planned |
 
 The normal workflow is: search model -> open certificate family -> select/create profile -> browse graph or related records -> inspect relevance and unknowns -> open the source excerpt and cited PDF -> use the original material in the user's review process.
 
@@ -45,11 +45,11 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | --- | --- | --- |
 | Foundation | Active/archive separation; repeatable lint, tests, types and build | Ongoing maintenance |
 | Infrastructure | GitHub; local/hosted Supabase; migrations; private archives; controlled public API and PDF viewer | Release operations, recovery and monitoring |
-| TCDS | 23 imported 2A13 revisions plus all 57 A16WE revisions with original PDFs/metadata; repeat imports verified | Additional attachments and aircraft families |
-| Related discovery | Metadata for 58 AD, 856 STC and 59 CAR records in the selected scope; pagination/incremental checks | Most primary PDFs/attachments, wider scope and automatic attachment checks |
+| TCDS | Scoped imported history and originals for 2A13/A16WE; source-version guards preserve earlier evidence without treating it as a new review | As observed November 16, A16WE Revision 83 needs renewed review before its full TCDS graph can return; additional attachments/families |
+| Related discovery | Scoped AD/STC metadata indexes and historical CAR sources; pagination, incremental checks, reconciliation and quarantine | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | 136 PA-28 model-scoped rows plus 18 reviewed 737 family/certificate/engine paths; 36 reviewed PA-28 AD/STC model connections; 418 Boeing AD and 2,601 Boeing STC discovery records; default node-link map and evidence views | Reviewed 737 AD/STC paths and historical graph exploration |
-| Interface | Model-first search; cited evidence/PDFs; current/history filters; revision metadata/PDF comparison | User feedback, accessibility audit and actual content-change summaries |
+| Relationships | Reviewed PA-28 and selected 737 AD/STC/component paths; 17 Boeing identities and seven technical profiles from earlier TCDS reviews; only currently eligible edges appear | Current A16WE TCDS review, broader reviewed coverage, detailed Part 25 basis mapping and historical graph exploration |
+| Interface | Model-first search; cited evidence/PDFs; canonical reference traversal; independent loading/retry; bounded cached model/family reads; current/history filters and revision comparison | Remaining audit findings, graph readability/motion, accessibility/user validation and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial and equipment labels; reported installation | Backup import, compound rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |
 | Publication | Cloudflare account and build setup selected | Website remains unpublished; beta review/release decision pending |

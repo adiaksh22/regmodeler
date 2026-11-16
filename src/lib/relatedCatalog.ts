@@ -1,9 +1,6 @@
-import {createClient} from '@supabase/supabase-js';
-import {readPublicConfig} from './publicConfig';
-import type {Database} from './database.types';
+import {publicCatalogConfig as config,publicCatalogClient} from './publicClient';
 import type {RelatedDocument} from '../domain/explorer';
-const config=readPublicConfig(import.meta.env.VITE_SUPABASE_URL,import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-const client=()=>config?createClient<Database>(config.url,config.publishableKey,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(15000)})}}):null;
+const client=()=>publicCatalogClient;
 export async function loadRelatedPage(model:string,type:string,includeHistory=false,query='',offset=0,limit=24) {
   const c=client();if(!c)return {documents:[],total:0,notice:'Connect the shared catalog to browse related FAA records.'};
   try {

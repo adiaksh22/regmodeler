@@ -1,5 +1,6 @@
 import { tcdsSamples } from '../data/tcdsSamples';
 import type { CatalogDocument, CatalogResult } from '../domain/catalog';
+export const catalogSearchLimit=20;
 
 export interface CatalogGateway {
   list(query?: string): Promise<CatalogDocument[]>;

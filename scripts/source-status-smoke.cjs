@@ -8,6 +8,8 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
   page.on('request',request=>{if(request.method()==='POST'&&request.url().includes('/rest/v1/rpc/'))requests.push(request.url().split('/').at(-1));});
   await page.setViewport({width:1440,height:1050});
   await page.goto('http://127.0.0.1:4173/tcds/A16WE?model=737-800',{waitUntil:'domcontentloaded'});
+  await page.waitForSelector('[aria-label="Find a relationship node"]');
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='Show all nodes').click());
   await page.waitForFunction(()=>document.querySelector('[aria-label="Node connections"]')?.textContent.includes('ST01635LA'),{timeout:30000});
   const family=await page.$eval('[aria-labelledby="family-overview-title"]',node=>node.innerText);
   assert.match(family,/Reviewed TCDS revision: \d+/);assert.doesNotMatch(family,/current FAA TCDS Revision 81|Listed in current A16WE/);

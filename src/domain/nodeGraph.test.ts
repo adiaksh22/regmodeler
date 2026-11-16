@@ -1,8 +1,13 @@
 import {describe,it,expect} from 'vitest';
-import {buildNodeGraph,focusedNodeGraph,relationshipLabel} from './nodeGraph';
+import {buildNodeGraph,focusedNodeGraph,relationshipLabel,referencedSourceNode} from './nodeGraph';
 import type {EvidenceRelationship} from './explorer';
 const row=(changes:Partial<EvidenceRelationship>={}):EvidenceRelationship=>({id:'edge',tcds_number:'2A13',model:'PA-28-140',target:'STC shared',target_type:'certificate',relationship_type:'approved_for',evidence_page:1,evidence_excerpt:'Reviewed',applicability_conditions:{},evidence_revision:'1',source_url:'https://drs.faa.gov',direction:'incoming',source_entity_id:'stc',target_entity_id:'model140',model_entity_id:'model140',...changes});
 describe('node graph identity and direction',()=>{
+ it('resolves reference traversal by source identity without conflating identical labels',()=>{
+  const evidence=row();const reference=row({id:'ref',source_entity_id:'stc',path_via:'STC shared'});
+  expect(referencedSourceNode([reference],evidence)).toBe('stc');
+  expect(referencedSourceNode([{...reference,source_entity_id:'another-stc'}],evidence)).toBeNull();
+ });
  it('shares one certificate across two model connections and keeps incoming arrows',()=>{
   const graph=buildNodeGraph([row(),row({id:'edge2',model:'PA-28-181',model_entity_id:'model181',target_entity_id:'model181'})]);
   expect(graph.nodes).toHaveLength(3);expect(graph.edges.map(e=>[e.source,e.target])).toEqual([['stc','model140'],['stc','model181']]);

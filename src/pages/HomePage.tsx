@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { catalog } from '../lib/catalog';
 import type { CatalogDocument, CatalogSource } from '../domain/catalog';
 import {matchedAircraftModel} from '../domain/aircraftModelIdentity';
+import {catalogSearchLimit} from '../lib/catalogRepository';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export default function HomePage() {
     <section aria-labelledby="aircraft-library-title"><div className="mb-4 flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-blue-700">Aircraft library</p><h2 id="aircraft-library-title" className="text-2xl font-bold text-slate-950">{source==='database'?'Shared FAA catalog':'Verified FAA snapshots'}</h2></div><span className="text-sm text-slate-500">Model-first discovery</span></div>
       {loading&&<p role="status" className="text-slate-600">Loading catalog…</p>}{notice&&<p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}{!loading&&documents.length===0&&<p className="text-slate-600">{query?'No catalog matches. Try another model or certificate number.':'No published TCDS records are available yet.'}</p>}{!loading&&query&&<button onClick={()=>{setSearch('');setQuery('');}} className="mb-4 text-sm font-semibold text-blue-700 underline">Clear search</button>}
       <div className="grid gap-4 md:grid-cols-2">{!loading&&documents.map(document=><CatalogCard key={document.tcds_number} document={document} query={query}/>)}</div>
+      {!loading&&source==='database'&&documents.length>=catalogSearchLimit&&<p className="mt-4 text-sm text-slate-600" role="status">Showing up to {catalogSearchLimit} catalog results. Narrow your search by aircraft model or certificate number to find more specific matches.</p>}
     </section>
   </div></div>;
 }

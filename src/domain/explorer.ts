@@ -43,6 +43,7 @@ export type RelatedDocument = {
   original_archived: boolean; attachments_pending: boolean;
   review_status?:string;quality_flags?:string[];
 };
+export type ExplorerSection={status:'idle'|'loading'|'ready'|'error';loadedAt?:string;error?:string};
 export type ExplorerDetails = {
   revisions: OfficialRevision[]; relationships: EvidenceRelationship[]; lastChecked: string | null;
   available: boolean; notice?: string;
@@ -50,4 +51,5 @@ export type ExplorerDetails = {
   variants?: AircraftVariantSummary[];
   applicabilityRules?: ApplicabilityRule[];
   monitoring?:import('./sourceChanges').SourceMonitoring[];
+  sections?:Record<'relationships'|'variants'|'monitoring',ExplorerSection>;
 };

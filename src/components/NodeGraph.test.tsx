@@ -16,6 +16,12 @@ beforeEach(async()=>{
 });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
 describe('graph exploration controls',()=>{
+ it('follows an inspector focus request, clears incompatible filters and keeps Back traversal',async()=>{
+  await click('Explore Engine');
+  await act(async()=>root.render(<NodeGraph rows={rows} onSelect={onSelect} selectedId="certificate" focusRequest={{id:'certificate',token:1}}/>));
+  expect(host.querySelector('[aria-label="Focused graph node"] h3')?.textContent).toBe('Certificate');
+  await click('Back one node');expect(host.querySelector('[aria-label="Focused graph node"] h3')?.textContent).toBe('Engine');
+ });
  it('previews a focused connection without requesting detailed evidence',async()=>{
   const onPreview=vi.fn();
   await act(async()=>root.render(<NodeGraph rows={rows} onPreview={onPreview} onSelect={onSelect} selectedId="certificate"/>));

@@ -1,5 +1,5 @@
 // Native browser dialog behavior with an isolated, intercepted viewer response.
-// Real archived PDF delivery is checked separately by revision82-smoke.cjs.
+// Real archived PDF delivery is checked by explorer-loading-smoke.cjs.
 const assert=require('node:assert/strict');
 const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
 (async()=>{
@@ -16,14 +16,16 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
    else void request.continue();
   });
   await page.setViewport({width:1280,height:900});
-  await page.goto('http://127.0.0.1:4173/tcds/A16WE?model=737-10',{waitUntil:'domcontentloaded'});
-  await page.waitForSelector('[aria-label="Relationship source evidence"]');
+  await page.goto('http://127.0.0.1:4173/tcds/2A13?model=PA-28-181',{waitUntil:'domcontentloaded'});
+  await page.waitForSelector('[aria-label="Node connections"] button[aria-pressed]');
+  await page.click('[aria-label="Node connections"] button[aria-pressed]');
+  const expectedPage=await page.$eval('[aria-label="Relationship source evidence"] p.text-sm.mb-2',node=>Number(node.textContent.match(/page (\d+)/)[1]));
   const open=async()=>{await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='View cited PDF').click());await page.waitForSelector('dialog[open]');};
   const restored=()=>page.evaluate(()=>document.activeElement?.textContent==='View cited PDF');
   await open();
   assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close PDF');
   assert.equal(await page.evaluate(()=>document.querySelector('dialog').matches(':modal')),true);
-  assert.equal(await page.$eval('dialog iframe',node=>new URL(node.src).hash),'#page=67');
+  assert.equal(await page.$eval('dialog iframe',node=>new URL(node.src).hash),'#page='+expectedPage);
   await page.focus('nav a');
   assert.equal(await page.evaluate(()=>document.querySelector('dialog').contains(document.activeElement)),true,'Background links must be inert');
   for(let step=0;step<12;step++){

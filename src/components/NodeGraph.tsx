@@ -28,8 +28,12 @@ function EvidenceNode({data,selected}:NodeProps){
 }
 const nodeTypes={evidence:EvidenceNode};
 const edgeTypes={evidence:EvidenceGraphEdge};
+const focusCanvasNode=(container:HTMLElement|null,id:string)=>{
+ const node=[...(container?.querySelectorAll<HTMLElement>('.react-flow__node.selected')??[])].find(node=>node.dataset.id===id);
+ node?.focus();return !!node&&document.activeElement===node;
+};
 
-export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPreview,familyOverview=false}:{rows:EvidenceRelationship[];onSelect:(row:EvidenceRelationship)=>void;selectedId:string;profile?:AircraftProfile|null;onPreview?:(row:EvidenceRelationship)=>void;familyOverview?:boolean}) {
+export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPreview,familyOverview=false,focusRequest,onFocusHandled}:{rows:EvidenceRelationship[];onSelect:(row:EvidenceRelationship)=>void;selectedId:string;profile?:AircraftProfile|null;onPreview?:(row:EvidenceRelationship)=>void;familyOverview?:boolean;focusRequest?:{id:string;token:number}|null;onFocusHandled?:(token:number)=>void}) {
   const [trail,setTrail]=useState<string[]>(()=>{const family=familyOverview?buildNodeGraph(rows).nodes.find(node=>node.kind==='aircraft family'):undefined;return family?['',family.id]:[''];});
   const [filter,setFilter]=useState('all');
   const [query,setQuery]=useState('');
@@ -37,10 +41,18 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const [canvas,setCanvas]=useState<ReactFlowInstance|null>(null);
   const container=useRef<HTMLDivElement>(null);
   const pendingKeyboardFocus=useRef<string|null>(null);
+  const processedFocus=useRef<typeof focusRequest>(null);
+  useEffect(()=>{
+    if(!focusRequest){processedFocus.current=null;return;}
+    if(processedFocus.current===focusRequest)return;
+    processedFocus.current=focusRequest;
+    const id=focusRequest.id;
+    pendingKeyboardFocus.current=id;setFilter('all');setQuery('');setPositions({});
+    setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);
+    onFocusHandled?.(focusRequest.token);
+  },[focusRequest,filter,trail,onFocusHandled]);
   const initializeCanvas=(instance:ReactFlowInstance)=>{
     setCanvas(instance);
-    const id=pendingKeyboardFocus.current;
-    if(id)requestAnimationFrame(()=>{const node=container.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`);if(node){node.focus();pendingKeyboardFocus.current=null;}});
   };
   const graph=useMemo(()=>buildNodeGraph(rows.filter(r=>filter==='all'||r.relationship_type===filter)),[rows,filter]);
   const lastNode=trail[trail.length-1];
@@ -48,17 +60,30 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const familyFocus=graph.nodes.find(node=>node.id===nodeId)?.kind==='aircraft family';
   const visibleGraph=useMemo(()=>focusedNodeGraph(graph,nodeId),[graph,nodeId]);
   useEffect(()=>{
+    if(!canvas||!pendingKeyboardFocus.current)return;
+    let frame=0;let attempts=0;
+    const restore=()=>{
+      const id=pendingKeyboardFocus.current;
+      if(!id)return;
+      if(id===nodeId&&focusCanvasNode(container.current,id)){pendingKeyboardFocus.current=null;return;}
+      if(++attempts<8)frame=requestAnimationFrame(restore);
+    };
+    frame=requestAnimationFrame(restore);return()=>cancelAnimationFrame(frame);
+  },[canvas,nodeId,focusRequest]);
+  useEffect(()=>{
     if(!container.current||!canvas)return;
     let frame=0;
     const observer=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{void canvas.fitView({padding:familyFocus?.12:.25,minZoom:nodeId&&container.current&&container.current.clientWidth<500?.65:.03,duration:0});});});
     observer.observe(container.current);return()=>{observer.disconnect();cancelAnimationFrame(frame);};
   },[canvas,visibleGraph,nodeId,familyFocus]);
-  const {nodes,edges}=useMemo(()=>{
+  const nodes=useMemo(()=>{
     const layout=radialGraphLayout(visibleGraph.nodes,visibleGraph.edges,nodeId);
-    const nodes:Node[]=visibleGraph.nodes.map(n=>({id:n.id,type:'evidence',data:{label:n.label,kind:n.kind,color:palette(n.kind)},position:layout.get(n.id)!,selected:n.id===nodeId,ariaLabel:`${n.kind}: ${n.label}`,style:{width:160,height:116,background:'transparent',border:0}}));
+    return visibleGraph.nodes.map((n):Node=>({id:n.id,type:'evidence',data:{label:n.label,kind:n.kind,color:palette(n.kind)},position:layout.get(n.id)!,selected:n.id===nodeId,ariaLabel:`${n.kind}: ${n.label}`,style:{width:160,height:116,background:'transparent',border:0}}));
+  },[visibleGraph,nodeId]);
+  const edges=useMemo(()=>{
     const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:active?'#93c5fd':'#496483',strokeWidth:active?2.5:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
-    return {nodes,edges};
-  },[visibleGraph,nodeId,selectedId,familyFocus]);
+    return edges;
+  },[visibleGraph,selectedId,familyFocus]);
   const positionedNodes=useMemo(()=>nodes.map(node=>({...node,position:positions[node.id]??node.position})),[nodes,positions]);
   const incident=familyFocus?visibleGraph.edges:graph.edges.filter(e=>!nodeId||e.source===nodeId||e.target===nodeId);
   const preview=(id:string)=>{const candidates=graph.edges.filter(edge=>edge.source===id||edge.target===id);const row=candidates.find(edge=>edge.relationship.relationship_type==='covered_by')??candidates.find(edge=>edge.relationship.source_entity_id===id)??candidates[0];if(id&&row)onPreview?.(row.relationship);};

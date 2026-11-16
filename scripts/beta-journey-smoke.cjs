@@ -67,11 +67,11 @@ let phase='home';
   await page.waitForFunction(()=>document.body.innerText.includes('online catalog is unavailable'));
   assert.equal(await page.$$eval('a[href^="/tcds/"]',nodes=>nodes.length),require('../src/data/tcds-samples.json').length,'Outage fallback must be labeled saved samples');
   await page.goto('http://127.0.0.1:4173/tcds/2A13?model=PA-28-181',{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>document.body.innerText.includes('Imported history and relationships are temporarily unavailable'));
+  await page.waitForFunction(()=>document.body.innerText.includes('Reviewed relationships are temporarily unavailable'));
   outage=false;
   await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent==='Reload catalog').click());
   await page.waitForSelector('[aria-label="Relationship source evidence"]');
-  assert.doesNotMatch(await page.$eval('body',node=>node.innerText),/online catalog is unavailable|Imported history and relationships are temporarily unavailable/);
+  assert.doesNotMatch(await page.$eval('body',node=>node.innerText),/online catalog is unavailable|Reviewed relationships are temporarily unavailable/);
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({status:'passed',checks:['model-first search','manual keyboard tab navigation','loaded revision history','related record evidence','current/history filter','active navigation','change-feed model filter','320/390px layout','unknown route recovery','empty search recovery','labeled outage fallback','retry restores live relationships','zero browser errors']}));
  }finally{await browser.close();}

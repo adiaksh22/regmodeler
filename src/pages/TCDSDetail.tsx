@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { TCDSRevision } from '../types/revision';
-import { catalog, loadExplorerDetails } from '../lib/catalog';
-import type { ExplorerDetails } from '../domain/explorer';
+import { catalog } from '../lib/catalog';
+import {invalidateExplorerReads} from '../lib/explorerReads';
 import AircraftExplorer from '../components/AircraftExplorer';
 import type { CatalogDocument } from '../domain/catalog';
 import { getRevisionsByTCDS } from '../utils/revisionManager';
@@ -20,24 +20,27 @@ export default function TCDSDetail() {
   const [linkInput, setLinkInput] = useState('');
   const [linkNotice,setLinkNotice]=useState('');
   const [loading, setLoading] = useState(false);
+  const [catalogReady,setCatalogReady]=useState(false);
+  const lastHostedDoc=useRef<CatalogDocument|null>(null);
   const [reload, setReload] = useState(0);
-  const [details, setDetails] = useState<ExplorerDetails>({revisions:[],relationships:[],lastChecked:null,available:false});
 
   useEffect(() => {
     let cancelled = false;
     if (tcdsNumber) {
       const sample=getTcdsSample(tcdsNumber);
       const immediateDoc:CatalogDocument|null=sample?{...sample,authority:'FAA'}:null;
-      setDoc(immediateDoc);
+      setDoc(previous=>previous?.tcds_number===tcdsNumber.toUpperCase()?previous:immediateDoc);
+      setCatalogReady(false);
       setNotice('');
       setLoading(!immediateDoc);
-      setDetails({revisions:[],relationships:[],lastChecked:null,available:false,notice:'Loading imported aircraft data...'});
-      void loadExplorerDetails(tcdsNumber).then(result=>{if(!cancelled) setDetails(result);});
       void catalog.get(tcdsNumber).then(result => {
         if (cancelled) return;
-        setDoc(result.data??immediateDoc);
-        setNotice(result.notice ?? '');
+        if(result.source==='database'&&result.data)lastHostedDoc.current=result.data;
+        const saved=result.source==='fallback'&&lastHostedDoc.current?.tcds_number===tcdsNumber.toUpperCase()?lastHostedDoc.current:null;
+        setDoc(saved??result.data??immediateDoc);
+        setNotice(saved?'The online catalog is unavailable. Showing the last loaded catalog record.':result.notice??'');
         setLoading(false);
+        setCatalogReady(true);
       });
       setRevisions(getRevisionsByTCDS(tcdsNumber));
       setCrossRefGroup(getGroupByMember(tcdsNumber));
@@ -46,6 +49,7 @@ export default function TCDSDetail() {
   }, [tcdsNumber, reload]);
 
   const handleRefresh = () => {
+    if(tcdsNumber)invalidateExplorerReads(tcdsNumber);
     setReload(value => value + 1);
   };
 
@@ -125,7 +129,7 @@ export default function TCDSDetail() {
             </div>
           </div>
 
-          {doc.product_type==='Aircraft' && <AircraftExplorer doc={doc} details={details} />}
+          {doc.product_type==='Aircraft' && <AircraftExplorer doc={doc} reload={reload} ready={catalogReady}/>}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Cross-References</h2>
             <p className="text-sm text-gray-600 mb-3">Personal links stored in this browser. These links do not establish regulatory applicability.</p>
