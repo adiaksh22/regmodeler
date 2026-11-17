@@ -7,6 +7,7 @@ import type {EvidenceRelationship} from '../domain/explorer';
 import {buildNodeGraph,focusedNodeGraph,relationshipLabel} from '../domain/nodeGraph';
 import {profileRelevance,type AircraftProfile} from '../domain/aircraftProfile';
 import {useGraphMotion,useReducedMotion} from '../lib/useGraphMotion';
+import ExplorerContext,{type ExplorerContextData} from './ExplorerContext';
 
 const palette=(kind:string)=>{
  const value=kind.toLowerCase();
@@ -35,7 +36,7 @@ const focusCanvasNode=(container:HTMLElement|null,id:string)=>{
  node?.focus();return !!node&&document.activeElement===node;
 };
 
-export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPreview,familyOverview=false,focusRequest,onFocusHandled}:{rows:EvidenceRelationship[];onSelect:(row:EvidenceRelationship)=>void;selectedId:string;profile?:AircraftProfile|null;onPreview?:(row:EvidenceRelationship)=>void;familyOverview?:boolean;focusRequest?:{id:string;token:number}|null;onFocusHandled?:(token:number)=>void}) {
+export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPreview,familyOverview=false,focusRequest,onFocusHandled,context}:{rows:EvidenceRelationship[];onSelect:(row:EvidenceRelationship)=>void;selectedId:string;profile?:AircraftProfile|null;onPreview?:(row:EvidenceRelationship)=>void;familyOverview?:boolean;focusRequest?:{id:string;token:number}|null;onFocusHandled?:(token:number)=>void;context?:ExplorerContextData}) {
   const [trail,setTrail]=useState<string[]>(()=>{const family=familyOverview?buildNodeGraph(rows).nodes.find(node=>node.kind==='aircraft family'):undefined;return family?['',family.id]:[''];});
   const [filter,setFilter]=useState('all');
   const [query,setQuery]=useState('');
@@ -114,7 +115,8 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const selected=graph.nodes.find(node=>node.id===nodeId);
   return <div className={`min-w-0 w-full reg-node-map reg-network-studio ${familyFocus?'reg-family-network':''}`}>
     <div className="reg-studio-heading"><div><p>REGULATORY CONNECTIONS</p><h3>Explore the evidence network</h3></div><span>Reviewed sources only</span></div>
-    <div className="reg-studio-meta"><p className="sr-only">Select a node to explore its direct connections, then select a labeled link for page-cited evidence. Drag nodes to arrange the map; use zoom and fit controls to navigate. Press Enter or Space on a focused node to explore its connections.</p><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{visibleGraph.nodes.length} of {graph.nodes.length} nodes · {visibleGraph.edges.length} of {graph.edges.length} links</span></div>
+    {context&&<ExplorerContext context={context} focus={selected?.label??'All nodes'}/>}
+    <div className="reg-studio-meta"><p className="reg-graph-instructions">Choose a node to explore its connections. Choose a link or connection card to read its cited source.</p><details className="reg-graph-help"><summary>Keyboard and map controls</summary><p>Use Tab to focus nodes and Enter or Space to explore. Back one node retraces your path; Show all nodes restores the overview. Use the selectors and connection cards as an alternative to the canvas.</p></details><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{visibleGraph.nodes.length} of {graph.nodes.length} nodes · {visibleGraph.edges.length} of {graph.edges.length} links</span></div>
     <div className="reg-studio-tools">
       <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Connection type <select className="border rounded p-2 block max-w-full" value={filter} onChange={e=>{setFilter(e.target.value);setTrail(['']);}}><option value="all">All reviewed types</option>{[...new Set(rows.map(r=>r.relationship_type))].map(t=><option key={t} value={t}>{relationshipLabel(t)}</option>)}</select></label>
       <label className="text-sm min-w-0 max-w-full w-full sm:w-auto">Browse node <select className="border rounded p-2 block max-w-full" value={nodeId} onChange={e=>browse(e.target.value)}><option value="">All nodes</option>{graph.nodes.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>

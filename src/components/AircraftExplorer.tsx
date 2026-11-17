@@ -22,6 +22,7 @@ import {useRelationshipEvidence} from '../lib/useRelationshipEvidence';
 import {useExplorerData} from '../lib/useExplorerData';
 import {referencedSourceNode} from '../domain/nodeGraph';
 import type {OfficialRevision} from '../domain/explorer';
+import ExplorerContext,{type ExplorerContextData} from './ExplorerContext';
 
 const NodeGraph=lazy(()=>import('./NodeGraph'));
 const ReviewQueue=lazy(()=>import('./ReviewQueue'));
@@ -100,6 +101,7 @@ export default function AircraftExplorer({ doc, details:providedDetails,reload=0
     }else setExpanded(evidence.target);
     setEvidenceId('');
   };
+  const explorationContext:ExplorerContextData={model:selected,certificate:doc.tcds_number,revision:doc.revision,family:view==='nodes'&&compareModels,profileName:activeProfile?.name,source:evidence,sourceVisible:view!=='nodes'||sourcePanelOpen};
   return <section className={`bg-white rounded-xl border border-slate-200 p-5 mb-6 ${mapWide&&view==='nodes'?'reg-wide-explorer':''}`} aria-label="Aircraft data explorer">
     {!ready&&<p role="status" className="mb-3 text-sm text-slate-600">Loading reviewed aircraft data…</p>}
     <AircraftFamilySummary variants={details.variants??[]} selected={selected} onSelect={chooseModel}/>
@@ -138,6 +140,7 @@ export default function AircraftExplorer({ doc, details:providedDetails,reload=0
         <div className="flex gap-2">{(['nodes','graph','list'] as const).map(mode=><button key={mode} onClick={()=>setView(mode)} aria-pressed={view===mode} className={`px-3 py-1 rounded border ${view===mode?'bg-blue-50 border-blue-400':'border-slate-200'}`}>{mode==='nodes'?'Node map':mode==='graph'?'Paths':'Evidence list'}</button>)}</div>
       </div>
       <p className="text-sm text-slate-600 mb-4">Select a connection to read its source evidence. Amendment dates identify the historical certification basis.</p>
+      {(view!=='nodes'||!nodeLinks.length)&&<ExplorerContext context={explorationContext} focus={expanded||selected}/>}
       {activeProfile&&<label className="block text-sm mb-4"><input type="checkbox" checked={profileOnly} onChange={e=>setProfileOnly(e.target.checked)}/> Hide connections outside reviewed serial or reported equipment scope. Unknown relevance remains visible.</label>}
       {view==='nodes'&&<button className="mb-3 mr-4 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" aria-pressed={mapWide} onClick={()=>setMapWide(value=>!value)}>{mapWide?'Compact workspace':'Expand workspace'}</button>}
       {view==='nodes'&&nodeLinks.length>0&&<button className="mb-3 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" aria-expanded={sourcePanelOpen} aria-controls="relationship-source-evidence" onClick={()=>setSourcePanelOpen(open=>!open)}>{sourcePanelOpen?'Hide source details':'Show source details'}</button>}
@@ -145,7 +148,7 @@ export default function AircraftExplorer({ doc, details:providedDetails,reload=0
       {view==='nodes'&&doc.tcds_number==='A16WE'&&compareModels&&<p className="mb-3 text-xs text-slate-600">Showing {new Set(nodeLinks.map(row=>row.model)).size} models with reviewed connections. Family, certificate and engine paths appear when their source evidence is current and reviewed. Technical profiles cover {details.variants?.length??0} variants; check their evidence revision above. AD/STC coverage remains model-specific.</p>}
       {view!=='nodes'&&expanded&&<button className="text-blue-700 underline mb-4" onClick={()=>{setExpanded('');setEvidenceId('');}}>Back to {selected}</button>}
       {(view==='nodes'?nodeLinks:links).length===0 ? details.available&&<p className="rounded-lg bg-slate-50 p-4">No reviewed relationships are available for this model in the current TCDS revision.</p> : <div className={view==='nodes'?`reg-graph-workspace grid items-start ${sourcePanelOpen?'':'reg-details-hidden'}`:'grid lg:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start'}>
-        {view==='nodes'?<div ref={nodeMap} className="reg-map-column min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} rows={nodeLinks} familyOverview={doc.tcds_number==='A16WE'&&compareModels} focusRequest={focusRequest?.context===context?focusRequest:null} onFocusHandled={token=>setFocusRequest(request=>request?.token===token?null:request)} profile={activeProfile} onPreview={r=>{setEvidenceId('');setPreviewId(r.id);}} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
+        {view==='nodes'?<div ref={nodeMap} className="reg-map-column min-w-0 w-full" tabIndex={-1} aria-label="Relationship map workspace"><Suspense fallback={<p>Loading node view…</p>}><NodeGraph key={selected+String(compareModels)} context={explorationContext} rows={nodeLinks} familyOverview={doc.tcds_number==='A16WE'&&compareModels} focusRequest={focusRequest?.context===context?focusRequest:null} onFocusHandled={token=>setFocusRequest(request=>request?.token===token?null:request)} profile={activeProfile} onPreview={r=>{setEvidenceId('');setPreviewId(r.id);}} selectedId={evidence?.id??''} onSelect={r=>selectNodeEvidence(r.id)}/></Suspense></div>:<div className={view==='graph'?'overflow-x-auto mb-5':'mb-5'} aria-label={`${selected} relationship ${view}`}>
           <div className={view==='graph'?'flex items-center min-w-[620px] p-2':'space-y-2'}>
             {view==='graph' && <><div className="w-40 shrink-0 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 text-center"><span className="text-xs text-blue-800">{expanded?'Selected source':'Aircraft model'}</span><p className="font-bold">{expanded||selected}</p></div>
               <svg aria-hidden="true" className="w-20 shrink-0" height={links.length*rowHeight} viewBox={`0 0 80 ${links.length*rowHeight}`}>

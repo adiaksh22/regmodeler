@@ -12,7 +12,7 @@ const out=path.join(__dirname,'../.artifacts/profiles');fs.mkdirSync(out,{recurs
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>void (acceptDialogs?d.accept():d.dismiss()));
     page.on('request',r=>{if(r.postData()?.includes('Browser test aircraft'))leaked.push(new URL(r.url()).pathname);});
     const click=async text=>page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()===t);if(!b)throw new Error('Button missing: '+t);b.click();},text);
-    const fill=async(label,value)=>{const selector=`input[aria-label="${label}"]`;await page.click(selector,{clickCount:3});await page.keyboard.press('Backspace');await page.type(selector,value);};
+    const fill=async(label,value)=>{const selector=`input[aria-label="${label}"]`;await page.focus(selector);await page.keyboard.down('Control');await page.keyboard.press('A');await page.keyboard.up('Control');await page.keyboard.press('Backspace');await page.type(selector,value);assert.equal(await page.$eval(selector,node=>node.value),value);};
     const openEditor=async()=>{await page.waitForFunction(()=>[...document.querySelectorAll('details > summary')].some(node=>node.textContent.startsWith('Aircraft configuration')));return page.evaluate(()=>{const d=[...document.querySelectorAll('details')].find(e=>e.querySelector(':scope > summary')?.textContent.startsWith('Aircraft configuration'));d.open=true;});};
     await page.setViewport({width:1280,height:900});
     await page.goto(`${process.env.SMOKE_BASE_URL||'http://127.0.0.1:4173'}/tcds/2A13?model=PA-28-140`,{waitUntil:'domcontentloaded'});

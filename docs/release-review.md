@@ -37,7 +37,7 @@ npm.cmd run build:release
 npm.cmd run preview -- --host 127.0.0.1 --port 4173
 ```
 
-Then run the browser journeys listed in [beta readiness](beta-readiness.md), including `node scripts/pdf-dialog-smoke.cjs`. The dialog smoke test intercepts a viewer response for keyboard testing; the Revision 82 check independently opens the actual archived PDF at its cited page.
+Then run the browser journeys listed in [beta readiness](beta-readiness.md), including `node scripts/pdf-dialog-smoke.cjs` and `node scripts/context-accessibility-smoke.cjs`. The dialog smoke test intercepts a viewer response for keyboard testing; `revision83-smoke.cjs` independently opens the actual archived PDF at its cited page. Revision 82 checks are historical.
 
 The repository intentionally has no top-level `404.html`. Cloudflare's [SPA behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/#single-page-application-spa-rendering) serves the application for client routes. After deployment, verify direct navigation and refresh at `/tcds/2A13?model=PA-28-181`, `/tcds/A16WE?model=737-10`, `/changelog`, and an unknown route. Confirm that hosted data loads, mobile navigation fits, PDFs open, errors are labeled, and retry restores data.
 

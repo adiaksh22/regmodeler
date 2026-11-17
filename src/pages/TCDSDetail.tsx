@@ -7,6 +7,7 @@ import AircraftExplorer from '../components/AircraftExplorer';
 import type { CatalogDocument } from '../domain/catalog';
 import { getRevisionsByTCDS } from '../utils/revisionManager';
 import PersonalCrossReferences from '../components/PersonalCrossReferences';
+import PageHeading from '../components/PageHeading';
 import {normalizeCertificate} from '../utils/crossReferenceManager';
 import RevisionHistory from '../components/RevisionHistory';
 import { getTcdsSample } from '../data/tcdsSamples';
@@ -57,7 +58,7 @@ export default function TCDSDetail() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">TCDS: {tcdsNumber?.toUpperCase()}</h1>
+        <PageHeading title={`TCDS ${tcdsNumber.toUpperCase()}`} className="text-3xl font-bold text-gray-900">TCDS: {tcdsNumber.toUpperCase()}</PageHeading>
         <button
           onClick={handleRefresh}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

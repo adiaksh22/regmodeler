@@ -4,7 +4,7 @@ const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
 const base=process.env.SMOKE_BASE_URL||'http://127.0.0.1:4173';
 let phase='profile draft';
 const click=(page,text)=>page.evaluate(text=>{const button=[...document.querySelectorAll('button')].find(node=>node.textContent.trim()===text);if(!button)throw Error('Missing button: '+text);button.click();},text);
-const fill=async(page,label,value)=>{const selector=`input[aria-label="${label}"]`;await page.click(selector,{clickCount:3});await page.keyboard.press('Backspace');await page.type(selector,value);};
+const fill=async(page,label,value)=>{const selector=`input[aria-label="${label}"]`;await page.focus(selector);await page.keyboard.down('Control');await page.keyboard.press('A');await page.keyboard.up('Control');await page.keyboard.press('Backspace');await page.type(selector,value);assert.equal(await page.$eval(selector,node=>node.value),value);};
 const editor=page=>page.waitForSelector('input[aria-label="Aircraft profile name"]');
 const open=page=>page.evaluate(()=>{const summary=[...document.querySelectorAll('details > summary')].find(node=>node.textContent.startsWith('Aircraft configuration'));summary.parentElement.open=true;});
 const named=(page,name)=>page.waitForFunction(name=>document.querySelector('input[aria-label="Aircraft profile name"]')?.value===name,{},name);

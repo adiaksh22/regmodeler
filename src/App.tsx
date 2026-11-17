@@ -3,6 +3,7 @@ import {lazy,Suspense} from 'react';
 import HomePage from './pages/HomePage';
 import BrowserStorageNotice from './components/BrowserStorageNotice';
 import PageErrorBoundary from './components/PageErrorBoundary';
+import PageHeading from './components/PageHeading';
 const TCDSDetail=lazy(()=>import('./pages/TCDSDetail'));
 const ChangeLogPage=lazy(()=>import('./pages/ChangeLogPage'));
 
@@ -23,7 +24,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/tcds/:tcdsNumber" element={<TCDSDetail />} />
           <Route path="/changelog" element={<ChangeLogPage />} />
-          <Route path="*" element={<section className="mx-auto max-w-3xl px-4 py-12"><h1 className="text-3xl font-bold">Page not found</h1><p className="mt-3 text-slate-600">This address does not match a page in RegModeler.</p><Link to="/" className="mt-5 inline-block text-blue-700 underline">Return to aircraft search</Link></section>} />
+          <Route path="*" element={<section className="mx-auto max-w-3xl px-4 py-12"><PageHeading title="Page not found" className="text-3xl font-bold">Page not found</PageHeading><p className="mt-3 text-slate-600">This address does not match a page in RegModeler.</p><Link to="/" className="mt-5 inline-block text-blue-700 underline">Return to aircraft search</Link></section>} />
         </Routes></Suspense></PageErrorBoundary></main>
       </div>
     </BrowserRouter>

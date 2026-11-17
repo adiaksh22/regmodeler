@@ -8,6 +8,8 @@ Updated November 16, 2026. The website remains unpublished. This report covers a
 | --- | --- |
 | Model-first discovery | PA-28-181 search opens the intended model; empty search results can be cleared |
 | Keyboard exploration | Aircraft tabs use one Tab stop; Left/Right wrap focus, Home/End reach endpoints, Enter activates a tab without fetching panels while merely moving focus |
+| Route context | Distinct browser titles and completed-page heading focus; model/filter changes retain focus; skip link and unknown-route recovery work |
+| Exploration context | Selected aircraft/configuration, family/model scope, explored node and citation model stay distinct, including hidden source details and cross-model family exploration |
 | Related sources | Current-first records, history filter, model-scoped reviewed AD evidence, source-status explanations |
 | Profiles | Draft/save separation, incomplete draft recovery across routes/reloads/models, blocked-storage fallback, serial boundaries, user-reported STCs, persistence, concurrent-edit protection, corrupt-storage preservation and no profile upload |
 | Personal cross-references | Validated identifiers, self/duplicate rejection, navigable destinations, explicit group merging, member removal/Undo, stale-write protection and unsupported destination guidance |
@@ -26,6 +28,7 @@ Run `npm.cmd run check` for lint, frontend/worker tests, database migration and 
 node scripts/beta-journey-smoke.cjs
 node scripts/profile-smoke.cjs
 node scripts/personal-workflows-smoke.cjs
+node scripts/context-accessibility-smoke.cjs
 node scripts/graph-navigation-smoke.cjs
 node scripts/network-design-smoke.cjs
 node scripts/monitoring-smoke.cjs
@@ -46,6 +49,8 @@ The loading journey verifies selected-model queries, explicit family expansion, 
 
 The personal-workflows journey and updated profile journey passed in Chrome and Edge. Draft backups are per model and tab; memory-only drafts request a reload warning even away from the editor. Personal linking performs one exact public catalog lookup on a valid submission, with no FAA import. These links remain personal browser records and do not become reviewed regulatory edges. Edge's first memory-fallback run timed out; an isolated rerun passed without a production-code change. This intermittent result remains recorded rather than being treated as proof of flawless browser behavior.
 
+The context/accessibility journey passed in Chrome and Edge: route headings/titles, skip link, filter/model focus preservation, the legacy status select's accessible name and saved update, distinct model/focus/source scopes, hidden-inspector context, Back and list/Paths consistency, 320/390px layouts, 200% root-font enlargement/reflow and reduced CSS motion. It samples text contrast only in the new solid-background context panel. This is not a complete gradient-contrast audit, real browser zoom matrix, actual-device touch test or NVDA review. The visible keyboard/map-control disclosure keeps longer instructions available without filling the mobile view. Existing graph motion/collision and source-navigation regressions remain part of validation.
+
 The graph UI journey verifies the 17-model/41-path family fit and label readability at desktop, tablet and 320/390px widths; all 41 links remain visible during overlap stress. It checks keyboard highlighting, stable canvas identity through navigation, readable zoom/fit, reduced motion and actual mobile touch scrolling. On narrow screens the family map grows vertically to preserve readable labels; Move map and Scroll page distinguish panning from normal page scrolling. Dense all-catalog overviews still benefit from focused exploration. These automated checks do not replace assistive-technology or owner/maintenance-professional feedback.
 
 The November 16 [Revision 83 review](boeing-revision83-review.md) restored 41 current TCDS paths across 17 Boeing models and seven profiles with 49 revision-bound facts. The source guard remains active for future revisions. `family-graph-smoke.cjs` now verifies the reviewed Revision 83 inventory; `revision83-smoke.cjs` verifies current facts and cited PDFs. Both passed in Chrome and Edge. `revision82-smoke.cjs` remains a historical check.
@@ -53,7 +58,7 @@ The November 16 [Revision 83 review](boeing-revision83-review.md) restored 41 cu
 ## Release sequence
 
 1. Completed locally: native PDF modal keyboard containment, escape/close behavior, focus restoration, unavailable-original messaging and supported-scope/source-status presentation checks. This does not replace assistive-technology/user testing.
-2. Finish the route/context/accessibility audit repairs (A13); profile drafts and personal-link repairs (A11/A12) are implemented. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, recovering an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
+2. Route/title/focus/context repairs (A13) and profile/link repairs (A11/A12) are implemented. Complete the remaining assistive-technology/user validation and portable browser release gate (A15). Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, recovering an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
 3. Review the prepared [release settings and rollback plan](release-review.md). The guarded `npm run build:release` requires hosted public configuration; backend credentials stay in the worker environment. Deployed deep links and environment settings still need verification after an approved first release.
 4. Obtain the user's release decision, then publish and verify the deployed build and supported workflows.
 

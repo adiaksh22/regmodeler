@@ -4,7 +4,7 @@ Original audited commit: `cac5ba68b61e475d8cd2717246c47758373aa6b9`. The initial
 
 ## Assessment
 
-At the initial audit, the tool had useful, traceable research workflows but was **not ready for publication**. The model/evidence display defects, browser-storage startup failures, profile draft recovery and personal-link workflows found then are fixed, as recorded below. Route/context/accessibility repairs, usability validation and release checks still require work before publication.
+At the initial audit, the tool had useful, traceable research workflows but was **not ready for publication**. The model/evidence defects, storage/draft recovery, personal-link workflows and route/context repairs found then are implemented and tested, as recorded below. Assistive-technology/usability validation and release checks still require work before publication.
 
 The existing source architecture has valuable safeguards: immutable source fingerprints, private originals, publication controls, source-version review guards, model-scoped relationships, quarantine, and separate discovery/review states. Passing these controls establishes evidence provenance and selected invariants. It does not establish that every relationship has been independently re-reviewed against every original, that FAA coverage is complete, or that any individual aircraft complies.
 
@@ -59,7 +59,15 @@ The subsequent [targeted Revision 83 review](boeing-revision83-review.md) restor
 
 Edge's first memory-fallback journey timed out; an isolated rerun passed without a production-code change. The smoke now records the precise phase, URL and isolated test-profile value on failure. This intermittency remains documented. No hosted data, source imports or publication changed in this phase.
 
-Next: A13 route/context/accessibility work, representative user/assistive-technology validation and release checks. A15 portable browser CI and production operations review remain open. Site publication still awaits explicit release approval.
+### November 16 route/context/accessibility follow-up
+
+**A13's route titles/focus, visible guidance and shared exploration context are implemented.** Home, source changes, certificate routes, unknown routes and page-error recovery use a completed-content heading that sets the document title and receives focus on a pathname change. Suspense placeholders do not steal focus; query-only model/filter changes and same-page title updates preserve it. Heading focus supplies the route announcement without a second live-region announcement. The legacy issue-status selector already had an accessible name; browser checks now verify its accessibility-tree name and saved update.
+
+The context panel distinguishes selected aircraft/saved configuration, model/family network scope, explored node and source citation/model. A family citation for another model explicitly says it differs from the selected aircraft; hiding the inspector retains that context. Paths and Evidence list use the same summary. A concise visible instruction and expandable keyboard/map controls explain node activation, Back, overview and selector/card alternatives. High-contrast focus outlines and 44-pixel connection/trail targets support exploration. Context typography uses relative units and reflows when enlarged. Reduced-motion CSS now covers application card transitions as well as the existing interruptible graph motion hook.
+
+The new `context-accessibility-smoke.cjs` passed in Windows Chrome and Edge at desktop and 320/390px widths, including skip link, titles/focus, the actual model-versus-source transition, hidden inspector, Back/list/Paths consistency, context text contrast against its solid background, visible focus, 200% root-font enlargement/reflow, reduced CSS motion and unknown-route recovery. Existing graph UI journeys passed in both browsers, preserving 17 models/41 family paths, arrows during overlap, touch scroll and reduced motion. Loading/source-navigation and profile regressions passed in Chrome; personal-link/draft regression passed in Chrome and Edge. A profile input test exposed unreliable triple-click selection (text appended instead of replaced); test helpers now use explicit keyboard Select All and immediately assert the entered value. No production profile rule was changed to satisfy it. The full local gate passed 187 frontend/50 worker tests and database/release/lint/types/build checks; a final same-page-title regression brought the passing frontend suite to 188. The final guidance/CSS refinement also passed targeted tests, lint, types and build.
+
+Next: portable browser CI (A15), production operations/release review, and remaining real NVDA, full rendered contrast, browser zoom/actual-device and representative owner/maintenance validation. Automated checks do not establish WCAG conformance or individual-aircraft compliance. Site publication still awaits explicit release approval.
 
 ## P1 — correctness and recovery
 
@@ -159,6 +167,8 @@ Stable canvas, bounded transitions, reduced motion and overlap handling are impl
 - Fix: validate/normalize certificate identifiers, prevent self-links, make destinations navigable, expose removal, handle groups already containing either certificate, and explain unsupported catalog targets.
 
 ### A13. Accessibility and context need a dedicated completion pass
+
+**Implementation follow-up November 16:** route headings/titles/focus, shared model/network/focus/citation context, visible keyboard guidance, relative context typography, graph target/focus improvements and application reduced-motion CSS are now implemented and browser-tested. The legacy select label was already present when this pass began and is verified. Original observations below remain the audit baseline; the manual/assistive-technology validation remains open.
 
 - **Positive checks:** manual aircraft-tab navigation, keyboard node activation/focus restoration, native PDF dialog containment/Escape/return focus, skip link, and current navigation states pass their existing browser journeys.
 - **Code/visual gaps:** route navigation does not manage document title or announce/focus the new page context; the legacy issue-status select has no accessible name; the most useful graph instructions are screen-reader-only; the UI uses several competing scopes (selected model, family network, focused node, cited source) without a compact shared context summary.

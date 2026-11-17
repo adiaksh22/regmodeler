@@ -109,7 +109,25 @@ select:focus-visible {
 .reg-map-help { color:#a9bdd5; font-size:12px; line-height:1.6; margin:12px 0; }
 .reg-network-studio nav > button { min-height:44px; }
 .reg-network-studio .react-flow__edge-path { transition:stroke 120ms ease; }
+.reg-page-heading:focus-visible { outline:3px solid #2563eb; outline-offset:6px; border-radius:4px; }
+.reg-explorer-context { margin-bottom:16px; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; background:#f8fafc; color:#0f172a; }
+.reg-explorer-context dl { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr)); gap:14px; }
+.reg-explorer-context dt { font-size:.6875rem; line-height:1.5; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+.reg-explorer-context dd { font-size:.8125rem; line-height:1.6; overflow-wrap:anywhere; }
+.reg-explorer-context .reg-context-note { color:#475569; font-size:.75rem; }
+.reg-network-studio .reg-explorer-context { background:#102541; color:#e2e8f0; border-color:#304867; }
+.reg-network-studio .reg-explorer-context dt { color:#7dd3fc; }
+.reg-network-studio .reg-explorer-context .reg-context-note { color:#a9bdd5; }
+.reg-graph-instructions { color:#c5d2e5; font-size:.8125rem; line-height:1.7; margin-bottom:12px; }
+.reg-graph-help { color:#c5d2e5; font-size:.8125rem; line-height:1.7; margin-bottom:12px; }
+.reg-graph-help summary { color:#93c5fd; cursor:pointer; min-height:32px; }
+.reg-graph-help summary:focus-visible { outline:3px solid #7dd3fc; outline-offset:3px; }
+.reg-graph-help p { margin:4px 0 12px; max-width:70ch; }
+.reg-network-studio :is(button,a,.react-flow__node):focus-visible { outline:3px solid #7dd3fc; outline-offset:3px; }
+.reg-network-studio :is([aria-label="Node connections"],[aria-label="Exploration trail"]) button { min-height:44px; }
+@media (max-width:767px) { .reg-explorer-context dl { grid-template-columns:1fr; gap:10px; } }
 @media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:0s!important; }
   .reg-network-studio .react-flow__edge-path { transition:none; }
 }
 .reg-network-canvas[data-pan-enabled="false"] .react-flow__pane { touch-action:pan-y; }

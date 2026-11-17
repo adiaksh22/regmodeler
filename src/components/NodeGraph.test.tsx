@@ -16,6 +16,14 @@ beforeEach(async()=>{
 });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();});
 describe('graph exploration controls',()=>{
+ it('keeps the shared scope summary aligned with focused nodes and Back navigation',async()=>{
+  const context={model:'Aircraft',certificate:'A16WE',revision:'83',family:true,sourceVisible:true,source:rows[0]};
+  await act(async()=>root.render(<NodeGraph context={context} rows={rows} onSelect={onSelect} selectedId="certificate"/>));
+  expect(host.querySelector('[aria-label="Exploration context"]')?.textContent).toContain('Exploring: All nodes');
+  await click('Explore Engine');expect(host.querySelector('[aria-label="Exploration context"]')?.textContent).toContain('Exploring: Engine');
+  await click('Back one node');expect(host.querySelector('[aria-label="Exploration context"]')?.textContent).toContain('Exploring: All nodes');
+  expect(host.querySelector('.reg-graph-help')?.textContent).toContain('Enter or Space');
+ });
  it('follows an inspector focus request, clears incompatible filters and keeps Back traversal',async()=>{
   await click('Explore Engine');
   await act(async()=>root.render(<NodeGraph rows={rows} onSelect={onSelect} selectedId="certificate" focusRequest={{id:'certificate',token:1}}/>));

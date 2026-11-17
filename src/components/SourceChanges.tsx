@@ -5,12 +5,13 @@ import {changeLabel,type SourceChange,type SourceMonitoring} from '../domain/sou
 import SourcePdf from './SourcePdf';
 import SourceMonitoringPanel from './SourceMonitoring';
 import {monitoredModels,evidencePath} from '../domain/sourceHealth';
+import PageHeading from './PageHeading';
 export default function SourceChanges(){
   const [model,setModel]=useState('');const [kind,setKind]=useState('');const [page,setPage]=useState(0);const [reload,setReload]=useState(0);
   const [events,setEvents]=useState<SourceChange[]>([]);const [checks,setChecks]=useState<SourceMonitoring[]>([]);const [notice,setNotice]=useState('');const [total,setTotal]=useState(0);const [busy,setBusy]=useState(true);
   useEffect(()=>{let cancelled=false;setBusy(true);setEvents([]);void loadSourceChanges(model,kind,page*20).then(r=>{if(!cancelled){setEvents(r.events);setChecks(r.monitoring);setTotal(r.total);setNotice(r.notice);setBusy(false);}});return()=>{cancelled=true;};},[model,kind,page,reload]);
   return <section className="bg-white border rounded-xl p-5" aria-label="Shared source change feed">
-    <h1 className="text-2xl font-bold mb-3">FAA source changes</h1>
+    <PageHeading title="FAA source changes" className="text-2xl font-bold mb-3">FAA source changes</PageHeading>
     <p className="text-sm text-slate-600 mb-4">Traceable changes in checked source observations. First checks establish a baseline; discovery dates are not issuance dates. A source check does not mean every source document or configuration has been reviewed. Applicability and compliance require source review.</p>
     <div className="flex flex-wrap gap-3 mb-4"><label className="text-sm">Model<select aria-label="Change feed model" value={model} onChange={e=>{setModel(e.target.value);setPage(0);}} className="block border rounded p-2"><option value="">All monitored models</option>{monitoredModels.map(model=><option key={model}>{model}</option>)}</select></label>
       <label className="text-sm">Source type<select aria-label="Change feed source type" value={kind} onChange={e=>{setKind(e.target.value);setPage(0);}} className="block border rounded p-2"><option value="">All types</option><option>TCDS</option><option>AD</option><option>STC</option></select></label><button className="text-blue-700 underline" onClick={()=>setReload(n=>n+1)}>Reload source checks</button></div>

@@ -4,7 +4,7 @@ import {MemoryRouter,Link,useLocation} from 'react-router-dom';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import PageErrorBoundary from './PageErrorBoundary';
 let host:HTMLDivElement;let root:Root;
-beforeEach(()=>{Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});host=document.createElement('div');document.body.append(host);root=createRoot(host);});
+beforeEach(()=>{Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});vi.spyOn(window,'scrollTo').mockImplementation(()=>{});host=document.createElement('div');document.body.append(host);root=createRoot(host);});
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();vi.restoreAllMocks();});
 function Page(){
  const location=useLocation();const [count,setCount]=useState(0);
@@ -20,7 +20,7 @@ describe('page failure containment',()=>{
   vi.spyOn(console,'error').mockImplementation(()=>{});
   const expectedError=(event:ErrorEvent)=>{if(event.error?.message==='Unreadable personal record')event.preventDefault();};window.addEventListener('error',expectedError);
   try{await act(async()=>root.render(app('/broken')));}finally{window.removeEventListener('error',expectedError);}
-  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Your saved browser data has not been cleared');expect(host.querySelector('nav')).not.toBeNull();
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Your saved browser data has not been cleared');expect(host.querySelector('nav')).not.toBeNull();expect(document.title).toBe('Page unavailable · RegModeler');expect(document.activeElement).toBe(host.querySelector('h1'));
   await act(async()=>host.querySelector<HTMLAnchorElement>('nav a')!.click());expect(host.querySelector('[role="alert"]')).toBeNull();expect(host.textContent).toContain('Count 0');
  });
 });
