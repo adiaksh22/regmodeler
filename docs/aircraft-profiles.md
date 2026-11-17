@@ -22,6 +22,10 @@ The optional graph/list filters hide only records or connections classified outs
 
 ## Browser storage
 
+Unsaved edits are backed up separately in this tab's `sessionStorage`, under `regmodeler_profile_draft_v1:` plus the model. Incomplete fields are preserved while navigating, reloading or switching models. Returning to the editor shows a recovery notice; only **Save and use profile** changes relevance. **Discard draft** removes that model's backup without deleting saved profiles. Closing the tab normally ends its draft storage; export saved profiles for a durable backup.
+
+If tab storage is blocked or full, an in-memory draft supports navigation within the app and a browser reload/leave warning is requested, even after leaving the editor. The notice explains that reload or closing the tab may lose these edits; browser warnings are not guaranteed. Unreadable backups are preserved until explicitly discarded. Recovered drafts retain their saved-store baseline, so saving cannot silently overwrite newer saved profiles from another tab.
+
 The separate `regmodeler_aircraft_profiles_v1` key contains a versioned envelope with profiles and active IDs by model. The reader validates field types, supported models, IDs, timestamps, canonical equipment keys, installation statuses and limits. It remains backward compatible with profiles saved before equipment entries were introduced, copies supported fields and rejects an invalid envelope as a whole. Unreadable, future-version or oversized data is preserved and saving is disabled until the user explicitly resets or reloads it. Other source notes, links and history keys are untouched.
 
 Save failures retain the current draft and never claim success. Before an update, the editor compares the latest saved values with its loaded state; observed changes from another tab require reloading rather than being overwritten. This is a local safeguard, not a transactional multi-user database. Reset and deletion require user confirmation. Limits are 100 profiles, 50 entries per profile and a one-million-character envelope.
@@ -33,9 +37,10 @@ Offline tests cover inclusive serial boundaries, adjacent serials, unknown/padde
 An optional isolated Chrome check is available after `npm.cmd run build` and starting the preview on port 4173:
 
 ```powershell
-node --env-file=.env.production.local scripts/profile-smoke.cjs
+node scripts/profile-smoke.cjs
+node scripts/personal-workflows-smoke.cjs
 ```
 
-It checks draft/save separation, persistence, relevance filters that retain unknowns, two-model profile preservation, mobile layout, stale-edit rejection, corruption preservation and absence of profile fields in network requests. It uses a temporary Chrome profile, not the user's browser data. The existing `scripts/smoke.cjs --database` flow checks source exploration and catalog outage behavior.
+These check draft/save separation, route/reload/model recovery, blocked-storage fallback, persistence, relevance filters that retain unknowns, two-model profile preservation, mobile layout, stale-edit rejection, corruption preservation and absence of profile fields in network requests. Both support `SMOKE_BASE_URL` and `SMOKE_BROWSER_EXECUTABLE` and use temporary browser data. They passed in Windows Chrome and Edge. The existing `scripts/smoke.cjs --database` flow checks source exploration and catalog outage behavior.
 
 The website remains unpublished. No account system, profile uploads or automated notifications are introduced in this phase. See [installed-equipment review](pa28-installed-equipment-review.md) for the reviewed source set and graph behavior.

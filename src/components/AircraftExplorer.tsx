@@ -64,7 +64,6 @@ export default function AircraftExplorer({ doc, details:providedDetails,reload=0
   const [mapWide,setMapWide]=useState(true);
   const [showAll, setShowAll] = useState(false);
   const [profile,setProfile] = useState<AircraftProfile|null>(null);
-  const [profileDirty,setProfileDirty] = useState(false);
   const [profileOnly,setProfileOnly] = useState(false);
   const loaded=useExplorerData(doc,selected,compareModels&&view==='nodes',!providedDetails&&ready,reload);
   const details=providedDetails??loaded.details;
@@ -91,7 +90,7 @@ export default function AircraftExplorer({ doc, details:providedDetails,reload=0
   const sortedRevisions = [...revisions].sort((a,b)=>Number(b.is_current)-Number(a.is_current) || (b.revision_date ?? '').localeCompare(a.revision_date ?? ''));
   const healthWarnings=details.monitoring?.filter(check=>monitoredSources.some(source=>source.source===check.source&&source.certificate===doc.tcds_number)&&sourceHealth(check).attention).length??0;
   useEffect(()=>{if(tab!=='history')return;let stopped=false;setHistoryState('loading');void loadRevisionHistory(doc.tcds_number).then(rows=>{if(!stopped){setRevisions(rows);setHistoryState('ready');}}).catch(()=>{if(!stopped)setHistoryState('error');});return()=>{stopped=true;};},[tab,doc.tcds_number]);
-  const chooseModel=(model:string)=>{if(profileDirty&&!window.confirm('Discard unsaved aircraft profile edits before switching models?'))return;setProfileDirty(false);setParams({model},{replace:true});setEvidenceId('');setPreviewId('');setExpanded('');setSourcePanelOpen(true);};
+  const chooseModel=(model:string)=>{setParams({model},{replace:true});setEvidenceId('');setPreviewId('');setExpanded('');setSourcePanelOpen(true);};
   const exploreReferences=()=>{
     if(!evidence||!referenceNode)return;
     if(view==='nodes'){
@@ -116,7 +115,7 @@ export default function AircraftExplorer({ doc, details:providedDetails,reload=0
     </div>
     <p className="text-sm text-slate-600 mb-4">Reviewed connections are limited to the cited FAA evidence shown here. Related records may contain additional model-index matches. Individual-aircraft applicability and compliance are not determined here.</p>
     {details.monitoring&&<details className={`mb-4 rounded-lg border p-3 ${healthWarnings?'border-amber-300 bg-amber-50':'border-slate-200'}`}><summary className="cursor-pointer text-sm font-semibold">Source check health and monitoring limits{healthWarnings?` · ${healthWarnings} ${healthWarnings===1?'check needs':'checks need'} attention`:''}</summary><SourceMonitoring checks={details.monitoring} certificate={doc.tcds_number}/></details>}
-    {selected.startsWith('PA-28')?<AircraftProfileEditor key={selected} model={selected} equipmentOptions={equipmentOptions} onChange={setProfile} onDirty={setProfileDirty}/>:<p className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Configuration profiles will appear for this model after component and AD applicability rules are reviewed. Family and certification links are available now.</p>}
+    {selected.startsWith('PA-28')?<AircraftProfileEditor key={selected} model={selected} equipmentOptions={equipmentOptions} onChange={setProfile}/>:<p className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">Configuration profiles will appear for this model after component and AD applicability rules are reviewed. Family and certification links are available now.</p>}
     <div className="flex flex-wrap gap-2 border-b mb-5" role="tablist" aria-label="Explore aircraft data" onKeyDown={event=>{
       const tabs=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
       const index=tabs.indexOf(document.activeElement as HTMLButtonElement);

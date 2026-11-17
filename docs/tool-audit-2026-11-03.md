@@ -4,7 +4,7 @@ Original audited commit: `cac5ba68b61e475d8cd2717246c47758373aa6b9`. The initial
 
 ## Assessment
 
-At the initial audit, the tool had useful, traceable research workflows but was **not ready for publication**. The two model/evidence display defects and browser-storage startup failures found then are fixed, as recorded below. Remaining profile/link workflows, accessibility/usability validation and release checks still require work before publication.
+At the initial audit, the tool had useful, traceable research workflows but was **not ready for publication**. The model/evidence display defects, browser-storage startup failures, profile draft recovery and personal-link workflows found then are fixed, as recorded below. Route/context/accessibility repairs, usability validation and release checks still require work before publication.
 
 The existing source architecture has valuable safeguards: immutable source fingerprints, private originals, publication controls, source-version review guards, model-scoped relationships, quarantine, and separate discovery/review states. Passing these controls establishes evidence provenance and selected invariants. It does not establish that every relationship has been independently re-reviewed against every original, that FAA coverage is complete, or that any individual aircraft complies.
 
@@ -53,7 +53,13 @@ The subsequent [targeted Revision 83 review](boeing-revision83-review.md) restor
 - Narrow-screen map backgrounds scroll the page by default. Move map explicitly enables panning; Scroll page restores native page scrolling. Zoom controls remain available, normal mouse-wheel page scrolling is preserved, and primary graph controls have 44-pixel targets.
 - `scripts/graph-ui-smoke.cjs` verifies readable labels, full family fit, keyboard path highlighting, collision handling with frame-by-frame edge counts, stable canvas identity, readable zoom/fit, reduced motion, mobile touch scrolling and pan controls. It supports the same base URL/browser overrides as the loading check. Frame observations are machine-specific rather than a performance guarantee; source review, accessibility certification and real-user usability are separate work.
 
-Next: finish A11/A12 profile-draft and personal-link workflows and A13 route/context/accessibility work, then complete release validation. Site publication still awaits explicit release approval.
+### November 16 personal-workflow follow-up
+
+**A11 draft recovery and A12 personal cross-reference workflows are implemented.** The remediations appear beside the original findings below. Full local checks passed 181 frontend tests and 50 worker tests, database migration/access checks, release configuration, lint, types and production build. The updated profile journey and new `personal-workflows-smoke.cjs` passed in Windows Chrome and Edge, including incomplete edits, model isolation, saved-only relevance, stale updates, private network boundaries, valid destination navigation, explicit merging, removal/Undo and mobile width. Chrome loading/source-navigation and audit-correctness regressions also passed.
+
+Edge's first memory-fallback journey timed out; an isolated rerun passed without a production-code change. The smoke now records the precise phase, URL and isolated test-profile value on failure. This intermittency remains documented. No hosted data, source imports or publication changed in this phase.
+
+Next: A13 route/context/accessibility work, representative user/assistive-technology validation and release checks. A15 portable browser CI and production operations review remain open. Site publication still awaits explicit release approval.
 
 ## P1 — correctness and recovery
 
@@ -138,11 +144,15 @@ Stable canvas, bounded transitions, reduced motion and overlap handling are impl
 
 ### A11. Unsaved profiles are protected on model switching but lost on navigation
 
+**Remediated November 16:** separate per-model tab backups recover incomplete edits after routes, reloads and model switches. A memory fallback preserves SPA navigation when tab storage fails and requests a browser leave/reload warning even away from the editor. Explicit save/discard, saved-only relevance and recovered-baseline conflict protection are tested. Closing a tab or a browser that suppresses warnings can still lose memory-only drafts.
+
 - **Confirmed in Chrome:** edit a profile name without saving, then click Source changes in primary navigation. Navigation proceeds with zero confirmation dialogs and the draft is discarded.
 - Fix: preserve a recoverable local draft or consistently guard route changes/reloads. Explain whether a draft or saved profile drives relevance. Keep profile data separate from source records.
 - Existing strengths: validation, saved-versus-draft separation, concurrent-edit protection, corrupt-profile preservation, serial boundaries, unknown relevance, and model isolation passed the targeted profile rerun.
 
 ### A12. Personal cross-reference controls form an incomplete workflow
+
+**Remediated November 16:** identifiers are normalized and syntax-validated, self/duplicate links are rejected, destinations are navigable, connected groups merge explicitly, members can be removed and removal undone. Stale writes/Undo and corrupt/full storage preserve existing records. One exact public catalog read checks destination coverage on submission; unsupported destinations explain coverage and provide FAA lookup/return links. These are personal browser groups, never regulatory graph edges.
 
 - **Code inspection:** Link accepts arbitrary nonempty strings, including the current TCDS itself. Existing links display as non-clickable badges. Remove/merge capabilities exist in utilities but are not exposed here, and the page provides no clear validation/success feedback.
 - Impact: owners can create a link that appears to do nothing, cannot traverse it, and cannot readily undo it. These are personal notes, not reviewed regulatory edges, but the workflow still needs to work.

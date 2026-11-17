@@ -1,58 +1,79 @@
 import {useEffect,useState} from 'react';
 import {profileModels,validateProfile,type AircraftProfile,type InstallationStatus} from '../domain/aircraftProfile';
 import {emptyProfiles,PROFILE_KEY,readProfiles,writeProfiles,profileStoreFingerprint,type ProfileStore} from '../lib/profileStorage';
+import {readProfileDraft,writeProfileDraft,clearProfileDraft} from '../lib/profileDrafts';
 
 const blank = (model:string):AircraftProfile => ({id:crypto.randomUUID(),model,name:`My ${model}`,serial:'',modifications:[],equipment:[],updatedAt:new Date().toISOString()});
 export default function AircraftProfileEditor({model,equipmentOptions,onChange,onDirty}:{model:string;equipmentOptions:{key:string;label:string}[];onChange:(profile:AircraftProfile|null)=>void;onDirty?:(dirty:boolean)=>void}) {
   const [loaded]=useState(readProfiles);
+  const [recovered]=useState(()=>readProfileDraft(model));
   const [store,setStore]=useState(loaded.store);
   const [writable,setWritable]=useState(loaded.writable);
-  const [notice,setNotice]=useState(loaded.notice);
+  const [notice,setNotice]=useState(loaded.notice||(recovered.record?'Recovered an unsaved draft for this model. Relevance still uses the selected saved profile.':''));
   const active=store.profiles.find(p=>p.id===store.activeIds[model]&&p.model===model)??null;
-  const [draft,setDraft]=useState<AircraftProfile>(()=>active??blank(model));
-  const [dirty,setDirty]=useState(false);
+  const [draft,setDraft]=useState<AircraftProfile>(()=>recovered.record?.profile??active??blank(model));
+  const [baseFingerprint,setBaseFingerprint]=useState(()=>recovered.record?.baseFingerprint??profileStoreFingerprint(loaded.store));
+  const [dirty,setDirty]=useState(!!recovered.record);
+  const [backedUp,setBackedUp]=useState(recovered.backedUp);
+  const [backupWritable,setBackupWritable]=useState(recovered.writable);
   useEffect(()=>{onChange(active);},[active,onChange]);
   useEffect(()=>{onDirty?.(dirty);},[dirty,onDirty]);
   const supported=profileModels.includes(model as typeof profileModels[number]);
   if(!supported)return <p className="rounded bg-slate-50 p-3 text-sm mb-4">Configuration profiles currently support PA-28-140 and PA-28-181. Other models remain available for source browsing.</p>;
-  const edit=(next:AircraftProfile)=>{setDraft(next);setDirty(true);if(writable)setNotice('');};
+  const edit=(next:AircraftProfile)=>{setDraft(next);setDirty(true);setBackedUp(writeProfileDraft({schemaVersion:1,profile:{...next,equipment:next.equipment??[]},baseFingerprint}));if(writable)setNotice('');};
+  function finishDraft(next:AircraftProfile){
+    const cleared=clearProfileDraft(model);setBackedUp(false);setBackupWritable(cleared);setDraft(next);
+    if(!cleared)setNotice('The action completed, but the old draft backup could not be cleared. Discard draft backup when storage is available.');
+  }
   function persist(next:ProfileStore,message:string){
     const latest=readProfiles();
     if(!latest.writable||profileStoreFingerprint(latest.store)!==profileStoreFingerprint(store)){setNotice('Saved profiles changed or became unavailable. Reload saved profiles before saving; your current draft has been preserved.');return false;}
     if(!writeProfiles(next)){setNotice('The profile was not saved: storage is unavailable, full, or exceeds the profile size limit. Your current draft remains here.');return false;}
-    setStore(next);setDirty(false);setNotice(message);return true;
+    setStore(next);setBaseFingerprint(profileStoreFingerprint(next));setDirty(false);setNotice(message);return true;
   }
   function save(){
+    if(dirty&&baseFingerprint!==profileStoreFingerprint(store)){setNotice('Saved profiles changed since this draft was started. Reload saved profiles before saving; your recovered draft has been preserved.');return;}
     const normalized={...draft,name:draft.name.trim(),serial:draft.serial.trim().toUpperCase(),modifications:draft.modifications.map(m=>({...m,number:m.number.trim().toUpperCase(),note:m.note.trim()})),equipment:(draft.equipment??[]).map(e=>({...e,note:e.note.trim()})),updatedAt:new Date().toISOString()};
     const error=validateProfile(normalized);if(error){setNotice(error);return;}
     if(store.profiles.some(p=>p.id!==draft.id&&p.model===model&&p.name.toLowerCase()===normalized.name.toLowerCase())){setNotice('Use a different profile name to distinguish your saved aircraft.');return;}
     if(store.profiles.length>=100&&!store.profiles.some(p=>p.id===draft.id)){setNotice('This browser supports up to 100 profiles. Delete an unused profile before adding another.');return;}
     const next={...store,profiles:[...store.profiles.filter(p=>p.id!==normalized.id),normalized],activeIds:{...store.activeIds,[model]:normalized.id}};
-    if(persist(next,'Profile saved in this browser.'))setDraft(normalized);
+    if(persist(next,'Profile saved in this browser.'))finishDraft(normalized);
   }
   function choose(id:string){
     if(dirty&&!window.confirm('Discard unsaved profile edits?'))return;
     const found=store.profiles.find(p=>p.id===id&&p.model===model);
     const activeIds={...store.activeIds};if(found)activeIds[model]=id;else delete activeIds[model];
-    if(persist({...store,activeIds},found?'Saved profile selected.':'Browsing without a profile.'))setDraft(found??blank(model));
+    if(persist({...store,activeIds},found?'Saved profile selected.':'Browsing without a profile.'))finishDraft(found??blank(model));
   }
   function reset(){
     if(!window.confirm('Remove only RegModeler aircraft profiles from this browser? Existing source notes and links will remain.'))return;
-    try{localStorage.removeItem(PROFILE_KEY);setWritable(true);setStore(emptyProfiles());setDraft(blank(model));setDirty(false);setNotice('Aircraft profile storage reset.');}catch{setNotice('Browser storage is unavailable. No saved data was changed.');}
+    try{localStorage.removeItem(PROFILE_KEY);const next=emptyProfiles();const base=profileStoreFingerprint(next);setWritable(true);setStore(next);setBaseFingerprint(base);if(dirty)setBackedUp(writeProfileDraft({schemaVersion:1,profile:{...draft,equipment:draft.equipment??[]},baseFingerprint:base}));else setDraft(blank(model));setNotice('Aircraft profile storage reset. Unsaved drafts remain separate.');}catch{setNotice('Browser storage is unavailable. No saved data was changed.');}
   }
   function remove(){
     const saved=store.profiles.find(p=>p.id===draft.id);if(!saved||!window.confirm(`Delete the saved profile "${saved.name}" from this browser?`))return;
     const activeIds={...store.activeIds};if(activeIds[model]===saved.id)delete activeIds[model];
-    if(persist({...store,profiles:store.profiles.filter(p=>p.id!==saved.id),activeIds},'Profile deleted.'))setDraft(blank(model));
+    if(persist({...store,profiles:store.profiles.filter(p=>p.id!==saved.id),activeIds},'Profile deleted.'))finishDraft(blank(model));
   }
   function exportProfiles(){
     const url=URL.createObjectURL(new Blob([JSON.stringify(store,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='regmodeler-aircraft-profiles.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   function reloadProfiles(){
     if(dirty&&!window.confirm('Discard unsaved edits and reload saved profiles?'))return;
-    const next=readProfiles();setStore(next.store);setWritable(next.writable);setNotice(next.notice||'Saved profiles reloaded.');setDraft(next.store.profiles.find(p=>p.id===next.store.activeIds[model])??blank(model));setDirty(false);
+    if(!clearProfileDraft(model)){setNotice('The draft backup could not be cleared. Current edits remain here; try again when tab storage is available.');return;}
+    const next=readProfiles();setStore(next.store);setBaseFingerprint(profileStoreFingerprint(next.store));setWritable(next.writable);setNotice(next.notice||'Saved profiles reloaded.');setDraft(next.store.profiles.find(p=>p.id===next.store.activeIds[model])??blank(model));setDirty(false);setBackedUp(false);setBackupWritable(true);
   }
-  return <details className="border rounded-lg p-4 mb-5">
+  function discardDraft(){
+    if(!window.confirm('Discard this model’s unsaved draft and its tab backup? Saved profiles are unchanged.'))return;
+    if(!clearProfileDraft(model,true)){setNotice('Tab storage is unavailable. The draft could not be discarded; current edits remain here.');return;}
+    setDraft(active??blank(model));setBaseFingerprint(profileStoreFingerprint(store));setDirty(false);setBackedUp(false);setBackupWritable(true);setNotice('Draft discarded. Saved profiles are unchanged.');
+  }
+  function newProfile(){
+    if(dirty&&!window.confirm('Discard unsaved profile edits?'))return;
+    const next=blank(model);const base=profileStoreFingerprint(store);
+    setDraft(next);setBaseFingerprint(base);setDirty(true);setBackedUp(writeProfileDraft({schemaVersion:1,profile:next,baseFingerprint:base}));setNotice('New draft. Save it to use it for relevance checks.');
+  }
+  return <details className="border rounded-lg p-4 mb-5" open={!!recovered.record||undefined}>
     <summary className="font-semibold cursor-pointer">Aircraft configuration {active?`· ${active.name}`:'· no profile selected'}</summary>
     <p className="text-sm text-slate-600 my-3">Saved on this browser and device; no sign-in or upload. Clearing browser storage removes profiles. Serial numbers and modification details are user reported. Blank fields mean unknown.</p>
     <label className="block text-sm mb-3">Use a saved {model} profile<select aria-label="Saved aircraft profile" value={active?.id??''} disabled={!writable} onChange={e=>choose(e.target.value)} className="block border rounded p-2 w-full mt-1"><option value="">Browse without a profile</option>{store.profiles.filter(p=>p.model===model).map(p=><option key={p.id} value={p.id}>{p.name} · {p.serial||'serial unknown'}</option>)}</select></label>
@@ -76,13 +97,15 @@ export default function AircraftProfileEditor({model,equipmentOptions,onChange,o
       <button className="text-sm text-red-700 underline" onClick={()=>edit({...draft,equipment:(draft.equipment??[]).filter((_,i)=>i!==index)})}>Remove equipment {index+1}</button>
     </div>)}</div>
     <button disabled={(draft.equipment??[]).length>=50} onClick={()=>edit({...draft,equipment:[...(draft.equipment??[]),{key:'',status:'unknown',note:''}]})} className="text-sm text-blue-700 underline mt-3">Add equipment entry</button></>}
-    <div className="flex flex-wrap gap-3 mt-4"><button disabled={!writable} onClick={save} className="bg-blue-600 text-white rounded px-3 py-2 disabled:opacity-50">Save and use profile</button><button onClick={()=>{if(!dirty||window.confirm('Discard unsaved profile edits?')){setDraft(blank(model));setDirty(false);setNotice('New draft. Save it to use it for relevance checks.');}}} className="border rounded px-3 py-2">New profile</button>
+    <div className="flex flex-wrap gap-3 mt-4"><button disabled={!writable} onClick={save} className="bg-blue-600 text-white rounded px-3 py-2 disabled:opacity-50">Save and use profile</button><button onClick={newProfile} className="border rounded px-3 py-2">New profile</button>
+      {(dirty||!backupWritable)&&<button onClick={discardDraft} className="text-sm text-red-700 underline">{dirty?'Discard draft':'Discard draft backup'}</button>}
       {store.profiles.some(p=>p.id===draft.id)&&<button onClick={remove} className="text-red-700 text-sm underline">Delete saved profile</button>}
       {!!store.profiles.length&&<button onClick={exportProfiles} className="text-blue-700 text-sm underline">Export profiles</button>}
       <button onClick={reloadProfiles} className="text-blue-700 text-sm underline">Reload saved profiles</button>
       {!writable&&<button onClick={reset} className="text-red-700 text-sm underline">Reset aircraft profile storage</button>}
     </div>
-    {dirty&&<p className="text-xs text-amber-900 mt-2">Unsaved edits. Relevance uses the selected saved profile until you save.</p>}
+    {dirty&&<p role="status" className="text-xs text-amber-900 mt-2">Unsaved edits. {backedUp?'Draft backed up in this tab; it recovers after navigation or reload. Closing this tab clears the draft.':'Draft backup is unavailable. Edits stay in memory during in-app navigation; reloading or closing may lose them.'} Relevance uses the selected saved profile until you save.</p>}
+    {!backupWritable&&<p role="status" className="text-sm text-amber-900 mt-2">The existing draft backup could not be read or cleared and has been preserved. Discard draft backup to reset only this model’s tab backup.</p>}
     {active&&<p className="text-xs text-slate-600 mt-2">Using {active.name} · serial {active.serial||'unknown'} · saved {new Date(active.updatedAt).toLocaleString()}</p>}
     {notice&&<p role="status" className="text-sm text-amber-900 mt-3">{notice}</p>}
   </details>;

@@ -24,7 +24,7 @@ The current app does not record maintenance performed, sign off work or determin
 
 ## Profile behavior today
 
-Profiles support PA-28-140 and PA-28-181. Fields are a name, optional manufacturer serial, STC numbers, reviewed equipment families, installation status (installed, not installed or unknown) and optional record-reference notes. Saving applies a draft; unsaved edits do not change relevance. Users can keep multiple profiles, select them independently by model, delete them and export JSON.
+Profiles support PA-28-140 and PA-28-181. Fields are a name, optional manufacturer serial, STC numbers, reviewed equipment families, installation status (installed, not installed or unknown) and optional record-reference notes. Saving applies a draft; unsaved edits do not change relevance. Per-model tab backups recover incomplete drafts after navigation or reload, with a memory fallback and warning when tab storage fails. Users can keep multiple profiles, select them independently by model, delete them and export JSON.
 
 | Profile information | Current use | Remaining uncertainty |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | TCDS | Scoped imported history and originals for 2A13/A16WE; source-version guards preserve earlier evidence without treating it as a new review | As observed November 16, A16WE Revision 83 needs renewed review before its full TCDS graph can return; additional attachments/families |
 | Related discovery | Scoped AD/STC metadata indexes and historical CAR sources; pagination, incremental checks, reconciliation and quarantine | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
-| Relationships | Reviewed PA-28 and selected 737 AD/STC/component paths; 17 Boeing identities and seven technical profiles from earlier TCDS reviews; only currently eligible edges appear | Current A16WE TCDS review, broader reviewed coverage, detailed Part 25 basis mapping and historical graph exploration |
+| Relationships | Reviewed PA-28 and selected 737 AD/STC/component paths; Revision 83 supports 17 Boeing identities, 41 TCDS paths and seven technical profiles; only currently eligible edges appear | Broader reviewed coverage, detailed Part 25 basis mapping and historical graph exploration |
 | Interface | Model-first search; cited evidence/PDFs; canonical reference traversal; independent loading/retry; bounded cached model/family reads; current/history filters and revision comparison | Remaining audit findings, graph readability/motion, accessibility/user validation and actual content-change summaries |
 | Profiles | Named browser profiles; unknowns; reviewed serial and equipment labels; reported installation | Backup import, compound rules and optional private accounts |
 | Changes/alerts | Atomic observation/change events, shared evidence-linked feed, hosted baseline and enabled daily checks with a successful manual GitHub run | Failure monitoring, broader reviewed relevance, watchlists and notifications |

@@ -19,9 +19,9 @@ Search `PA-28-181` → select the Piper PA-28 result → view the selected model
 | Regulation originals | Historical CAR scans and 2016 CFR text labeled by edition and completeness |
 | Comparison | Two archived revision selections, issuance metadata and PDF byte identity; both originals available |
 | Coverage | Reviewed connections distinguished from index candidates; missing amendments, equipment and applicability stated explicitly |
-| Browser notes | Existing personal links and prototype history remain labeled as local records |
+| Browser notes | Navigable personal certificate groups with merge preview, removal and Undo; prototype history remains labeled as local records |
 
-Desktop keeps evidence beside the diagram so a user can inspect connections without scrolling to the end. Mobile defaults to the list; the graph remains selectable and scrolls within its own container. Native buttons, source links, and the model selector support keyboard navigation.
+Desktop keeps evidence beside the diagram so a user can inspect connections without scrolling to the end. Mobile defaults to the list; the selectable graph allows normal page scrolling, with an explicit Move map mode for panning. Native buttons, source links, and the model selector support keyboard navigation. Per-model tab backups recover incomplete profile drafts; saved profiles alone drive relevance.
 
 ## Current relationship coverage
 
@@ -29,7 +29,7 @@ The hosted graph contains 136 model-scoped rows for PA-28-140 and PA-28-181, inc
 
 The graph distinguishes `covered_by`, `certified_against`, `applies_to`, `approved_for`, `affects_component`, `references` and `supersedes`, with directed arrows and a matching list. CAR 3 baseline identity is shared, while model-specific amendment scope stays on each relationship. Individual FAR sections include the cited amendment in their identity. Selecting AD 2020-24-05 for PA-28-140 shows conditional serial scope and lets the user expand to the referenced Piper SB 1304A. Installed-equipment ADs traverse through canonical component nodes, so a Garmin or vacuum-pump identity can be shared across both supported models. Approved STC scope and user-reported equipment do not establish installation or compliance. Optional-equipment and serial-specific noise connections remain pending. Other PA-28 models show explicit unreviewed coverage.
 
-The A16WE expansion adds `member_of` and `powered_by` paths for six reviewed Boeing 737 variants. A family summary presents page-cited engine, weight, capacity, speed, crew and altitude facts while preserving exit-configuration conditions. The 737 MAX 10 appears only as a certification-project boundary because it is absent from current Revision 81. See [Boeing 737 family review](boeing-737-family-review.md).
+The current [A16WE Revision 83 review](boeing-revision83-review.md) supports 17 model identities and 41 family/certificate/engine paths, including `member_of` and `powered_by`. Seven detailed profiles contain 49 page-cited facts for engine, weight, capacity, speed, crew and altitude while preserving model-specific and exit-configuration conditions. This includes 737-10 TCDS evidence; its AD/STC discovery remains unconfigured. Technical profiles are selective and do not represent a complete Part 25 certification-basis graph.
 
 A new current TCDS snapshot hides the previous snapshot's graph connections until the evidence is reviewed again. A changed or inactive AD/STC index observation likewise hides the old reviewed current paths. Historical relationships remain stored. CAR baseline and amendment 3-7 originals are available, but do not form the complete cited basis. Seven 2016 CFR sections are labeled as later reference text, distinct from the TCDS's amendment wording and today's regulations.
 

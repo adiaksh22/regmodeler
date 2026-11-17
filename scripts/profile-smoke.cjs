@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const puppeteer=require('../research/legacy/mcp-client/node_modules/puppeteer');
 const out=path.join(__dirname,'../.artifacts/profiles');fs.mkdirSync(out,{recursive:true});
 (async()=>{
-  const browser=await puppeteer.launch({headless:'new',executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const browser=await puppeteer.launch({headless:'new',executablePath:process.env.SMOKE_BROWSER_EXECUTABLE||'C:/Program Files/Google/Chrome/Application/chrome.exe'});
   try{
     const page=await browser.newPage();const errors=[];const leaked=[];
     let acceptDialogs=true;
@@ -15,12 +15,12 @@ const out=path.join(__dirname,'../.artifacts/profiles');fs.mkdirSync(out,{recurs
     const fill=async(label,value)=>{const selector=`input[aria-label="${label}"]`;await page.click(selector,{clickCount:3});await page.keyboard.press('Backspace');await page.type(selector,value);};
     const openEditor=async()=>{await page.waitForFunction(()=>[...document.querySelectorAll('details > summary')].some(node=>node.textContent.startsWith('Aircraft configuration')));return page.evaluate(()=>{const d=[...document.querySelectorAll('details')].find(e=>e.querySelector(':scope > summary')?.textContent.startsWith('Aircraft configuration'));d.open=true;});};
     await page.setViewport({width:1280,height:900});
-    await page.goto('http://127.0.0.1:4173/tcds/2A13?model=PA-28-140',{waitUntil:'domcontentloaded'});
+    await page.goto(`${process.env.SMOKE_BASE_URL||'http://127.0.0.1:4173'}/tcds/2A13?model=PA-28-140`,{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>document.body.innerText.includes('AD 2020-24-05'));
     await openEditor();await fill('Aircraft profile name','Browser test aircraft');await click('Save and use profile');
     await page.waitForFunction(()=>document.body.innerText.includes('Serial number needs review'));
     await fill('Aircraft profile name','Browser test aircraft draft');acceptDialogs=false;await page.select('#aircraft-model','PA-28-181');
-    assert.equal(await page.$eval('#aircraft-model',e=>e.value),'PA-28-140');assert.equal(await page.$eval('input[aria-label="Aircraft profile name"]',e=>e.value),'Browser test aircraft draft');
+    assert.equal(await page.$eval('#aircraft-model',e=>e.value),'PA-28-181');await page.select('#aircraft-model','PA-28-140');await openEditor();assert.equal(await page.$eval('input[aria-label="Aircraft profile name"]',e=>e.value),'Browser test aircraft draft');
     acceptDialogs=true;await fill('Aircraft profile name','Browser test aircraft');
     await fill('Aircraft serial number','28-20001');await click('Add STC entry');await fill('STC number 1','sa2230ce');await page.select('select[aria-label="STC installation 1"]','installed');
     assert.match(await page.evaluate(()=>document.body.innerText),/Unsaved edits/);

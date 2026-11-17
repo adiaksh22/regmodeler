@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { TCDSRevision } from '../types/revision';
 import { catalog } from '../lib/catalog';
 import {invalidateExplorerReads} from '../lib/explorerReads';
 import AircraftExplorer from '../components/AircraftExplorer';
 import type { CatalogDocument } from '../domain/catalog';
 import { getRevisionsByTCDS } from '../utils/revisionManager';
-import { getGroupByMember, createGroup, addToGroup } from '../utils/crossReferenceManager';
-import type { CrossRefGroup } from '../types/crossReference';
+import PersonalCrossReferences from '../components/PersonalCrossReferences';
+import {normalizeCertificate} from '../utils/crossReferenceManager';
 import RevisionHistory from '../components/RevisionHistory';
 import { getTcdsSample } from '../data/tcdsSamples';
 
@@ -16,10 +16,8 @@ export default function TCDSDetail() {
   const [doc, setDoc] = useState<CatalogDocument | null>(null);
   const [notice, setNotice] = useState('');
   const [revisions, setRevisions] = useState<TCDSRevision[]>([]);
-  const [crossRefGroup, setCrossRefGroup] = useState<CrossRefGroup | null>(null);
-  const [linkInput, setLinkInput] = useState('');
-  const [linkNotice,setLinkNotice]=useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [catalogUnavailable,setCatalogUnavailable]=useState(false);
   const [catalogReady,setCatalogReady]=useState(false);
   const lastHostedDoc=useRef<CatalogDocument|null>(null);
   const [reload, setReload] = useState(0);
@@ -31,19 +29,20 @@ export default function TCDSDetail() {
       const immediateDoc:CatalogDocument|null=sample?{...sample,authority:'FAA'}:null;
       setDoc(previous=>previous?.tcds_number===tcdsNumber.toUpperCase()?previous:immediateDoc);
       setCatalogReady(false);
+      setCatalogUnavailable(false);
       setNotice('');
       setLoading(!immediateDoc);
       void catalog.get(tcdsNumber).then(result => {
         if (cancelled) return;
         if(result.source==='database'&&result.data)lastHostedDoc.current=result.data;
         const saved=result.source==='fallback'&&lastHostedDoc.current?.tcds_number===tcdsNumber.toUpperCase()?lastHostedDoc.current:null;
-        setDoc(saved??result.data??immediateDoc);
-        setNotice(saved?'The online catalog is unavailable. Showing the last loaded catalog record.':result.notice??'');
+        const resolved=saved??result.data??immediateDoc;
+        setDoc(resolved);setCatalogUnavailable(result.source==='fallback'&&!resolved);
+        setNotice(saved?'The online catalog is unavailable. Showing the last loaded catalog record.':result.source==='fallback'&&!resolved?'The online catalog is unavailable for this certificate. FAA records may exist outside this app.':result.notice??'');
         setLoading(false);
         setCatalogReady(true);
       });
       setRevisions(getRevisionsByTCDS(tcdsNumber));
-      setCrossRefGroup(getGroupByMember(tcdsNumber));
     }
     return () => { cancelled = true; };
   }, [tcdsNumber, reload]);
@@ -51,19 +50,6 @@ export default function TCDSDetail() {
   const handleRefresh = () => {
     if(tcdsNumber)invalidateExplorerReads(tcdsNumber);
     setReload(value => value + 1);
-  };
-
-  const handleLinkTCDS = () => {
-    if (!linkInput.trim() || !tcdsNumber) return;
-
-    const normalized = linkInput.trim().toUpperCase();
-
-    try {
-      if (crossRefGroup) addToGroup(crossRefGroup.group_id, normalized);
-      else createGroup([tcdsNumber.toUpperCase(), normalized], 'manual');
-      setCrossRefGroup(getGroupByMember(tcdsNumber));setLinkInput('');setLinkNotice('Personal link saved in this browser.');
-    }catch{setLinkNotice('The link could not be saved. Existing browser records were preserved.');}
-
   };
 
   if (!tcdsNumber) return null;
@@ -85,13 +71,15 @@ export default function TCDSDetail() {
 
       {!loading && !doc && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <p className="text-yellow-800 font-semibold">TCDS not included in this catalog</p>
+          <p className="text-yellow-800 font-semibold">{catalogUnavailable?'Catalog coverage temporarily unavailable':'TCDS not included in this catalog'}</p>
           <p className="text-yellow-700 mt-2">Search the FAA DRS source catalog or return to aircraft search.</p>
           <a href="https://drs.faa.gov/" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">Search FAA DRS</a>
+          <Link to="/" className="text-blue-700 underline block mt-3">Return to aircraft search</Link>
         </div>
       )}
+      {!loading&&!doc&&normalizeCertificate(tcdsNumber)&&<PersonalCrossReferences key={tcdsNumber.toUpperCase()} number={tcdsNumber.toUpperCase()}/>}
 
-      {doc && (
+      {doc?.tcds_number===tcdsNumber.toUpperCase() && (
         <>
           <p className="text-sm text-gray-600 mb-4">
             FAA snapshot retrieved {new Date(doc.retrieved_at).toLocaleDateString()}. Source status reflects that retrieval.
@@ -130,42 +118,7 @@ export default function TCDSDetail() {
           </div>
 
           {doc.product_type==='Aircraft' && <AircraftExplorer doc={doc} reload={reload} ready={catalogReady}/>}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Cross-References</h2>
-            <p className="text-sm text-gray-600 mb-3">Personal links stored in this browser. These links do not establish regulatory applicability.</p>
-            {crossRefGroup ? (
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Linked TCDS:</p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {crossRefGroup.members.filter((m: string) => m !== tcdsNumber?.toUpperCase()).map((member: string) => (
-                    <span key={member} className="bg-blue-100 text-blue-800 px-3 py-1 rounded">
-                      {member}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-500 mb-4">No cross-references yet.</p>
-            )}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={linkInput}
-                onChange={(e) => setLinkInput(e.target.value)}
-                placeholder="Enter TCDS number to link..."
-                aria-label="TCDS number to link"
-                className="border rounded px-3 py-2 flex-1"
-                onKeyDown={(e) => e.key === 'Enter' && handleLinkTCDS()}
-              />
-              <button
-                onClick={handleLinkTCDS}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                Link
-              </button>
-            </div>
-            {linkNotice&&<p role="status" className="mt-3 text-sm text-amber-900">{linkNotice}</p>}
-          </div>
+          <PersonalCrossReferences key={tcdsNumber.toUpperCase()} number={tcdsNumber.toUpperCase()}/>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Browser-recorded prototype history</h2>
