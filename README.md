@@ -38,6 +38,8 @@ The separate portable browser gate runs with `npm.cmd run test:browser` after `n
 | `npm run preview` | Serve an existing production build locally |
 | `npm run test:browser` | Run isolated desktop/mobile browser journeys with a managed server |
 | `npm run release:assets:test` | Verify built Pages headers, SPA entry and absence of the browser-fixture backend |
+| `npm run backup:project -- --project-ref=<linked-ref>` | Export private application SQL and archived objects locally; requires CLI login and Docker |
+| `npm run backup:drill -- .artifacts/backups/<directory>` | Restore/check a verified export in a disposable network-isolated database |
 | `npm run db:start` | Start local Supabase with Docker |
 | `npm run db:env` | Generate ignored local configuration without printing keys |
 | `npm run db:test` | Test schema and access policies without Docker |

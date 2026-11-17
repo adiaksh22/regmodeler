@@ -107,3 +107,11 @@ test('corrupt personal records are preserved and blocked tab storage keeps draft
  await page.getByRole('navigation',{name:'Primary navigation'}).getByRole('link',{name:'Source changes',exact:true}).click();await page.goBack();
  await expect(page.getByLabel('Aircraft profile name')).toHaveValue('CI private memory draft');expect(await page.evaluate(()=>localStorage.getItem('tcds_cross_references'))).toBe('{broken fixture');
 });
+
+test('archive traffic limits explain recovery and leave official source links usable',async({page,api})=>{
+ api.viewerLimited=true;await page.goto('/tcds/2A13?model=PA-28-181');const trigger=page.getByRole('button',{name:'View cited PDF',exact:true});await trigger.click();
+ await expect(page.getByLabel('Relationship source evidence')).toContainText('temporarily limited');await expect(page.getByLabel('Relationship source evidence')).toContainText('about a minute');
+ await expect(trigger).toBeDisabled();await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect(page.getByLabel('Relationship source evidence').getByRole('link',{name:/Open FAA source/})).toBeVisible();
+ expect(api.reads.filter(read=>read.path==='source-viewer')).toHaveLength(1);
+});

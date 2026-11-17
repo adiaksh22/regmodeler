@@ -27,10 +27,10 @@ export const piperRows=['PA-28-140','PA-28-181'].flatMap(model=>[
  row(model,'2A13',{id:`${model}:reference`,target:'Fixture bulletin',target_type:'service_document',relationship_type:'references',path_via:'Fixture AD',source_entity_id:'ad:fixture',target_entity_id:'bulletin:fixture',source_document_type:'AD',source_document_number:'Fixture AD',evidence_page:6}),
 ]);
 type Read={method:string;path:string;query:URLSearchParams;body:Record<string,unknown>|null};
-type State={reads:Read[];unexpected:string[];errors:string[];fail:Set<string>;incompleteGraph:boolean};
+type State={reads:Read[];unexpected:string[];errors:string[];fail:Set<string>;incompleteGraph:boolean;viewerLimited:boolean};
 export const test=base.extend<{api:State}>({
  api:[async({context,page},use)=>{
-  const state:State={reads:[],unexpected:[],errors:[],fail:new Set(),incompleteGraph:false};
+  const state:State={reads:[],unexpected:[],errors:[],fail:new Set(),incompleteGraph:false,viewerLimited:false};
   context.on('page',tab=>tab.on('pageerror',error=>state.errors.push(error.message)));page.on('pageerror',error=>state.errors.push(error.message));
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url());
@@ -57,7 +57,7 @@ export const test=base.extend<{api:State}>({
    if(endpoint==='relationship_applicability_rules'||endpoint==='regulation_sources'||endpoint==='source_quality_details')return reply([]);
    if(endpoint==='source_change_feed')return reply([],0);
    if(endpoint==='tcds_versions')return reply([{id:versionId,document_id:versionId,tcds_number:'2A13',revision:'66',revision_date:'2026-11-13',status:'current',source_url:`${origin}/fixture-source/2A13`,retrieved_at:'2026-11-16T00:00:00Z',content_sha256:'a'.repeat(64),is_current:true}]);
-   if(endpoint==='source-viewer')return reply({url:`${origin}/storage/fixture-frame`,expiresIn:300});
+   if(endpoint==='source-viewer')return state.viewerLimited?route.fulfill({status:429,headers:{...headers,'access-control-expose-headers':'content-range,retry-after','Retry-After':'60'},json:{error:'SOURCE_RATE_LIMITED'}}):reply({url:`${origin}/storage/fixture-frame`,expiresIn:300});
    if(endpoint==='fixture-frame')return route.fulfill({status:200,headers,contentType:'text/html',body:'<!doctype html><title>Simulated archive</title><p>Browser fixture frame; not an FAA PDF.</p><button>Frame focus target</button>'});
    if(endpoint==='related_last_checked'||endpoint==='search_related_documents_with_review')return reply([]);
    if(endpoint==='search_review_queue')return reply({rows:[],total:0,reviewed_count:0});

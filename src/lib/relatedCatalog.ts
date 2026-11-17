@@ -1,5 +1,6 @@
 import {publicCatalogConfig as config,publicCatalogClient} from './publicClient';
 import type {RelatedDocument} from '../domain/explorer';
+import {ArchiveRateLimitError} from '../domain/archiveAccess';
 const client=()=>publicCatalogClient;
 export async function loadRelatedPage(model:string,type:string,includeHistory=false,query='',offset=0,limit=24) {
   const c=client();if(!c)return {documents:[],total:0,notice:'Connect the shared catalog to browse related FAA records.'};
@@ -32,6 +33,7 @@ export async function loadReviewQueue(model:string,status='pending',type='all',q
 export async function getOriginalLink(versionId:string,attachmentId?:string) {
   if(!config)throw new Error('Source viewer unavailable');
   const r=await fetch(config.url+'/functions/v1/source-viewer',{method:'POST',headers:{apikey:config.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({versionId,attachmentId}),signal:AbortSignal.timeout(15000)});
+  if(r.status===429)throw new ArchiveRateLimitError(Number(r.headers.get('Retry-After')));
   if(!r.ok)throw new Error('Source viewer unavailable');
   const result:unknown=await r.json();
   if(!result||typeof result!=='object'||!('url' in result)||typeof result.url!=='string'||new URL(result.url).origin!==new URL(config.url).origin)throw new Error('Invalid source link');

@@ -1,4 +1,4 @@
-export const cors = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'apikey,authorization,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Cache-Control':'no-store' };
+export const cors = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'apikey,authorization,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Expose-Headers':'Retry-After','Cache-Control':'no-store' };
 const reply=(status,error)=>Response.json({error},{status,headers:cors});
 export async function handleSourceRequest(request,client,allowedOrigin) {
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
@@ -13,6 +13,14 @@ export async function handleSourceRequest(request,client,allowedOrigin) {
     const attachmentId=payload?.attachmentId;
     if(attachmentId!==undefined&&(typeof attachmentId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(attachmentId)))return reply(400,'INVALID_ATTACHMENT');
     if(typeof versionId!=='string'||! /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(versionId))return reply(400,'INVALID_VERSION');
+    // Reserve before database source lookups/signing. No per-instance/IP bypass.
+    const slot=await client.rpc('take_source_viewer_slot');
+    if(slot.error||typeof slot.data?.allowed!=='boolean')return reply(503,'SOURCE_UNAVAILABLE');
+    if(!slot.data.allowed){
+      const delay=slot.data.retry_after_seconds;
+      if(!Number.isInteger(delay)||delay<1||delay>86400)return reply(503,'SOURCE_UNAVAILABLE');
+      return Response.json({error:'SOURCE_RATE_LIMITED'},{status:429,headers:{...cors,'Retry-After':String(delay)}});
+    }
     const record=await client.from('document_versions').select('id,is_published,storage_path,content_sha256,document:documents!document_versions_document_id_fkey(is_published,authority,document_type)').eq('id',versionId).maybeSingle();
     const v=record.data;const d=v?.document;
     if(record.error||!v?.is_published||!d?.is_published||d.authority!=='FAA'||!['TCDS','AD','STC','CAR'].includes(d.document_type)||

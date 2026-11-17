@@ -7,7 +7,7 @@ const request=(body={versionId:id})=>new Request(origin+'/functions/v1/source-vi
 function fixture(overrides={}){
  let signed=0;
  const record={is_published:true,storage_path:`FAA/TCDS/2A13/${hash}.pdf`,content_sha256:hash,document:{is_published:true,authority:'FAA',document_type:'TCDS'},...overrides};
- const client={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:record,error:null})})})}),storage:{from:()=>({createSignedUrl:async(path,expires)=>{signed++;assert.equal(path,record.storage_path);assert.equal(expires,300);return {data:{signedUrl:origin+'/storage/v1/object/sign/approved.pdf?token=test'},error:null};}})}};
+ const client={rpc:async name=>{assert.equal(name,'take_source_viewer_slot');return {data:{allowed:true,retry_after_seconds:0},error:null};},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:record,error:null})})})}),storage:{from:()=>({createSignedUrl:async(path,expires)=>{signed++;assert.equal(path,record.storage_path);assert.equal(expires,300);return {data:{signedUrl:origin+'/storage/v1/object/sign/approved.pdf?token=test'},error:null};}})}};
  return {client,signed:()=>signed};
 }
 test('viewer signs only the selected published FAA PDF with a bounded expiry',async()=>{
@@ -26,6 +26,14 @@ test('viewer rejects invalid IDs, oversized requests and unsupported methods',as
  const malformed=new Request(origin,{method:'POST',headers:{'Content-Type':'application/json'},body:'{'});
  assert.equal((await handleSourceRequest(malformed,f.client,origin)).status,400);
  assert.equal((await handleSourceRequest(request(null),f.client,origin)).status,400);
+});
+
+test('viewer budget refuses work across instances and fails closed when unavailable',async()=>{
+ for(const [result,status] of [[{data:{allowed:false,retry_after_seconds:42},error:null},429],[{data:null,error:{message:'offline'}},503],[{data:{allowed:'yes'},error:null},503],[{data:{allowed:false,retry_after_seconds:-1},error:null},503]]){
+  const f=fixture();let lookups=0;f.client.rpc=async()=>result;f.client.from=()=>{lookups++;throw Error('Must not query a source');};
+  const response=await handleSourceRequest(request(),f.client,origin);assert.equal(response.status,status);assert.equal(f.signed(),0);assert.equal(lookups,0);
+  if(status===429){assert.equal(response.headers.get('Retry-After'),'42');assert.equal(response.headers.get('Cache-Control'),'no-store');}
+ }
 });
 test('attachment viewer binds a PDF to its published parent and refuses HTML and wrong paths',async()=>{
  const attachmentId='20000000-0000-4000-8000-000000000001';

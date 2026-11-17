@@ -35,3 +35,8 @@ jobs:
         if: ${{ !cancelled() }}
       - run: npm run import:related -- --scope=B737 --type=STC
         if: ${{ !cancelled() }}
+      - name: Summarize source reconciliation outcome
+        if: ${{ always() }}
+        env:
+          SOURCE_JOB_STATUS: ${{ job.status }}
+        run: node scripts/source-check-summary.mjs

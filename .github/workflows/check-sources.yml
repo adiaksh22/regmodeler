@@ -42,3 +42,8 @@ jobs:
       - name: Check Boeing 737 STC metadata delta
         if: ${{ !cancelled() }}
         run: npm run check:related -- --scope=B737 --type=STC
+      - name: Summarize source check outcome
+        if: ${{ always() }}
+        env:
+          SOURCE_JOB_STATUS: ${{ job.status }}
+        run: node scripts/source-check-summary.mjs

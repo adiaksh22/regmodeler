@@ -3,6 +3,7 @@ import {createRoot,type Root} from 'react-dom/client';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import SourcePdf from './SourcePdf';
 import {getOriginalLink} from '../lib/relatedCatalog';
+import {ArchiveRateLimitError} from '../domain/archiveAccess';
 vi.mock('../lib/relatedCatalog',()=>({getOriginalLink:vi.fn()}));
 let host:HTMLDivElement;let root:Root;
 beforeEach(async()=>{
@@ -46,5 +47,15 @@ describe('archived PDF dialog',()=>{
   await act(async()=>host.querySelector('button')!.click());
   await act(async()=>root.render(<div>Another page</div>));
   expect(document.body.style.overflow).toBe('auto');
+ });
+ it('explains a signing limit, prevents repeat requests and reenables after the wait',async()=>{
+  vi.useFakeTimers();
+  try{
+   vi.mocked(getOriginalLink).mockRejectedValue(new ArchiveRateLimitError(60));
+   const trigger=host.querySelector('button')!;await act(async()=>trigger.click());
+   expect(host.textContent).toContain('temporarily limited');expect(host.textContent).toContain('official source link');expect(trigger.disabled).toBe(true);expect(host.querySelector('dialog')).toBeNull();
+   trigger.click();expect(getOriginalLink).toHaveBeenCalledTimes(1);
+   await act(async()=>{vi.advanceTimersByTime(60000);});expect(trigger.disabled).toBe(false);
+  }finally{vi.useRealTimers();}
  });
 });

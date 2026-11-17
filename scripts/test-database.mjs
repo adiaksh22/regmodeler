@@ -38,6 +38,24 @@ try {
     } finally { await db.exec('rollback'); }
   };
   const query = (sql, params) => db.query(sql, params);
+  await assert.rejects(asRole('anon',null,()=>query('select public.take_source_viewer_slot()')),/permission denied/);
+  await assert.rejects(asRole('authenticated',null,()=>query('select * from public.source_viewer_budget')),/permission denied/);
+  await asRole('service_role',null,async()=>assert.equal((await query('select public.take_source_viewer_slot() result')).rows[0].result.allowed,true));
+  await query('begin');
+  try{
+   await query('update public.source_viewer_budget set minute_limit=2,day_limit=3,minute_used=0,day_used=0');
+   const slots=await Promise.all([1,2,3,4].map(()=>query('select public.take_source_viewer_slot() result')));
+   assert.equal(slots.filter(result=>result.rows[0].result.allowed).length,2,'Serialized reservations cannot exceed the minute cap');
+   assert.ok(slots.filter(result=>!result.rows[0].result.allowed).every(result=>result.rows[0].result.retry_after_seconds>=1));
+   await query("update public.source_viewer_budget set minute_started=now()-interval '2 minutes'");
+   assert.equal((await query('select public.take_source_viewer_slot() result')).rows[0].result.allowed,true,'Minute rollover restores only the minute allowance');
+   assert.equal((await query('select public.take_source_viewer_slot() result')).rows[0].result.allowed,false,'Daily budget remains exhausted');
+   await query("update public.source_viewer_budget set day_started=current_date-1,minute_started=now()-interval '2 minutes'");
+   assert.equal((await query('select public.take_source_viewer_slot() result')).rows[0].result.allowed,true,'UTC day rollover resets the daily budget');
+   await query('update public.source_viewer_budget set enabled=false');await query('savepoint viewer_disabled');
+   await assert.rejects(query('select public.take_source_viewer_slot()'),/SOURCE_VIEWER_UNAVAILABLE/);await query('rollback to viewer_disabled');
+  }finally{await query('rollback');}
+  console.log('Viewer budget checks passed: private shared counters, minute/day reservations, rollovers and fail-closed pause.');
   await asRole('anon', null, async () => {
     const models = await query("select tcds_number from public.search_tcds('PA-28',20)");
     assert.deepEqual(models.rows.map(row => row.tcds_number), ['2A13']);

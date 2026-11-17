@@ -230,6 +230,8 @@ Read-only PDF sample: [A16WE Revision 82](../.artifacts/a16we/revision-82.pdf), 
 
 ## Recommended execution order
 
+November 16 launch-safeguard follow-up: deployed a service-only atomic shared signing budget (60/minute, owner-selected 1,000/UTC-day), fail-closed viewer behavior and accessible retry notice. Verified hosted concurrent reservations and actual published PDF signing. This is not a bandwidth or provider spending cap. Exported the actual application database and private archive, verified hashes and isolated restoration of 23 tables/18,558 rows, every foreign key, 136 cited originals and both anonymous-reader graphs. Added sanitized source-workflow outcome summaries; account notification delivery remains unverified. See [viewer usage](viewer-usage.md), [backup recovery](backup-recovery.md) and [release operations](release-operations.md). Website publication remains pending explicit approval.
+
 1. **Correctness and recovery:** A01–A05. Bind every displayed fact/detail to the intended model and exact citation; normalize model navigation; make storage and evidence failures recoverable. Add real transition/failure regressions.
 2. **Complete the workflows:** A06–A08, A11–A12. Repair reference traversal, independent loading/retries, bounded cached reads, draft protection and editable personal links. Verify Paths/Evidence list as well as the node map.
 3. **Professional graph/accessibility pass:** A09–A10, A13. Readable neighborhoods and family grouping, stable short transitions, overlap-safe edges, reduced motion, keyboard/touch/context clarity. Benchmark active interaction before considering a force engine.

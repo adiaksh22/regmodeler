@@ -1,6 +1,6 @@
 # Portfolio beta release review
 
-Prepared November 3, updated November 16, 2026. **No deployment has been created by this work.** The publishing decision is pending user review. See the [operations review](release-operations.md) for observed source health and unverified backup, notification and viewer-usage controls.
+Prepared November 3, updated November 16, 2026. **The website remains unpublished.** Its publishing decision is pending user review. The existing backend viewer now enforces the reviewed shared signing budget. See [operations](release-operations.md) for verified local backup/recovery and remaining off-site, notification and provider-usage controls.
 
 ## Proposed release
 
@@ -48,7 +48,7 @@ Record the approved Git commit, GitHub quality run, deployment ID/URL, and actua
 
 For later releases, select a previously successful **production** deployment in Pages and use its rollback action. Preview deployments are not rollback targets. See [Cloudflare rollback documentation](https://developers.cloudflare.com/pages/configuration/rollbacks/). The first publication has no earlier production release to restore.
 
-A frontend rollback does not roll back database migrations, source observations or browser profile edits. This release changes no hosted schema or source inventory. Re-run the model, graph, PDF and change-feed checks after rollback. Keep automatic production deployment disabled during an incident so another push does not replace the selected recovery build.
+A frontend rollback does not roll back database migrations, source observations or browser profile edits. The viewer-budget migration adds private operational state without changing source evidence. Keep it with the guarded viewer function; do not remove the shared budget to restore a frontend build. The [verified backup](backup-recovery.md) precedes this migration, so restoring it to current code requires applying the subsequent reviewed migration. Re-run the model, graph, PDF and change-feed checks after rollback. Keep automatic production deployment disabled during an incident so another push does not replace the selected recovery build.
 
 ## Remaining review
 

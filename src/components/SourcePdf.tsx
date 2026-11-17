@@ -1,7 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import {getOriginalLink} from '../lib/relatedCatalog';
+import {ArchiveRateLimitError} from '../domain/archiveAccess';
 export default function SourcePdf({versionId,attachmentId,page=1,label='View cited PDF'}:{versionId:string;attachmentId?:string;page?:number;label?:string}) {
   const [url,setUrl]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+  const [retryAt,setRetryAt]=useState(0);
   const trigger=useRef<HTMLButtonElement>(null);const close=useRef<HTMLButtonElement>(null);
   const dialog=useRef<HTMLDialogElement>(null);
   const dismiss=()=>{dialog.current?.close();setUrl('');trigger.current?.focus();};
@@ -12,9 +14,10 @@ export default function SourcePdf({versionId,attachmentId,page=1,label='View cit
     modal.showModal();close.current?.focus();document.body.style.overflow='hidden';
     return()=>{if(modal.open)modal.close();document.body.style.overflow=previousOverflow;};
   },[url]);
-  async function open(){setBusy(true);setError('');try{setUrl(await getOriginalLink(versionId,attachmentId));}catch{setError('The archived PDF is unavailable. Use the official source link.');}finally{setBusy(false);}}
+  useEffect(()=>{if(!retryAt)return;const timer=setTimeout(()=>{setRetryAt(0);setError('You can try the archived PDF again, or use the official source link.');},Math.max(1,retryAt-Date.now()));return()=>clearTimeout(timer);},[retryAt]);
+  async function open(){setBusy(true);setError('');try{setUrl(await getOriginalLink(versionId,attachmentId));}catch(error){if(error instanceof ArchiveRateLimitError){setRetryAt(Date.now()+error.retryAfter*1000);setError(error.message);}else setError('The archived PDF is unavailable. Use the official source link.');}finally{setBusy(false);}}
   return <>
-    <button ref={trigger} onClick={()=>void open()} disabled={busy} className="border border-blue-600 rounded px-3 py-2 text-blue-800 text-sm mt-3 disabled:opacity-50">{busy?'Loading PDF…':label}</button>
+    <button ref={trigger} onClick={()=>void open()} disabled={busy||retryAt>0} className="border border-blue-600 rounded px-3 py-2 text-blue-800 text-sm mt-3 disabled:opacity-50">{busy?'Loading PDF…':label}</button>
     {error&&<p role="status" className="text-sm text-amber-900 mt-2">{error}</p>}
     {url&&<dialog ref={dialog} role="dialog" aria-modal="true" aria-label="Archived source PDF" onCancel={event=>{event.preventDefault();dismiss();}} onClose={()=>{setUrl('');trigger.current?.focus();}} className="fixed inset-0 m-auto w-[calc(100%_-_1.5rem)] max-w-6xl h-[90dvh] max-h-[calc(100dvh_-_1.5rem)] rounded-xl border border-slate-300 bg-white p-0 shadow-2xl backdrop:bg-slate-950/60">
       <div className="h-full flex flex-col overflow-hidden">
