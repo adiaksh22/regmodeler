@@ -9,7 +9,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.{ts,tsx}', '*.config.ts'],
+    files: ['src/**/*.{ts,tsx}', 'tests/browser/**/*.ts', '*.config.ts'],
     languageOptions: { globals: globals.browser },
     plugins: { react, 'react-hooks': hooks },
     settings: { react: { version: 'detect' } },

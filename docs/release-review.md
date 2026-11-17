@@ -1,6 +1,6 @@
 # Portfolio beta release review
 
-Prepared November 3, 2026. **No deployment has been created by this work.** The publishing decision is pending user review.
+Prepared November 3, updated November 16, 2026. **No deployment has been created by this work.** The publishing decision is pending user review. See the [operations review](release-operations.md) for observed source health and unverified backup, notification and viewer-usage controls.
 
 ## Proposed release
 
@@ -33,11 +33,12 @@ Creating a Git-connected Pages project and completing its first deployment publi
 
 ```powershell
 npm.cmd run check
+npm.cmd run test:browser
 npm.cmd run build:release
 npm.cmd run preview -- --host 127.0.0.1 --port 4173
 ```
 
-Then run the browser journeys listed in [beta readiness](beta-readiness.md), including `node scripts/pdf-dialog-smoke.cjs` and `node scripts/context-accessibility-smoke.cjs`. The dialog smoke test intercepts a viewer response for keyboard testing; `revision83-smoke.cjs` independently opens the actual archived PDF at its cited page. Revision 82 checks are historical.
+Install managed Chromium once with `npm run test:browser:install`; the [portable browser gate](browser-testing.md) starts its own fixture server and blocks external traffic. `build:release` validates both hosted configuration and release assets. Then run the separate live journeys listed in [beta readiness](beta-readiness.md), including `node scripts/pdf-dialog-smoke.cjs` and `node scripts/context-accessibility-smoke.cjs`. The dialog smoke test intercepts a viewer response for keyboard testing; `revision83-smoke.cjs` independently opens the actual archived PDF at its cited page. Revision 82 checks are historical.
 
 The repository intentionally has no top-level `404.html`. Cloudflare's [SPA behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/#single-page-application-spa-rendering) serves the application for client routes. After deployment, verify direct navigation and refresh at `/tcds/2A13?model=PA-28-181`, `/tcds/A16WE?model=737-10`, `/changelog`, and an unknown route. Confirm that hosted data loads, mobile navigation fits, PDFs open, errors are labeled, and retry restores data.
 
@@ -51,4 +52,4 @@ A frontend rollback does not roll back database migrations, source observations 
 
 ## Remaining review
 
-The user requested a reference-inspired network redesign before publication; its visual review now takes priority. Automated beta, radial graph workspace and native PDF-dialog checks are complete locally. Representative owner/maintenance feedback and the user's final supported-scope/publishing decision remain outstanding. No paid plan, new source expansion or account system is required to review this build.
+Automated beta, network workspace, route/context and PDF-dialog checks pass locally; both deterministic quality jobs must pass for the selected release commit. Representative owner/maintenance feedback, manual accessibility validation, the [remaining operating safeguards](release-operations.md) and the user's final supported-scope/publishing decision remain outstanding. No paid plan, new source expansion or account system is required to review this build. Actual provider backup/rate/budget options still need confirmation before public traffic.

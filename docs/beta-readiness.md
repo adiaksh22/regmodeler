@@ -22,7 +22,9 @@ Updated November 16, 2026. The website remains unpublished. This report covers a
 | Recovery | Unknown routes offer aircraft search; simulated database outage shows labeled snapshots; retry restores hosted relationships and removes outage notices |
 | PDF dialog | Native modal makes background controls inert; keyboard stays inside, Escape/Close restore focus, page scrolling is restored, mobile sizing and unavailable-original guidance pass browser checks |
 
-Run `npm.cmd run check` for lint, frontend/worker tests, database migration and access checks, types and production build. Browser checks use the existing isolated Chrome/Puppeteer setup with a production preview on port 4173:
+Run `npm.cmd run check` for lint, frontend/worker tests, database migration/access checks, types, build and release assets. The separate **portable browser gate** runs `npm.cmd run test:browser` after `npm.cmd run test:browser:install`: managed server, synthetic fixtures, desktop/mobile Chromium and blocked external traffic. It runs in GitHub's `browser` quality job without FAA/Supabase credentials; see [browser testing](browser-testing.md). Its simulated archive checks dialog behavior rather than the real FAA PDF.
+
+The existing **live integration checks** below use the isolated Chrome/Puppeteer setup with a normally configured production preview on port 4173. They remain separate from the portable gate and test actual hosted/source integration:
 
 ```powershell
 node scripts/beta-journey-smoke.cjs
@@ -58,8 +60,8 @@ The November 16 [Revision 83 review](boeing-revision83-review.md) restored 41 cu
 ## Release sequence
 
 1. Completed locally: native PDF modal keyboard containment, escape/close behavior, focus restoration, unavailable-original messaging and supported-scope/source-status presentation checks. This does not replace assistive-technology/user testing.
-2. Route/title/focus/context repairs (A13) and profile/link repairs (A11/A12) are implemented. Complete the remaining assistive-technology/user validation and portable browser release gate (A15). Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, recovering an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
-3. Review the prepared [release settings and rollback plan](release-review.md). The guarded `npm run build:release` requires hosted public configuration; backend credentials stay in the worker environment. Deployed deep links and environment settings still need verification after an approved first release.
+2. Route/title/focus/context repairs (A13), profile/link repairs (A11/A12) and portable browser CI (A15) are implemented. Complete remaining assistive-technology/user validation. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, recovering an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.
+3. Complete the [operating safeguards](release-operations.md) and review [release settings and rollback](release-review.md): viewer usage protection, backup/restore evidence and notification delivery remain unverified. The guarded `npm run build:release` requires hosted public configuration and validates packaged assets/headers; backend credentials stay in the worker environment. Deployed headers/deep links/settings still need verification after an approved first release.
 4. Obtain the user's release decision, then publish and verify the deployed build and supported workflows.
 
 New aircraft expansion is deferred until this UI/release phase is complete. The reviewed Revision 83 Boeing network is restored with 17 model identities, 41 TCDS paths and seven detailed technical profiles; 737-10 AD/STC discovery remains explicitly unconfigured. Browser configuration profiles support PA-28-140/181. The graph is research evidence, not an individual-aircraft compliance determination.

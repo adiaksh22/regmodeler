@@ -13,6 +13,9 @@ try{
  await assert.rejects(config,/Release builds require/);
  process.env.VITE_SUPABASE_URL='https://localhost';
  await assert.rejects(config,/Release builds require/);
+ for(const host of ['browser-fixture.invalid','example.test','demo.example']){
+  process.env.VITE_SUPABASE_URL=`https://${host}`;await assert.rejects(config,/Release builds require/);
+ }
  process.env.VITE_SUPABASE_URL='https://example.supabase.co';
  assert.ok(await config());
  process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_secret_fixture';

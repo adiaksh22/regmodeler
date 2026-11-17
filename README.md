@@ -26,6 +26,8 @@ npm.cmd run check
 
 This runs linting, frontend tests, embedded PostgreSQL schema/access tests, typechecking, and the production build. Individual commands are available:
 
+The separate portable browser gate runs with `npm.cmd run test:browser` after `npm.cmd run test:browser:install`. It starts its own server and uses synthetic API responses with all external traffic blocked; no FAA or Supabase keys are required. GitHub runs desktop/mobile browser journeys alongside the main quality job. See [browser testing](docs/browser-testing.md) for diagnostics, Chrome/Edge channels and the distinction from live-source checks.
+
 | Command | Purpose |
 | --- | --- |
 | `npm run typecheck` | Check application and build/test configuration types |
@@ -34,6 +36,8 @@ This runs linting, frontend tests, embedded PostgreSQL schema/access tests, type
 | `npm run test:watch` | Watch tests during development |
 | `npm run build` | Typecheck and build to `dist/` |
 | `npm run preview` | Serve an existing production build locally |
+| `npm run test:browser` | Run isolated desktop/mobile browser journeys with a managed server |
+| `npm run release:assets:test` | Verify built Pages headers, SPA entry and absence of the browser-fixture backend |
 | `npm run db:start` | Start local Supabase with Docker |
 | `npm run db:env` | Generate ignored local configuration without printing keys |
 | `npm run db:test` | Test schema and access policies without Docker |
@@ -70,6 +74,7 @@ docs/                Project plan, foundation decisions, storage documentation
 supabase/            Database migrations, private storage setup, local seed
 apps/worker/         Server-only FAA/GovInfo import and source-review jobs
 .github/workflows/   Quality checks and manual import/connection jobs
+tests/browser/       Portable, isolated browser journeys and synthetic API fixtures
 data-feasibility/    Reproducible data-access probes and local evidence
 research/legacy/     Archived experiments, obsolete UI, and original datasets
 public/              Public frontend assets (no credentials or raw research data)
