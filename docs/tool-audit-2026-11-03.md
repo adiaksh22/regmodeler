@@ -230,6 +230,8 @@ Read-only PDF sample: [A16WE Revision 82](../.artifacts/a16we/revision-82.pdf), 
 
 ## Recommended execution order
 
+November 18 usability follow-up: repaired search/graph-label contrast, page landmarks, profile heading order and named graph/status/profile groups. Added repeatable axe scans alongside the functional gate (26 desktop/mobile test cases). Live Chrome context and Edge cited-source/graph journeys passed; rendered-gradient text sampling passed in six selected views. This does not complete NVDA, real browser zoom, physical-device or representative-user validation. See [the findings and remaining review script](usability-review-2026-11-18.md).
+
 November 16 launch-safeguard follow-up: deployed a service-only atomic shared signing budget (60/minute, owner-selected 1,000/UTC-day), fail-closed viewer behavior and accessible retry notice. Verified hosted concurrent reservations and actual published PDF signing. This is not a bandwidth or provider spending cap. Exported the actual application database and private archive, verified hashes and isolated restoration of 23 tables/18,558 rows, every foreign key, 136 cited originals and both anonymous-reader graphs. Added sanitized source-workflow outcome summaries; account notification delivery remains unverified. See [viewer usage](viewer-usage.md), [backup recovery](backup-recovery.md) and [release operations](release-operations.md). Website publication remains pending explicit approval.
 
 1. **Correctness and recovery:** A01–A05. Bind every displayed fact/detail to the intended model and exact citation; normalize model navigation; make storage and evidence failures recoverable. Add real transition/failure regressions.

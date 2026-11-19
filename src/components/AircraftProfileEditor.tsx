@@ -74,7 +74,7 @@ export default function AircraftProfileEditor({model,equipmentOptions,onChange,o
     setDraft(next);setBaseFingerprint(base);setDirty(true);setBackedUp(writeProfileDraft({schemaVersion:1,profile:next,baseFingerprint:base}));setNotice('New draft. Save it to use it for relevance checks.');
   }
   return <details className="border rounded-lg p-4 mb-5" open={!!recovered.record||undefined}>
-    <summary className="font-semibold cursor-pointer">Aircraft configuration {active?`· ${active.name}`:'· no profile selected'}</summary>
+    <summary className="font-semibold cursor-pointer"><h2 className="inline text-base font-semibold">Aircraft configuration {active?`· ${active.name}`:'· no profile selected'}</h2></summary>
     <p className="text-sm text-slate-600 my-3">Saved on this browser and device; no sign-in or upload. Clearing browser storage removes profiles. Serial numbers and modification details are user reported. Blank fields mean unknown.</p>
     <label className="block text-sm mb-3">Use a saved {model} profile<select aria-label="Saved aircraft profile" value={active?.id??''} disabled={!writable} onChange={e=>choose(e.target.value)} className="block border rounded p-2 w-full mt-1"><option value="">Browse without a profile</option>{store.profiles.filter(p=>p.model===model).map(p=><option key={p.id} value={p.id}>{p.name} · {p.serial||'serial unknown'}</option>)}</select></label>
     <div className="grid sm:grid-cols-2 gap-3">

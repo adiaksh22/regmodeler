@@ -1,6 +1,6 @@
 # RegModeler product and delivery plan
 
-Updated October 14, 2026. This is the main project plan. It separates completed features, proposed work and unresolved decisions; supporting documents contain implementation details.
+Updated November 18, 2026. This is the main project plan. It separates completed features, proposed work and unresolved decisions; supporting documents contain implementation details.
 
 ## Purpose and scope
 
@@ -45,7 +45,7 @@ Profiles stay in this browser/device, need no account and are not uploaded. Clea
 | --- | --- | --- |
 | Foundation | Active/archive separation; repeatable lint, tests, types and build | Ongoing maintenance |
 | Infrastructure | GitHub; local/hosted Supabase; migrations; private archives; controlled public API and PDF viewer | Release operations, recovery and monitoring |
-| TCDS | Scoped imported history and originals for 2A13/A16WE; source-version guards preserve earlier evidence without treating it as a new review | As observed November 16, A16WE Revision 83 needs renewed review before its full TCDS graph can return; additional attachments/families |
+| TCDS | Scoped imported history and originals for 2A13/A16WE; reviewed Revision 83 restores the Boeing graph; source-version guards preserve earlier evidence without treating it as a new review | Additional attachments/families and renewed review when a later source revision is observed |
 | Related discovery | Scoped AD/STC metadata indexes and historical CAR sources; pagination, incremental checks, reconciliation and quarantine | Most primary PDFs/attachments, wider scope and automatic attachment checks |
 | Regulatory sources | Reviewed CAR baseline/amendment scans; seven dated 2016 CFR reference sections | Complete cited historical wording and production current-text connector |
 | Relationships | Reviewed PA-28 and selected 737 AD/STC/component paths; Revision 83 supports 17 Boeing identities, 41 TCDS paths and seven technical profiles; only currently eligible edges appear | Broader reviewed coverage, detailed Part 25 basis mapping and historical graph exploration |
@@ -163,8 +163,28 @@ Gate: representative owner/maintenance tasks reach the needed originals and expl
 | D | Cloudflare release | Reviewable build, domain/repository setup and post-deployment checks; publish after the user's release decision |
 | E | Coverage expansion | Additional PA-28 models and selected GA families; repeat source/review gates for each expansion |
 | F | Broader aircraft/authorities | Commercial and other categories/jurisdictions, preserving authority-specific identities and rule differences |
+| G | Optional GraphRAG and AI explanation layer | Scoped natural-language questions grounded in reviewed relationships and exact source passages; demonstrate improvement over ordinary search before enabling a user-facing pilot |
 
 Accounts can move earlier if cross-device access becomes the main need. Notifications follow reliable change detection and explicit subscriptions. Richer diagrams, exact historical text and broader coverage can proceed incrementally with incomplete areas visible.
+
+### GraphRAG and AI explanation layer: approved future scope
+
+The user approved adding this phase on November 18, 2026. It is planned, not implemented, and does not block current UI refinement or the first beta. A small pilot can follow the existing release-readiness work without waiting for broad aircraft expansion. The reviewed PostgreSQL graph remains the evidence source; a separate graph database or Microsoft's full GraphRAG pipeline is not a prerequisite.
+
+Initial use cases: ask why a document is connected to a selected model, explain a reviewed model/component/certificate path, and find supporting passages using everyday language. Answers explain the available research and missing information; they do not determine applicability, installation approval or compliance. Automated change explanations can follow only when exact before/after evidence exists; the current metadata feed is not a full document-content diff.
+
+Implementation steps:
+
+1. **Define and measure the pilot.** Start with the existing reviewed PA-28 slice. Build representative owner/maintenance questions and expected source/path references, including unsupported aircraft, unknown equipment/serial conditions, conflicting or superseded material and questions the catalog cannot answer. Compare ordinary text search, scoped passage retrieval and graph-assisted retrieval on the same questions.
+2. **Prepare revision-bound passage retrieval.** Extract permitted text from already archived, selected originals, retaining document/version/hash, page, section and graph identity. Review extraction quality, especially tables and OCR. Use PostgreSQL full-text search first; add embeddings only if measured retrieval improves. Process changed documents incrementally, cache by immutable source version and keep retrieval bounded. Do not bulk-import the FAA catalog or call the FAA for every user question.
+3. **Connect retrieval to reviewed graph paths.** Resolve the selected model and question entities, retrieve bounded eligible paths and supporting passages, and preserve alternative conditions, missing coverage and revision status. Historical evidence requires explicit historical context. Candidate/unreviewed relationships remain separately labeled and cannot silently enter the reviewed answer context. Source-version eligibility applies to retrieval and cached answers as well as the visual graph.
+4. **Add the server-side AI service.** Give the model the selected evidence, exact citation identifiers and bounded graph context. Require structured answers with claim-linked citations, conditions and uncertainty; validate citation identities and links server-side. Citation validation alone does not prove a claim is supported. Treat document text as untrusted content, isolate it from instructions, and give the answer model no publication, database-write or secret-access tools. Keep provider keys server-only, enforce token/request/spend limits and a kill switch, and preserve ordinary browsing if AI is unavailable.
+5. **Design the user experience and privacy.** Add an optional “Ask about this aircraft” panel with clickable document/page citations, graph highlighting, coverage/revision dates and a clear insufficient-evidence response. Profiles remain browser-private by default: any transfer of selected profile fields to an AI provider requires a clear disclosure and deliberate user action. Exclude private notes by default, minimize logging and settle retention/provider terms before implementation. AI-proposed extraction or edges go to a private review queue; only the existing reviewed publication workflow can promote them.
+6. **Evaluate before enabling a pilot.** Check claim support, exact citation/page accuracy, model and revision isolation, unsupported-answer refusal, preservation of applicability unknowns, prompt-injection resistance and private-data boundaries. Measure usefulness, retrieval recall, response latency and cost against the search baseline. Agree numeric thresholds before implementation and test with representative users. Ship only if the pilot improves evidence discovery within the agreed budget; no promise of perfect accuracy. Keep the AI feature independently disableable.
+
+Decisions at implementation: first questions/model scope, provider/model and privacy terms, extraction/embedding strategy, evaluation thresholds, acceptable latency and monthly spending cap. Adding this plan does not authorize a paid subscription, sending profiles to an external provider, or publishing the website.
+
+Technical references: [GraphRAG indexing](https://microsoft.github.io/graphrag/index/overview/) and [graph-assisted query methods](https://microsoft.github.io/graphrag/query/overview/). These describe available techniques; the implementation should use the smallest approach that passes the pilot evaluation.
 
 ## Decisions still to make
 

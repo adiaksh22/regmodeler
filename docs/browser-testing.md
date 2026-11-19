@@ -28,7 +28,7 @@ The 17-model/41-path family fixture exercises canonical shared nodes and graph g
 
 The gate covers model search, route titles/focus, manual aircraft tabs, revision navigation, family layout and arrow boundaries, aircraft-versus-citation context, bounded/scoped cached reads, independent failure/retry, incomplete-response rejection, draft recovery/saved-only relevance, corrupt-storage preservation, memory-only drafts, personal links/merge/removal/Undo and native PDF-dialog behavior. Test files and configuration are typechecked and linted by `npm run check`.
 
-The gate now has 18 cases (nine journeys in two projects), including archive-rate-limit guidance and official-link availability. The earlier 16-case gate passed managed Chromium, installed Chrome and installed Edge; the expanded gate passed managed Chromium and installed Edge locally. Consult the selected commit's GitHub Linux quality result rather than treating local success as a hosted CI pass.
+The gate now has 26 cases: nine functional journeys and four accessibility journeys in each of two projects. The development-only `@axe-core/playwright` checker scans search, source changes, family map, evidence list, profile editor, related records, Paths, revision history and review coverage. WCAG A/AA tags through 2.2 and axe best-practice rules are checked without exclusions. JSON attachments preserve violations and incomplete results; incomplete gradient/offscreen checks are not counted as passing contrast. See [the November 18 usability pass](usability-review-2026-11-18.md) for findings, repairs, rendered sampling and manual review limits. Consult the selected commit's GitHub Linux quality result rather than treating local success as a hosted CI pass.
 
 ## Failures and diagnostics
 

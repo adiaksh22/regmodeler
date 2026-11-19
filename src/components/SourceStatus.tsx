@@ -1,7 +1,7 @@
 import {qualityStates,reviewState,reviewStates} from '../domain/sourceStatus';
 export default function SourceStatus({status,flags=[],explain=false}:{status?:string;flags?:string[];explain?:boolean}){
  const state=reviewState(status);
- return <span className="block mt-2 text-xs" aria-label="Evidence review status">
+ return <span role="group" className="block mt-2 text-xs" aria-label="Evidence review status">
   <span className={`inline-block rounded border px-2 py-1 font-semibold ${state.attention?'border-amber-300 bg-amber-50 text-amber-950':status==='reviewed'?'border-blue-200 bg-blue-50 text-blue-900':'border-slate-300 bg-slate-50 text-slate-700'}`}>{state.label}</span>
   {explain&&<span className="block mt-2 leading-relaxed text-slate-700">{state.explanation}</span>}
   {[...new Set(flags)].filter(flag=>qualityStates[flag]).map(flag=><span key={flag} className="block mt-2 text-amber-950">
