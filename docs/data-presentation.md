@@ -25,6 +25,8 @@ Desktop keeps evidence beside the diagram so a user can inspect connections with
 
 Mouse-wheel zoom is enabled over the graph, with a visible **Wheel zoom** toggle to return wheel events to normal page scrolling. **Soften distant nodes** keeps hovered/keyboard-focused neighborhoods clear while distant symbols and links recede; labels stay readable. Both effects are reversible, do not change evidence or layout, and preserve the mobile swipe/Move map distinction.
 
+Dense aircraft graphs pack direct connections into compact bands and farther-hop references into outer bands, rather than one very large ring. They open closer to the aircraft; **Fit map** shows the complete network. Farther-hop symbols soften even without hovering, then reveal on hover/focus or when diagram zoom reaches a readable scale. The optional visual effect does not change those positions. Family-column layout and evidence direction remain unchanged.
+
 ## Current relationship coverage
 
 The hosted graph contains 136 model-scoped rows for PA-28-140 and PA-28-181, including 36 reviewed model-to-AD/STC connections. The remainder represent TCDS/certification-basis connections and reviewed paths from source documents to components, prior ADs, STCs, AMLs and service documents. TCDS evidence comes from pages 1, 35 and 36 of revision 66. Review functions require the exact SHA-256 of inspected PDFs; they cannot publish against arbitrary source originals.

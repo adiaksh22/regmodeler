@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {radialGraphLayout,avoidNodeOverlap} from './graphLayout';
+import {radialGraphLayout,avoidNodeOverlap,graphNodeDepths} from './graphLayout';
 describe('radial evidence layout',()=>{
  it('centers the focused entity and spaces its neighbors without altering direction',()=>{
   const nodes=[{id:'model',kind:'Aircraft model'},{id:'ad',kind:'AD'},{id:'source',kind:'Source'}];
@@ -16,6 +16,25 @@ describe('radial evidence layout',()=>{
   expect(new Set([...positions.values()].map(position=>JSON.stringify(position))).size).toBe(3);
  });
  it('handles an empty filtered graph',()=>{expect(radialGraphLayout([],[]).size).toBe(0);});
+ it('packs many direct connections close to the aircraft with clearance for every label',()=>{
+  const nodes=[{id:'model',kind:'Aircraft model'},...Array.from({length:36},(_,i)=>({id:`direct-${i}`,kind:'AD'})),...Array.from({length:20},(_,i)=>({id:`far-${i}`,kind:'Source'}))];
+  const edges=[...nodes.filter(n=>n.id.startsWith('direct')).map(n=>({source:'model',target:n.id})),...nodes.filter(n=>n.id.startsWith('far')).map(n=>({source:'direct-0',target:n.id}))];
+  const before=JSON.stringify(edges),positions=radialGraphLayout(nodes,edges);
+  const radius=(id:string)=>{const point=positions.get(id)!;return Math.hypot(point.x+80,point.y+30);};
+  const direct=nodes.filter(n=>n.id.startsWith('direct')).map(n=>radius(n.id));
+  expect(Math.max(...direct)).toBeLessThan(900); // previously one ~1490px ring
+  expect(new Set(direct.map(n=>Math.round(n))).size).toBeGreaterThan(1);
+  expect(Math.min(...nodes.filter(n=>n.id.startsWith('far')).map(n=>radius(n.id)))).toBeGreaterThan(Math.max(...direct));
+  for(const a of nodes)for(const b of nodes)if(a.id!==b.id){const p=positions.get(a.id)!,q=positions.get(b.id)!;expect(Math.abs(p.x-q.x)>=180||Math.abs(p.y-q.y)>=176).toBe(true);}
+  expect(JSON.stringify(edges)).toBe(before);
+ });
+ it('measures shortest connection distance without inferring new relationships',()=>{
+  const nodes=['model','ad','reference','unconnected'].map(id=>({id,kind:id==='model'?'Aircraft model':'Source'}));
+  const edges=[{source:'ad',target:'model'},{source:'ad',target:'reference'},{source:'reference',target:'ad'}];
+  expect([...graphNodeDepths(nodes,edges)]).toEqual([['model',0],['ad',1],['reference',2]]);
+  expect(graphNodeDepths(nodes,edges,'reference').get('model')).toBe(2);
+  expect(graphNodeDepths([],[]).size).toBe(0);
+ });
  it('separates all family members from shared certification sources',()=>{
   const nodes=[{id:'family',kind:'aircraft family'},...Array.from({length:17},(_,i)=>({id:`model-${i}`,kind:'Aircraft model'})),{id:'certificate',kind:'certificate'}];
   const positions=radialGraphLayout(nodes,[],'family');

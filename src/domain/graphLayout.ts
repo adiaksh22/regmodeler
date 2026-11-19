@@ -1,3 +1,15 @@
+type LayoutNode={id:string;kind:string;label?:string};
+type LayoutEdge={source:string;target:string};
+// Undirected distance is a presentation aid, not an applicability inference.
+export function graphNodeDepths(nodes:LayoutNode[],edges:LayoutEdge[],focus=''){
+ const root=nodes.find(node=>node.id===focus)??nodes.find(node=>node.kind==='Aircraft model')??nodes[0];
+ const distance=new Map<string,number>();if(!root)return distance;
+ const neighbors=new Map(nodes.map(node=>[node.id,new Set<string>()]));
+ for(const edge of edges){neighbors.get(edge.source)?.add(edge.target);neighbors.get(edge.target)?.add(edge.source);}
+ distance.set(root.id,0);const queue=[root.id];
+ for(let index=0;index<queue.length;index++)for(const id of neighbors.get(queue[index])??[])if(neighbors.has(id)&&!distance.has(id)){distance.set(id,distance.get(queue[index])!+1);queue.push(id);}
+ return distance;
+}
 // Position canonical nodes only; layout never adds or reverses evidence relationships.
 export function radialGraphLayout(nodes:{id:string;kind:string;label?:string}[],edges:{source:string;target:string}[],focus='',width=1200) {
  const root=nodes.find(node=>node.id===focus)??nodes.find(node=>node.kind==='Aircraft model')??nodes[0];
@@ -17,17 +29,22 @@ export function radialGraphLayout(nodes:{id:string;kind:string;label?:string}[],
   sources.forEach((node,index)=>{const row=Math.floor(index/sourceColumns);const count=Math.min(sourceColumns,sources.length-row*sourceColumns);positions.set(node.id,{x:(index%sourceColumns-(count-1)/2)*210-80,y:rowCount*180+70+row*180});});
   return positions;
  }
- const neighbors=new Map(nodes.map(node=>[node.id,new Set<string>()]));
- for(const edge of edges){neighbors.get(edge.source)?.add(edge.target);neighbors.get(edge.target)?.add(edge.source);}
- const distance=new Map([[root.id,0]]);const queue=[root.id];
- for(let index=0;index<queue.length;index++)for(const id of neighbors.get(queue[index])??[])if(!distance.has(id)){distance.set(id,distance.get(queue[index])!+1);queue.push(id);}
+ const distance=graphNodeDepths(nodes,edges,root.id);
  const disconnected=Math.max(...distance.values())+1;
  const rings=new Map<number,string[]>();
  for(const node of nodes){const ring=distance.get(node.id)??disconnected;rings.set(ring,[...(rings.get(ring)??[]),node.id]);}
  let radius=0;
  for(const [depth,ids] of [...rings].sort(([a],[b])=>a-b)){
-  radius=depth===0?0:Math.max(radius+300,ids.length*260/(2*Math.PI));
-  ids.forEach((id,index)=>{const angle=-Math.PI/2+index*2*Math.PI/ids.length;positions.set(id,{x:Math.cos(angle)*radius-80,y:Math.sin(angle)*radius-30});});
+  // Pack each hop into bounded concentric bands instead of stretching every
+  // direct connection onto one enormous circumference. Keep label clearance.
+  let offset=0;
+  while(offset<ids.length){
+   radius=depth===0?0:radius===0?300:radius+280;
+   const capacity=depth===0?1:Math.max(1,Math.floor(Math.PI/Math.asin(Math.min(1,260/(2*radius)))));
+   const band=ids.slice(offset,offset+capacity);
+   band.forEach((id,index)=>{const angle=-Math.PI/2+index*2*Math.PI/band.length;positions.set(id,{x:Math.cos(angle)*radius-80,y:Math.sin(angle)*radius-30});});
+   offset+=band.length;
+  }
  }
  return positions;
 }

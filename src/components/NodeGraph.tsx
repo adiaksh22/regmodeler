@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ReactFlow,Background,Controls,Handle,Position,useStore,getNodesBounds,getViewportForBounds,type Node,type NodeProps,type Edge,type ReactFlowInstance} from '@xyflow/react';
-import {radialGraphLayout} from '../domain/graphLayout';
+import {radialGraphLayout,graphNodeDepths} from '../domain/graphLayout';
 import EvidenceGraphEdge from './EvidenceGraphEdge';
 import '@xyflow/react/dist/style.css';
 import type {EvidenceRelationship} from '../domain/explorer';
@@ -22,7 +22,8 @@ const palette=(kind:string)=>{
 function EvidenceNode({data,selected}:NodeProps){
  const color=String(data.color);
  const labelScale=useStore(state=>Math.min(1.6,Math.max(1,.82/state.transform[2])));
- return <div className={`reg-orbit-node ${selected?'is-focused':''}`} title={String(data.label)} style={{'--node-label-scale':labelScale} as React.CSSProperties}>
+ const detailed=useStore(state=>state.transform[2]>=.9);
+ return <div className={`reg-orbit-node ${selected?'is-focused':''}`} data-softened={!!data.distant&&!detailed&&!selected} title={String(data.label)} style={{'--node-label-scale':labelScale} as React.CSSProperties}>
   <Handle type="target" position={Position.Left} style={{left:64,top:30,opacity:0}}/>
   <svg aria-hidden="true" viewBox="0 0 60 60" className="reg-node-symbol" style={{color}}><circle cx="30" cy="30" r={selected?26:17} fill="#0b1d3b" stroke="currentColor" strokeWidth={selected?3:1.5}/><circle cx="30" cy="30" r={selected?19:12} fill="currentColor"/></svg>
   <Handle type="source" position={Position.Right} style={{right:64,top:30,opacity:0}}/>
@@ -97,14 +98,20 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     return visibleGraph.nodes.map((n):Node=>({id:n.id,type:'evidence',data:{label:n.label,kind:n.kind,color:palette(n.kind)},position:layout.get(n.id)!,selected:n.id===nodeId,ariaLabel:`${n.kind}: ${n.label}`,width:160,height:156,measured:{width:160,height:156},style:{width:160,height:156,background:'transparent',border:0}}));
   },[visibleGraph,nodeId,width]);
   const motion=useGraphMotion(nodes,reducedMotion);
+  const depths=useMemo(()=>graphNodeDepths(visibleGraph.nodes,visibleGraph.edges,nodeId),[visibleGraph,nodeId]);
   const bounds=useMemo(()=>getNodesBounds(nodes),[nodes]);
   const height=familyFocus?Math.max(680,Math.min(1800,Math.ceil(bounds.height*Math.min(1,(width-32)/Math.max(1,bounds.width))+64))):width<500?620:720;
   useEffect(()=>{
     if(!nodes.length){setCameraMoving(false);return;}
     if(!canvas)return;
-    const viewport=getViewportForBounds(getNodesBounds(nodes),width,height,.03,1.15,.08);
+    let viewport=getViewportForBounds(getNodesBounds(nodes),width,height,.03,1.15,.08);
+    if(!nodeId&&nodes.length>30){
+      const anchor=nodes.find(node=>depths.get(node.id)===0)!;
+      const zoom=Math.max(.65,viewport.zoom);
+      viewport={x:width/2-(anchor.position.x+80)*zoom,y:height/2-(anchor.position.y+30)*zoom,zoom};
+    }
     moveCamera(()=>canvas.setViewport(viewport,{duration:reducedMotion?0:240,ease:t=>1-(1-t)**3}));
-  },[canvas,nodes,width,height,reducedMotion,moveCamera]);
+  },[canvas,nodes,nodeId,depths,width,height,reducedMotion,moveCamera]);
   const highlightedNodes=useMemo(()=>new Set([hoveredNode,keyboardNode].filter(id=>visibleGraph.nodes.some(node=>node.id===id))),[visibleGraph,hoveredNode,keyboardNode]);
   const highlightedEdge=visibleGraph.edges.find(edge=>edge.id===hoveredEdge);
   const nearbyNodes=useMemo(()=>{
@@ -114,11 +121,12 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     for(const edge of visibleGraph.edges)if(anchors.has(edge.source)||anchors.has(edge.target)){nearby.add(edge.source);nearby.add(edge.target);}
     return nearby;
   },[visibleGraph,highlightedNodes,highlightedEdge,softenDistant]);
-  const displayNodes=useMemo<Node[]>(()=>motion.nodes.map(node=>({...node,className:nearbyNodes.size&&!nearbyNodes.has(node.id)?'reg-distant-node':undefined})),[motion.nodes,nearbyNodes]);
+  const distantNodes=useMemo(()=>new Set(softenDistant?visibleGraph.nodes.filter(node=>nearbyNodes.size?!nearbyNodes.has(node.id):(depths.get(node.id)??Infinity)>1).map(node=>node.id):[]),[visibleGraph,nearbyNodes,depths,softenDistant]);
+  const displayNodes=useMemo<Node[]>(()=>motion.nodes.map(node=>({...node,data:{...node.data,distant:distantNodes.has(node.id)},className:distantNodes.has(node.id)?'reg-distant-node':undefined})),[motion.nodes,distantNodes]);
   const edges=useMemo(()=>{
-    const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;const highlighted=e.id===highlightedEdge?.id||highlightedNodes.has(e.source)||highlightedNodes.has(e.target);const distant=nearbyNodes.size>0&&(!nearbyNodes.has(e.source)||!nearbyNodes.has(e.target));return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:distant?'#263e5a':active?'#93c5fd':highlighted?'#7dd3fc':highlightedNodes.size?'#263e5a':'#496483',strokeWidth:active?2.5:highlighted?2:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
+    const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;const highlighted=e.id===highlightedEdge?.id||highlightedNodes.has(e.source)||highlightedNodes.has(e.target);const distant=distantNodes.has(e.source)||distantNodes.has(e.target);return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:distant?'#263e5a':active?'#93c5fd':highlighted?'#7dd3fc':highlightedNodes.size?'#263e5a':'#496483',strokeWidth:active?2.5:highlighted?2:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
     return edges;
-  },[visibleGraph,selectedId,familyFocus,highlightedNodes,highlightedEdge,nearbyNodes]);
+  },[visibleGraph,selectedId,familyFocus,highlightedNodes,highlightedEdge,distantNodes]);
   const incident=familyFocus?visibleGraph.edges:graph.edges.filter(e=>!nodeId||e.source===nodeId||e.target===nodeId);
   const preview=(id:string)=>{const candidates=graph.edges.filter(edge=>edge.source===id||edge.target===id);const row=candidates.find(edge=>edge.relationship.relationship_type==='covered_by')??candidates.find(edge=>edge.relationship.source_entity_id===id)??candidates[0];if(id&&row)onPreview?.(row.relationship);};
   const browse=(id:string)=>{preview(id);setQuery('');setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);};
@@ -146,7 +154,7 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     </nav>
     {query.trim()&&<div role="group" className="mb-3" aria-label="Node search results"><p className="text-xs text-slate-600 mb-2">Matches within the current model and connection-type filters.</p><ul className="max-h-48 overflow-auto space-y-1">{graph.nodes.filter(n=>n.label.toLowerCase().includes(query.trim().toLowerCase())).map(n=><li key={n.id}><button className="border rounded p-2 w-full text-sm text-left hover:bg-blue-50" onClick={()=>browse(n.id)}>{n.label}</button></li>)}</ul>{!graph.nodes.some(n=>n.label.toLowerCase().includes(query.trim().toLowerCase()))&&<p role="status" className="text-sm">No matching nodes. Try another search or connection type.</p>}</div>}
     {selected&&<section aria-label="Focused graph node" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Exploring · {selected.kind}</p><h3 className="mt-1 font-bold break-words">{selected.label}</h3><p className="mt-1 text-sm text-slate-600">{familyFocus?`${incident.length} reviewed family and certification paths`:`${incident.length} direct reviewed ${incident.length===1?'connection':'connections'}`}. Follow a neighboring node or select a link to read its source.</p></section>}
-    <p className="reg-map-help">{width<500?(touchPan?'Drag the background to move the map. Choose Scroll page to continue down the page.':'Swipe the background to scroll this page. Choose Move map to pan, or select a model below.'):(wheelZoom?'Scroll over the map to zoom. Turn off Wheel zoom to scroll the page over the map.':'Scroll to move down the page. Turn on Wheel zoom to zoom over the map.')} Hover or focus a node to highlight its connections.{softenDistant?' Distant symbols soften; names stay readable.':''}</p>
+    <p className="reg-map-help">{width<500?(touchPan?'Drag the background to move the map. Choose Scroll page to continue down the page.':'Swipe the background to scroll this page. Choose Move map to pan, or select a model below.'):(wheelZoom?'Scroll over the map to zoom. Turn off Wheel zoom to scroll the page over the map.':'Scroll to move down the page. Turn on Wheel zoom to zoom over the map.')} Fit map shows the whole network. Hover or focus a node to highlight its connections.{softenDistant?' Farther connections soften until you hover, focus or zoom in; names stay readable.':''}</p>
     <div role="group" ref={container} className="reg-network-canvas overflow-hidden" style={{height}} data-pan-enabled={width>=500||touchPan} data-motion={motion.moving||cameraMoving?'moving':'settled'} aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status"
      onFocusCapture={event=>setKeyboardNode((event.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id??'')}
      onBlurCapture={event=>setKeyboardNode((event.relatedTarget as HTMLElement|null)?.closest?.<HTMLElement>('.react-flow__node')?.dataset.id??'')}
@@ -158,7 +166,7 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
       pendingKeyboardFocus.current=id===nodeId?null:id;browse(id);
     }}>
       <ReactFlow onInit={initializeCanvas} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodes={displayNodes} edges={edges} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
-       autoPanOnNodeFocus={false} panOnDrag={width>=500||touchPan} zoomOnScroll={wheelZoom} preventScrolling={wheelZoom} onNodeDragStart={motion.stop} onMoveStart={event=>{if(event){++cameraToken.current;setCameraMoving(true);motion.stop();}}} onMoveEnd={event=>{if(event)setCameraMoving(false);}} onNodesChange={motion.onNodesChange}
+       autoPanOnNodeFocus={!nodeId&&nodes.length>30} panOnDrag={width>=500||touchPan} zoomOnScroll={wheelZoom} preventScrolling={wheelZoom} onNodeDragStart={motion.stop} onMoveStart={event=>{if(event){++cameraToken.current;setCameraMoving(true);motion.stop();}}} onMoveEnd={event=>{if(event)setCameraMoving(false);}} onNodesChange={motion.onNodesChange}
        onNodeMouseEnter={(_,node)=>setHoveredNode(node.id)} onNodeMouseLeave={()=>setHoveredNode('')}
        onEdgeMouseEnter={(_,edge)=>setHoveredEdge(edge.id)} onEdgeMouseLeave={()=>setHoveredEdge('')}
        onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#315681" gap={36} size={1}/><Controls aria-label="" showInteractive={false}/></ReactFlow>

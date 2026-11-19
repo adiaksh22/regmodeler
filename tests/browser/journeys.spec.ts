@@ -66,6 +66,25 @@ test('wheel zoom and a reversible focus effect preserve graph navigation',async(
  await expect(page.getByRole('button',{name:'Soften distant nodes',exact:true})).toHaveAttribute('aria-pressed','false');
 });
 
+test('farther-hop nodes reveal on hover, keyboard focus and zoom without hiding evidence',async({page})=>{
+ await page.goto('/tcds/A16WE?model=737-800');await openMap(page);
+ const far=page.locator('.react-flow__node[data-id="certificate:A16WE"]');
+ const model=page.locator('.react-flow__node[data-id="model:737-800"]');
+ await expect(far.locator('.reg-orbit-node')).toHaveAttribute('data-softened','true');
+ await expect(model.locator('.reg-orbit-node')).toHaveAttribute('data-softened','false');
+ await far.locator('.reg-node-symbol').hover();await expect(far.locator('.reg-orbit-node')).toHaveAttribute('data-softened','false');
+ await page.getByRole('button',{name:'Fit map',exact:true}).hover();await page.getByRole('button',{name:'Fit map',exact:true}).focus();
+ await expect(far.locator('.reg-orbit-node')).toHaveAttribute('data-softened','true');
+ await far.focus();await expect(far.locator('.reg-orbit-node')).toHaveAttribute('data-softened','false');
+ await page.getByRole('button',{name:'Readable zoom',exact:true}).click();
+ await expect(page.locator('.reg-orbit-node[data-softened="true"]')).toHaveCount(0);
+ await expect(page.locator('.react-flow__node')).toHaveCount(21);await expect(page.locator('.react-flow__edge')).toHaveCount(41);
+ await page.getByRole('button',{name:'Fit map',exact:true}).click();
+ await expect(far.locator('.reg-orbit-node')).toHaveAttribute('data-softened','true');
+ await page.getByRole('button',{name:'Soften distant nodes',exact:true}).click();
+ await expect(page.locator('.reg-orbit-node[data-softened="true"]')).toHaveCount(0);
+});
+
 test('scoped reads are cached; secondary outage does not erase graph; retry is isolated',async({page,api})=>{
  api.fail.add('aircraft_variant_catalog');await page.goto('/tcds/2A13?model=PA-28-181');await openMap(page);
  await expect(page.locator('.react-flow__edge')).toHaveCount(3);await expect(page.getByRole('button',{name:'Retry technical profiles',exact:true})).toBeVisible();

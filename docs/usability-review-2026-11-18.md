@@ -12,7 +12,7 @@ November 18, 2026. Authorized fixes and verification of the current aircraft-res
 | Open profile editor jumped from the page h1 to h3 subsections | Added h2 to the configuration disclosure summary | Expanded-editor heading scan |
 | Loading-status and other graph/evidence/profile wrappers had names on generic elements | Added group roles; removed the unsupported generic React Flow controls label while retaining each button's own name | Browser ARIA scans and typecheck |
 
-The added `@axe-core/playwright` development dependency makes common accessibility checks part of the existing isolated browser gate. Four accessibility journeys scan nine states in each desktop/mobile project: search, source changes, family map, evidence list, profile editor, related records, Paths, revision history and review coverage. Ten functional journeys now include the wheel/focus follow-up below. Total: 28 test cases. No rule exclusions or suppressed violations were needed. JSON attachments retain both violations and incomplete results; an incomplete result is not a pass.
+The added `@axe-core/playwright` development dependency makes common accessibility checks part of the existing isolated browser gate. Four accessibility journeys scan nine states in each desktop/mobile project: search, source changes, family map, evidence list, profile editor, related records, Paths, revision history and review coverage. Eleven functional journeys now include the wheel/focus follow-up below. Total: 30 test cases. No rule exclusions or suppressed violations were needed. JSON attachments retain both violations and incomplete results; an incomplete result is not a pass.
 
 ## Project-owner feedback and graph interaction follow-up
 
@@ -33,9 +33,17 @@ The targeted browser regression verifies wheel zoom in/out, fixed page position 
 
 Ignored screenshots/diagnostics are under `.artifacts/usability-2026-11-18/`; the repeatable fixture gate is `npm.cmd run test:browser`. Use `BROWSER_CHANNEL=chrome` or `msedge` for installed browsers. [Playwright accessibility guidance](https://playwright.dev/docs/accessibility-testing) describes the automated/manual boundary; [axe's contrast checks](https://github.com/dequelabs/axe-core/blob/develop/lib/checks/color/color-contrast.json) explain why gradient and occlusion results need further review.
 
+## Closer connections and zoom-dependent detail
+
+The owner's screenshot showed that a single wide circumference left direct PA-28 connections too far from the aircraft. Direct connections now occupy several compact radial bands with label clearance, followed by farther-hop bands. For example, 36 direct connections fit within an 860px layout radius instead of the previous approximately 1490px circle. The Boeing family-column layout is unchanged. Shortest undirected hop distance is used only for presentation; it does not infer applicability or add/reverse edges.
+
+Dense all-node maps open centered on the aircraft at a minimum 0.65 diagram zoom, leaving peripheral context available by panning/zooming. **Fit map** still fits every node, and the selectors/cards remain available. The live PA-28 check retained 76 nodes/77 links before and after Fit map. Distant symbols now soften by default beyond the root's direct neighborhood, not only while another node is hovered. Hover/focus reveals the local neighborhood; diagram zoom of 0.9 or above restores clear symbols. Names remain readable at every level and softening remains optional. This is diagram zoom, independent of browser zoom.
+
+New layout regressions check compact direct-neighbor radius, every label's clearance, farther-hop ordering, cyclic/shared path distance and unchanged edge directions. The browser gate verifies default distance softening plus hover, keyboard and zoom reveal with all nodes/links retained. Ignored `.artifacts/compact-map-start.png` and `compact-map-full.png` record the inspected live PA-28 views. These changes do not alter source evidence or completeness claims.
+
 ## Human review still needed
 
-The native desktop-control connection was unavailable. No NVDA session, physical touch-device test or installed Chrome/Edge browser-toolbar zoom test was completed. No owner/maintenance-professional feedback has been collected by these scripts.
+The native desktop-control connection was unavailable. No NVDA session, physical touch-device test or installed Chrome/Edge browser-toolbar zoom test was completed. Project-owner feedback is recorded above; no independent maintenance-professional study was completed.
 
 A follow-up closed part of the zoom gap with `node scripts/browser-zoom-smoke.mjs`: actual bundled Chromium tab zoom at 100%, 200% and 400% passed for search, PA-28, Boeing and Source changes. Browser API readback plus CSS viewport/device-pixel-ratio checks confirmed actual zoom, rather than CSS scaling or pinch emulation. The effective viewport widths were 1424, 712 and 356 CSS pixels, with no page-level horizontal overflow. Profile save and graph/list/camera controls worked at 400%. Physical-surface screenshots avoid the cropped output that CSS-sized screenshots can produce at tab zoom. Initial strict equality rejected floating-point `3.9999999999999996`; the probe now uses a tight numeric tolerance.
 
