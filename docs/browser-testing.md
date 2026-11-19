@@ -38,6 +38,8 @@ The initial fixture lacked CORS exposure for `Content-Range`; the real completen
 
 ## Separate live checks
 
+`node scripts/browser-zoom-smoke.mjs` is a separate configured-app check for actual 100/200/400% tab zoom. Start the normal local app at port 5173 first, or set `SMOKE_BASE_URL` to an explicit loopback URL. The script uses bundled Chromium, a fresh persistent profile and a test extension with only loopback host access; no personal browser or extension installation is used. Zoom API readback and viewport/DPR assertions distinguish actual tab zoom from CSS/root-font/device emulation. It verifies four routes, page reflow, keyboard navigation, profile save and graph controls at400%. Screenshots/reports stay under `.artifacts/browser-zoom/`. This script is not part of the credential-free fixture job and does not replace installed Chrome/Edge toolbar zoom, screen-reader or device review.
+
 The scripts listed in [beta readiness](beta-readiness.md) remain read-only hosted-data checks. They verify current source integration, actual model/source inventories, public database access and cited private-archive viewing. They currently use the older local Puppeteer setup and are not dependencies of the portable gate. Run them deliberately with the normal configured production preview; never point the synthetic Playwright router at a live service.
 
 Passing the deterministic gate does not establish current FAA availability, complete regulatory accuracy, database-policy correctness (covered separately by database tests), complete WCAG conformance, NVDA usability or actual-device behavior. Keep hosted evidence checks and human review in the release decision.

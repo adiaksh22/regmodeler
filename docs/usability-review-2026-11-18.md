@@ -27,7 +27,11 @@ Ignored screenshots/diagnostics are under `.artifacts/usability-2026-11-18/`; th
 
 ## Human review still needed
 
-The native desktop-control connection was unavailable in this session. No NVDA session, physical touch-device test or real browser-toolbar zoom test was completed. Root-font enlargement, responsive viewports and touch emulation are useful separate checks, not substitutes. No owner/maintenance-professional feedback has been collected by these scripts.
+The native desktop-control connection was unavailable. No NVDA session, physical touch-device test or installed Chrome/Edge browser-toolbar zoom test was completed. No owner/maintenance-professional feedback has been collected by these scripts.
+
+A follow-up closed part of the zoom gap with `node scripts/browser-zoom-smoke.mjs`: actual bundled Chromium tab zoom at 100%, 200% and 400% passed for search, PA-28, Boeing and Source changes. Browser API readback plus CSS viewport/device-pixel-ratio checks confirmed actual zoom, rather than CSS scaling or pinch emulation. The effective viewport widths were 1424, 712 and 356 CSS pixels, with no page-level horizontal overflow. Profile save and graph/list/camera controls worked at 400%. Physical-surface screenshots avoid the cropped output that CSS-sized screenshots can produce at tab zoom. Initial strict equality rejected floating-point `3.9999999999999996`; the probe now uses a tight numeric tolerance.
+
+The probe uses a fresh, ignored persistent test profile and a local test extension limited to the loopback app origin. It closes that context afterward, never uses the owner's browser profile and does not change the installed browser. Playwright documents that its bundled Chromium supports this extension workflow, whereas installed Chrome/Edge removed the required side-load flags. Those installed-browser manual checks, NVDA and physical devices remain outstanding. See [Playwright extension testing](https://playwright.dev/docs/chrome-extensions) and the [tab zoom API](https://developer.chrome.com/docs/extensions/reference/api/tabs#method-setZoom).
 
 Use this short review script with a representative user and record outcome, confusion and recovery:
 

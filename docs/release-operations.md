@@ -1,6 +1,8 @@
 # Release operations review
 
-Reviewed November 16, 2026. The website remains unpublished. Repository checks and read-only service observations below do not establish that uninspected provider/account settings are configured.
+Reviewed November 16, with read-only scheduling/build follow-up November 18, 2026. The website remains unpublished. Repository checks and read-only service observations below do not establish that uninspected provider/account settings are configured.
+
+November 18 follow-up: the latest daily source run [44401420577](https://github.com/adiaksh22/regmodeler/actions/runs/44401420577) and weekly run [43752567091](https://github.com/adiaksh22/regmodeler/actions/runs/43752567091) succeeded; source scheduling remains enabled. The public health RPC reported all six configured sources successful and baseline-ready, with last-success observations on November 18. This does not clear quarantined/unreviewed source warnings or prove complete coverage. Both quality jobs passed for usability commit `987c519` in [run44441793425](https://github.com/adiaksh22/regmodeler/actions/runs/44441793425), and the configured release build/assets passed locally. No workflow was manually dispatched, no new FAA imports were run, no notifications sent and no website deployed.
 
 | Area | Evidence/status | Before publication |
 | --- | --- | --- |
