@@ -38,6 +38,34 @@ test('full family network, readable layout and cross-model citation context',asy
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
 
+test('wheel zoom and a reversible focus effect preserve graph navigation',async({page})=>{
+ await page.goto('/tcds/A16WE?model=737-800');await openMap(page);
+ const canvas=page.locator('.reg-network-canvas'),viewport=canvas.locator('.react-flow__viewport');
+ const scale=()=>viewport.evaluate(node=>new DOMMatrix(getComputedStyle(node).transform).a);
+ await canvas.scrollIntoViewIfNeeded();const box=(await canvas.boundingBox())!;
+ await page.mouse.move(box.x+box.width/2,Math.max(10,Math.min(box.y+box.height/2,600)));
+ const before=await scale(),scroll=await page.evaluate(()=>scrollY);
+ await page.mouse.wheel(0,-180);await expect.poll(scale).toBeGreaterThan(before);
+ await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(scroll);
+ const enlarged=await scale();await page.mouse.wheel(0,180);await expect.poll(scale).toBeLessThan(enlarged);
+ await page.getByRole('button',{name:'Wheel zoom',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Wheel zoom',exact:true})).toHaveAttribute('aria-pressed','false');
+ await canvas.scrollIntoViewIfNeeded();const bounds=(await canvas.boundingBox())!;
+ await page.mouse.move(bounds.x+30,Math.max(10,Math.min(bounds.y+bounds.height/2,600)));
+ const fixed=await scale(),pageBefore=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,180);
+ await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(pageBefore);expect(await scale()).toBeCloseTo(fixed,4);
+ await page.getByRole('button',{name:'Fit map',exact:true}).click();await expect(canvas).toHaveAttribute('data-motion','settled');
+ const model=page.locator('.react-flow__node[data-id="model:737-800"]');
+ await model.focus();await expect(page.locator('.reg-distant-node')).not.toHaveCount(0);
+ await expect(model).not.toHaveClass(/reg-distant-node/);
+ await expect(page.locator('.react-flow__node[data-id="certificate:A16WE"]')).not.toHaveClass(/reg-distant-node/);
+ expect(await page.locator('.reg-distant-node .reg-node-label').first().evaluate(node=>getComputedStyle(node).opacity)).toBe('1');
+ await expect(page.locator('.react-flow__edge')).toHaveCount(41);
+ await page.getByRole('button',{name:'Soften distant nodes',exact:true}).click();await model.focus();
+ await expect(page.locator('.reg-distant-node')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Soften distant nodes',exact:true})).toHaveAttribute('aria-pressed','false');
+});
+
 test('scoped reads are cached; secondary outage does not erase graph; retry is isolated',async({page,api})=>{
  api.fail.add('aircraft_variant_catalog');await page.goto('/tcds/2A13?model=PA-28-181');await openMap(page);
  await expect(page.locator('.react-flow__edge')).toHaveCount(3);await expect(page.getByRole('button',{name:'Retry technical profiles',exact:true})).toBeVisible();

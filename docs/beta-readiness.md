@@ -60,7 +60,7 @@ The November 16 [Revision 83 review](boeing-revision83-review.md) restored 41 cu
 
 ## Release sequence
 
-The [November 18 usability/accessibility pass](usability-review-2026-11-18.md) repaired confirmed contrast, landmark, heading and accessible-name defects and expanded the portable gate to 26 cases. Rendered gradient sampling and live Chrome/Edge journeys supplement the fixtures. NVDA, physical devices, actual browser zoom and representative user feedback remain explicit human-review items.
+The [November 18 usability/accessibility pass](usability-review-2026-11-18.md) repaired confirmed contrast, landmark, heading and accessible-name defects and expanded the portable gate to 28 cases after the owner-feedback follow-up. Rendered gradient sampling and live Chrome/Edge journeys supplement the fixtures. NVDA, physical devices, installed-browser toolbar zoom and broader representative-user feedback remain human-review items. Actual bundled Chromium tab zoom has passed separately.
 
 1. Completed locally: native PDF modal keyboard containment, escape/close behavior, focus restoration, unavailable-original messaging and supported-scope/source-status presentation checks. This does not replace assistive-technology/user testing.
 2. Route/title/focus/context repairs (A13), profile/link repairs (A11/A12) and portable browser CI (A15) are implemented. Complete remaining assistive-technology/user validation. Have an owner or maintenance professional try finding a model, following a reviewed connection to its cited page, recovering an incomplete profile and interpreting a source-change event. Record confusion rather than treating automated checks as user feedback.

@@ -23,6 +23,8 @@ Search `PA-28-181` → select the Piper PA-28 result → view the selected model
 
 Desktop keeps evidence beside the diagram so a user can inspect connections without scrolling to the end. Mobile defaults to the list; the selectable graph allows normal page scrolling, with an explicit Move map mode for panning. Native buttons, source links, and the model selector support keyboard navigation. Per-model tab backups recover incomplete profile drafts; saved profiles alone drive relevance.
 
+Mouse-wheel zoom is enabled over the graph, with a visible **Wheel zoom** toggle to return wheel events to normal page scrolling. **Soften distant nodes** keeps hovered/keyboard-focused neighborhoods clear while distant symbols and links recede; labels stay readable. Both effects are reversible, do not change evidence or layout, and preserve the mobile swipe/Move map distinction.
+
 ## Current relationship coverage
 
 The hosted graph contains 136 model-scoped rows for PA-28-140 and PA-28-181, including 36 reviewed model-to-AD/STC connections. The remainder represent TCDS/certification-basis connections and reviewed paths from source documents to components, prior ADs, STCs, AMLs and service documents. TCDS evidence comes from pages 1, 35 and 36 of revision 66. Review functions require the exact SHA-256 of inspected PDFs; they cannot publish against arbitrary source originals.

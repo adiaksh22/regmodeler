@@ -44,6 +44,9 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
   const [touchPan,setTouchPan]=useState(false);
   const [hoveredNode,setHoveredNode]=useState('');
   const [keyboardNode,setKeyboardNode]=useState('');
+  const [hoveredEdge,setHoveredEdge]=useState('');
+  const [wheelZoom,setWheelZoom]=useState(true);
+  const [softenDistant,setSoftenDistant]=useState(true);
   const [cameraMoving,setCameraMoving]=useState(true);
   const reducedMotion=useReducedMotion();
   const [canvas,setCanvas]=useState<ReactFlowInstance|null>(null);
@@ -102,11 +105,20 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
     const viewport=getViewportForBounds(getNodesBounds(nodes),width,height,.03,1.15,.08);
     moveCamera(()=>canvas.setViewport(viewport,{duration:reducedMotion?0:240,ease:t=>1-(1-t)**3}));
   },[canvas,nodes,width,height,reducedMotion,moveCamera]);
-  const highlightedNode=[hoveredNode,keyboardNode].find(id=>visibleGraph.nodes.some(node=>node.id===id))??'';
+  const highlightedNodes=useMemo(()=>new Set([hoveredNode,keyboardNode].filter(id=>visibleGraph.nodes.some(node=>node.id===id))),[visibleGraph,hoveredNode,keyboardNode]);
+  const highlightedEdge=visibleGraph.edges.find(edge=>edge.id===hoveredEdge);
+  const nearbyNodes=useMemo(()=>{
+    const anchors=new Set(highlightedNodes.size?highlightedNodes:highlightedEdge?[highlightedEdge.source,highlightedEdge.target]:[]);
+    if(!softenDistant||!anchors.size)return new Set<string>();
+    const nearby=new Set(anchors);
+    for(const edge of visibleGraph.edges)if(anchors.has(edge.source)||anchors.has(edge.target)){nearby.add(edge.source);nearby.add(edge.target);}
+    return nearby;
+  },[visibleGraph,highlightedNodes,highlightedEdge,softenDistant]);
+  const displayNodes=useMemo<Node[]>(()=>motion.nodes.map(node=>({...node,className:nearbyNodes.size&&!nearbyNodes.has(node.id)?'reg-distant-node':undefined})),[motion.nodes,nearbyNodes]);
   const edges=useMemo(()=>{
-    const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;const highlighted=highlightedNode&&(e.source===highlightedNode||e.target===highlightedNode);return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:active?'#93c5fd':highlighted?'#7dd3fc':highlightedNode?'#263e5a':'#496483',strokeWidth:active?2.5:highlighted?2:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
+    const edges:Edge[]=visibleGraph.edges.map(e=>{const active=e.id===selectedId;const highlighted=e.id===highlightedEdge?.id||highlightedNodes.has(e.source)||highlightedNodes.has(e.target);const distant=nearbyNodes.size>0&&(!nearbyNodes.has(e.source)||!nearbyNodes.has(e.target));return {id:e.id,source:e.source,target:e.target,type:'evidence',label:active&&!familyFocus?relationshipLabel(e.relationship.relationship_type):undefined,ariaLabel:relationshipLabel(e.relationship.relationship_type),labelStyle:{fill:'#dbeafe',fontSize:11,fontWeight:600},labelShowBg:true,labelBgStyle:{fill:'#0b1d3b',fillOpacity:.95},labelBgPadding:[7,4],labelBgBorderRadius:5,style:{stroke:distant?'#263e5a':active?'#93c5fd':highlighted?'#7dd3fc':highlightedNodes.size?'#263e5a':'#496483',strokeWidth:active?2.5:highlighted?2:1.2,strokeDasharray:e.relationship.relationship_type==='references'?'5 5':undefined},interactionWidth:24}});
     return edges;
-  },[visibleGraph,selectedId,familyFocus,highlightedNode]);
+  },[visibleGraph,selectedId,familyFocus,highlightedNodes,highlightedEdge,nearbyNodes]);
   const incident=familyFocus?visibleGraph.edges:graph.edges.filter(e=>!nodeId||e.source===nodeId||e.target===nodeId);
   const preview=(id:string)=>{const candidates=graph.edges.filter(edge=>edge.source===id||edge.target===id);const row=candidates.find(edge=>edge.relationship.relationship_type==='covered_by')??candidates.find(edge=>edge.relationship.source_entity_id===id)??candidates[0];if(id&&row)onPreview?.(row.relationship);};
   const browse=(id:string)=>{preview(id);setQuery('');setTrail(previous=>previous[previous.length-1]===id?previous:[...previous.slice(-19),id]);};
@@ -127,12 +139,14 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
       <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>{setQuery('');browse('');}}>Show all nodes</button>
       <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>{motion.stop();if(canvas)moveCamera(()=>canvas.fitView({padding:.08,minZoom:.03,maxZoom:1.15,duration:reducedMotion?0:240}));}}>Fit map</button>
       <button className="rounded border border-slate-300 px-3 py-2 font-semibold" onClick={()=>{motion.stop();const anchor=motion.nodes.find(node=>node.id===nodeId)??motion.nodes[0];if(anchor&&canvas)moveCamera(()=>canvas.setCenter(anchor.position.x+80,anchor.position.y+58,{zoom:1,duration:reducedMotion?0:240}));}}>Readable zoom</button>
+      <button className="rounded border border-slate-300 px-3 py-2 font-semibold" aria-pressed={wheelZoom} onClick={()=>setWheelZoom(value=>!value)}>Wheel zoom</button>
+      <button className="rounded border border-slate-300 px-3 py-2 font-semibold" aria-pressed={softenDistant} onClick={()=>setSoftenDistant(value=>!value)}>Soften distant nodes</button>
       {width<500&&<button className="rounded border border-slate-300 px-3 py-2 font-semibold" aria-pressed={touchPan} onClick={()=>setTouchPan(value=>!value)}>{touchPan?'Scroll page':'Move map'}</button>}
       <ol className="flex flex-wrap gap-x-2 gap-y-1 min-w-0" aria-label="Exploration trail">{trail.map((id,index)=>{const label=id?graph.nodes.find(n=>n.id===id)?.label:'All nodes';return label?<li key={index} className="min-w-0 break-words"><span aria-hidden="true">{index>0?'› ':''}</span><button className="text-blue-700 underline text-left" aria-current={index===trail.length-1?'location':undefined} onClick={()=>{preview(id);setTrail(trail.slice(0,index+1));}}>{label}</button></li>:null;})}</ol>
     </nav>
     {query.trim()&&<div role="group" className="mb-3" aria-label="Node search results"><p className="text-xs text-slate-600 mb-2">Matches within the current model and connection-type filters.</p><ul className="max-h-48 overflow-auto space-y-1">{graph.nodes.filter(n=>n.label.toLowerCase().includes(query.trim().toLowerCase())).map(n=><li key={n.id}><button className="border rounded p-2 w-full text-sm text-left hover:bg-blue-50" onClick={()=>browse(n.id)}>{n.label}</button></li>)}</ul>{!graph.nodes.some(n=>n.label.toLowerCase().includes(query.trim().toLowerCase()))&&<p role="status" className="text-sm">No matching nodes. Try another search or connection type.</p>}</div>}
     {selected&&<section aria-label="Focused graph node" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Exploring · {selected.kind}</p><h3 className="mt-1 font-bold break-words">{selected.label}</h3><p className="mt-1 text-sm text-slate-600">{familyFocus?`${incident.length} reviewed family and certification paths`:`${incident.length} direct reviewed ${incident.length===1?'connection':'connections'}`}. Follow a neighboring node or select a link to read its source.</p></section>}
-    <p className="reg-map-help">{width<500?(touchPan?'Drag the background to move the map. Choose Scroll page to continue down the page.':'Swipe the background to scroll this page. Choose Move map to pan, or select a model below.'):'Drag to arrange nodes; drag the background to pan. Use the zoom controls or Readable zoom for a closer look.'}</p>
+    <p className="reg-map-help">{width<500?(touchPan?'Drag the background to move the map. Choose Scroll page to continue down the page.':'Swipe the background to scroll this page. Choose Move map to pan, or select a model below.'):(wheelZoom?'Scroll over the map to zoom. Turn off Wheel zoom to scroll the page over the map.':'Scroll to move down the page. Turn on Wheel zoom to zoom over the map.')} Hover or focus a node to highlight its connections.{softenDistant?' Distant symbols soften; names stay readable.':''}</p>
     <div role="group" ref={container} className="reg-network-canvas overflow-hidden" style={{height}} data-pan-enabled={width>=500||touchPan} data-motion={motion.moving||cameraMoving?'moving':'settled'} aria-label="Interactive relationship node-link diagram" aria-describedby="node-map-status"
      onFocusCapture={event=>setKeyboardNode((event.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id??'')}
      onBlurCapture={event=>setKeyboardNode((event.relatedTarget as HTMLElement|null)?.closest?.<HTMLElement>('.react-flow__node')?.dataset.id??'')}
@@ -143,9 +157,10 @@ export default function NodeGraph({rows,onSelect,selectedId,profile=null,onPrevi
       event.preventDefault();event.stopPropagation();const id=node.dataset.id;
       pendingKeyboardFocus.current=id===nodeId?null:id;browse(id);
     }}>
-      <ReactFlow onInit={initializeCanvas} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodes={motion.nodes} edges={edges} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
-       autoPanOnNodeFocus={false} panOnDrag={width>=500||touchPan} zoomOnScroll={false} preventScrolling={false} onNodeDragStart={motion.stop} onMoveStart={event=>{if(event){++cameraToken.current;setCameraMoving(true);motion.stop();}}} onMoveEnd={event=>{if(event)setCameraMoving(false);}} onNodesChange={motion.onNodesChange}
+      <ReactFlow onInit={initializeCanvas} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodes={displayNodes} edges={edges} minZoom={0.03} maxZoom={2} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
+       autoPanOnNodeFocus={false} panOnDrag={width>=500||touchPan} zoomOnScroll={wheelZoom} preventScrolling={wheelZoom} onNodeDragStart={motion.stop} onMoveStart={event=>{if(event){++cameraToken.current;setCameraMoving(true);motion.stop();}}} onMoveEnd={event=>{if(event)setCameraMoving(false);}} onNodesChange={motion.onNodesChange}
        onNodeMouseEnter={(_,node)=>setHoveredNode(node.id)} onNodeMouseLeave={()=>setHoveredNode('')}
+       onEdgeMouseEnter={(_,edge)=>setHoveredEdge(edge.id)} onEdgeMouseLeave={()=>setHoveredEdge('')}
        onNodeClick={(_,n)=>browse(n.id)} onEdgeClick={(_,e)=>{const row=graph.edges.find(r=>r.id===e.id)?.relationship;if(row)onSelect(row);}}><Background color="#315681" gap={36} size={1}/><Controls aria-label="" showInteractive={false}/></ReactFlow>
     </div>
     <p id="node-map-status" className="text-xs text-slate-500 my-3" aria-live="polite">{selected?`${selected.label}: ${incident.length} ${familyFocus?'family and certification paths':`direct reviewed connection${incident.length===1?'':'s'}`} shown below.`:'Arrows preserve reviewed direction. Dashed links are references; shared nodes use one canonical catalog identity.'}</p>
